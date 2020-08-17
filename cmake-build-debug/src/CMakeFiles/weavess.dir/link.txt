@@ -1,0 +1,2 @@
+F:\MinGW-W64\mingw64\bin\ar.exe qc libweavess.a  CMakeFiles/weavess.dir/index.cpp.obj CMakeFiles/weavess.dir/index_component_coarse.h.cpp.obj
+F:\MinGW-W64\mingw64\bin\ranlib.exe libweavess.a

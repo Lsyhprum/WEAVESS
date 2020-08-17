@@ -1,0 +1,44 @@
+#IncludeRegexLine: ^[ 	]*[#%][ 	]*(include|import)[ 	]*[<"]([^">]+)([">])
+
+#IncludeRegexScan: ^.*$
+
+#IncludeRegexComplain: ^$
+
+#IncludeRegexTransform: 
+
+../include/weavess/distance.h
+iostream
+-
+
+../include/weavess/index.h
+vector
+-
+parameters.h
+../include/weavess/parameters.h
+distance.h
+../include/weavess/distance.h
+
+../include/weavess/index_graph.h
+index.h
+../include/weavess/index.h
+neighbor.h
+../include/weavess/neighbor.h
+
+../include/weavess/neighbor.h
+vector
+-
+
+../include/weavess/parameters.h
+sstream
+-
+unordered_map
+-
+
+F:/ANNS/WEAVESS_v1.0/src/index_graph.cpp
+cassert
+-
+algorithm
+-
+weavess/index_graph.h
+F:/ANNS/WEAVESS_v1.0/src/weavess/index_graph.h
+

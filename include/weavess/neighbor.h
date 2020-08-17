@@ -1,31 +1,16 @@
 //
-// Created by Murph on 2020/8/12.
+// Created by Murph on 2020/8/14.
 //
 
 #ifndef WEAVESS_NEIGHBOR_H
 #define WEAVESS_NEIGHBOR_H
 
+#include "util.h"
 #include <cstddef>
 #include <vector>
 #include <mutex>
-#include <random>
 
 namespace weavess {
-
-    struct SimpleNeighbor {
-        unsigned id;
-        float distance;
-
-        SimpleNeighbor() = default;
-
-        SimpleNeighbor(unsigned id, float distance) : id{id}, distance{distance} {}
-
-        inline bool operator<(const SimpleNeighbor &other) const {
-            return distance < other.distance;
-        }
-    };
-
-
     struct Neighbor {
         unsigned id;
         float distance;
@@ -59,7 +44,7 @@ namespace weavess {
             nn_new.resize(s * 2);
             GenRandom(rng, &nn_new[0], (unsigned) nn_new.size(), N);
             nn_new.reserve(s * 2);
-            pool.reserve(l + 1);
+            pool.reserve(l);
         }
 
         nhood(const nhood &other) {
@@ -69,68 +54,21 @@ namespace weavess {
             pool.reserve(other.pool.capacity());
         }
 
-        void InsertIntopool(Neighbor *addr, unsigned K, Neighbor nn) {
-            // find the location to insert
-            int left = 0, right = K - 1;
-            if (addr[left].distance > nn.distance) {
-                memmove((char *) &addr[left + 1], &addr[left], K * sizeof(Neighbor));
-                addr[left] = nn;
-                return;
-            }
-            if (addr[right].distance < nn.distance) {
-                addr[K] = nn;
-                return;
-            }
-            while (left < right - 1) {
-                int mid = (left + right) / 2;
-                if (addr[mid].distance > nn.distance)right = mid;
-                else left = mid;
-            }
-            //check equal ID
-
-            while (left > 0) {
-                if (addr[left].distance < nn.distance) break;
-                // if (addr[left].id == nn.id) return ;
-                left--;
-            }
-            // if(addr[left].id == nn.id||addr[right].id==nn.id)return ;
-            memmove((char *) &addr[right + 1], &addr[right], (K - right) * sizeof(Neighbor));
-            addr[right] = nn;
-            return;
-        }
-
         void insert(unsigned id, float dist) {
             LockGuard guard(lock);
-            if (dist > pool.back().distance) return;
+            if (dist > pool.front().distance) return;
             for (unsigned i = 0; i < pool.size(); i++) {
                 if (id == pool[i].id)return;
             }
-            bool is_insert = true;
-            // for (unsigned i = 0; i < pool.size(); i++) {
-            //   if  (dist < pool[i].distance) {
-            //     is_insert = true;
-            //     break;
-            //   }else {
-            //     float tmp = dist  > pool[i].distance ? dist - pool[i].distance : pool[i].distance - dist;
-            //     // tmp *= 10.0;
-            //     // std::cout << "tmp: " << tmp << " " << "dist: " << dist << "\n";
-            //     if (dist > tmp) {
-            //       break;
-            //     }
-            //   }
-            // }
-            unsigned L = pool.capacity() - 1;
-            unsigned poolL = pool.size();
-            if (is_insert) {
-                if (poolL <= L) {
-                    pool.resize(poolL + 1);
-                    InsertIntopool(pool.data(), poolL, Neighbor(id, dist, true));
-                } else {
-                    InsertIntopool(pool.data(), L, Neighbor(id, dist, true));
-                }
+            if (pool.size() < pool.capacity()) {
+                pool.push_back(Neighbor(id, dist, true));
+                std::push_heap(pool.begin(), pool.end());
+            } else {
+                std::pop_heap(pool.begin(), pool.end());
+                pool[pool.size() - 1] = Neighbor(id, dist, true);
+                std::push_heap(pool.begin(), pool.end());
             }
-            // pool.reserve(L + 1);
-            // if (pool.size() > L) {pool.resize(L);}
+
         }
 
         template<typename C>
@@ -182,7 +120,7 @@ namespace weavess {
         addr[right] = nn;
         return right;
     }
-}
 
+}
 
 #endif //WEAVESS_NEIGHBOR_H

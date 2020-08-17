@@ -1,0 +1,4 @@
+C:\Users\Murph\AppData\Local\JetBrains\Toolbox\apps\CLion\ch-0\202.6397.106\bin\cmake\win\bin\cmake.exe -DCMAKE_BUILD_TYPE=Debug -G "CodeBlocks - MinGW Makefiles" F:\ANNS\WEAVESS_v1.0
+-- Configuring done
+-- Generating done
+-- Build files have been written to: F:/ANNS/WEAVESS_v1.0/cmake-build-debug
