@@ -121,6 +121,23 @@ namespace weavess {
         return right;
     }
 
+    // NSG
+
+    struct SimpleNeighbor{
+        unsigned id;
+        float distance;
+
+        SimpleNeighbor() = default;
+        SimpleNeighbor(unsigned id, float distance) : id{id}, distance{distance}{}
+
+        inline bool operator<(const SimpleNeighbor &other) const {
+            return distance < other.distance;
+        }
+    };
+    struct SimpleNeighbors{
+        std::vector<SimpleNeighbor> pool;
+    };
+
 }
 
 #endif //WEAVESS_NEIGHBOR_H

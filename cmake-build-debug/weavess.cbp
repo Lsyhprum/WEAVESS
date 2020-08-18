@@ -46,6 +46,7 @@
 				<Compiler>
 					<Add option="-DINFO"/>
 					<Add directory="F:/ANNS/WEAVESS_v1.0/include"/>
+					<Add directory="F:/MinGW/boost_1_73_0"/>
 					<Add directory="F:/MinGW-W64/mingw64/bin/../lib/gcc/x86_64-w64-mingw32/8.1.0/include/c++"/>
 					<Add directory="F:/MinGW-W64/mingw64/bin/../lib/gcc/x86_64-w64-mingw32/8.1.0/include/c++/x86_64-w64-mingw32"/>
 					<Add directory="F:/MinGW-W64/mingw64/bin/../lib/gcc/x86_64-w64-mingw32/8.1.0/include/c++/backward"/>
@@ -69,6 +70,7 @@
 				<Compiler>
 					<Add option="-DINFO"/>
 					<Add directory="F:/ANNS/WEAVESS_v1.0/include"/>
+					<Add directory="F:/MinGW/boost_1_73_0"/>
 					<Add directory="F:/MinGW-W64/mingw64/bin/../lib/gcc/x86_64-w64-mingw32/8.1.0/include/c++"/>
 					<Add directory="F:/MinGW-W64/mingw64/bin/../lib/gcc/x86_64-w64-mingw32/8.1.0/include/c++/x86_64-w64-mingw32"/>
 					<Add directory="F:/MinGW-W64/mingw64/bin/../lib/gcc/x86_64-w64-mingw32/8.1.0/include/c++/backward"/>

@@ -14,14 +14,14 @@ else()
 endif()
 
 #Boost
-#set(BOOST_ROOT F:/MinGW/boost_1_73_0)
-#find_package(BOOST 1.73.0 COMPONENTS thread)
-#if(Boost_FOUND)
-#    message(Boost_INCLUDE_DIRS "${Boost_INCLUDE_DIRS}")
-#    message(Boost_LIBRARY_DIRS "${Boost_LIBRARY_DIRS}")
-#    include_directories(${Boost_INCLUDE_DIRS})
-#    link_directories(${Boost_LIBRARY_DIRS})
-#endif()
+set(BOOST_ROOT F:/MinGW/boost_1_73_0)
+find_package(BOOST 1.73.0 COMPONENTS thread)
+if(Boost_FOUND)
+    message(Boost_INCLUDE_DIRS "${Boost_INCLUDE_DIRS}")
+    message(Boost_LIBRARY_DIRS "${Boost_LIBRARY_DIRS}")
+    include_directories(${Boost_INCLUDE_DIRS})
+    link_directories(${Boost_LIBRARY_DIRS})
+endif()
 
 add_definitions (-std=c++11 -O3 -lboost -march=native -Wall -DINFO)
 
