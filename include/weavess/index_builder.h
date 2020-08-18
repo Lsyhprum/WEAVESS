@@ -56,7 +56,6 @@ namespace weavess {
 
             index->IndexConnect(type);
             e = std::chrono::high_resolution_clock::now();
-
             return builder;
         }
 
