@@ -13,6 +13,12 @@ else()
     message(FATAL_ERROR "no OpenMP supprot")
 endif()
 
+#OpenBLAS
+#list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake/module)
+#find_package(OpenBLAS REQUIRED)
+#include_directories(${OpenBLAS_INCLUDE_DIR})
+#set(BLAS_LIB ${OpenBLAS_LIB})
+
 #Boost
 set(BOOST_ROOT F:/MinGW/boost_1_73_0)
 find_package(BOOST 1.73.0 COMPONENTS thread)
@@ -27,19 +33,3 @@ add_definitions (-std=c++11 -O3 -lboost -march=native -Wall -DINFO)
 
 add_subdirectory(src)
 add_subdirectory(test)
-
-
-
-#
-##OpenBLAS
-#list(APPEND CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake/module)
-#find_package(OpenBLAS REQUIRED)
-#include_directories(${OpenBLAS_INCLUDE_DIR})
-#set(BLAS_LIB ${OpenBLAS_LIB})
-#
-##Boost
-
-#
-#add_definitions (-std=c++11 -O3 -march=native -Wall -DINFO)
-#
-##add_subdirectory(src)

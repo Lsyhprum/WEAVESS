@@ -4,8 +4,12 @@ set(CMAKE_DEPENDS_LANGUAGES
   )
 # The set of files for implicit dependencies of each language:
 set(CMAKE_DEPENDS_CHECK_CXX
-  "F:/ANNS/WEAVESS_v1.0/src/index.cpp" "F:/ANNS/WEAVESS_v1.0/cmake-build-debug/src/CMakeFiles/weavess_s.dir/index.cpp.obj"
-  "F:/ANNS/WEAVESS_v1.0/src/index_component_coarse.h.cpp" "F:/ANNS/WEAVESS_v1.0/cmake-build-debug/src/CMakeFiles/weavess_s.dir/index_component_coarse.h.cpp.obj"
+  "F:/ANNS/WEAVESS/src/index_component_coarse.cpp" "F:/ANNS/WEAVESS/cmake-build-debug/src/CMakeFiles/weavess_s.dir/index_component_coarse.cpp.obj"
+  "F:/ANNS/WEAVESS/src/index_component_conn.cpp" "F:/ANNS/WEAVESS/cmake-build-debug/src/CMakeFiles/weavess_s.dir/index_component_conn.cpp.obj"
+  "F:/ANNS/WEAVESS/src/index_component_eva.cpp" "F:/ANNS/WEAVESS/cmake-build-debug/src/CMakeFiles/weavess_s.dir/index_component_eva.cpp.obj"
+  "F:/ANNS/WEAVESS/src/index_component_init.cpp" "F:/ANNS/WEAVESS/cmake-build-debug/src/CMakeFiles/weavess_s.dir/index_component_init.cpp.obj"
+  "F:/ANNS/WEAVESS/src/index_component_load.cpp" "F:/ANNS/WEAVESS/cmake-build-debug/src/CMakeFiles/weavess_s.dir/index_component_load.cpp.obj"
+  "F:/ANNS/WEAVESS/src/index_component_prune.cpp" "F:/ANNS/WEAVESS/cmake-build-debug/src/CMakeFiles/weavess_s.dir/index_component_prune.cpp.obj"
   )
 set(CMAKE_CXX_COMPILER_ID "GNU")
 
@@ -18,6 +22,7 @@ set(CMAKE_TARGET_DEFINITIONS_CXX
 # The include file search paths:
 set(CMAKE_CXX_TARGET_INCLUDE_PATH
   "../include"
+  "F:/MinGW/boost_1_73_0"
   )
 
 # Targets to which this target links.

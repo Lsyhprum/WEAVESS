@@ -29,6 +29,7 @@ namespace weavess {
 
     struct nhood {
         std::mutex lock;
+        // 邻居候选池，初始化后成为大顶堆
         std::vector<Neighbor> pool;
         unsigned M;
 
@@ -122,7 +123,6 @@ namespace weavess {
     }
 
     // NSG
-
     struct SimpleNeighbor{
         unsigned id;
         float distance;

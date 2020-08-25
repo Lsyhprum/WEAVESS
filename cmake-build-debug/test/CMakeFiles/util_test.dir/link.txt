@@ -1,3 +1,0 @@
-C:\Users\Murph\AppData\Local\JetBrains\Toolbox\apps\CLion\ch-0\202.6397.106\bin\cmake\win\bin\cmake.exe -E rm -f CMakeFiles\util_test.dir/objects.a
-F:\MinGW-W64\mingw64\bin\ar.exe cr CMakeFiles\util_test.dir/objects.a @CMakeFiles\util_test.dir\objects1.rsp
-F:\MinGW-W64\mingw64\bin\g++.exe -g   -Wl,--whole-archive CMakeFiles\util_test.dir/objects.a -Wl,--no-whole-archive  -o util_test.exe -Wl,--out-implib,libutil_test.dll.a -Wl,--major-image-version,0,--minor-image-version,0 @CMakeFiles\util_test.dir\linklibs.rsp

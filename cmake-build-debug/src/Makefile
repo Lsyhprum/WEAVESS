@@ -67,24 +67,13 @@ RM = C:\Users\Murph\AppData\Local\JetBrains\Toolbox\apps\CLion\ch-0\202.6397.106
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = F:\ANNS\WEAVESS_v1.0
+CMAKE_SOURCE_DIR = F:\ANNS\WEAVESS
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = F:\ANNS\WEAVESS_v1.0\cmake-build-debug
+CMAKE_BINARY_DIR = F:\ANNS\WEAVESS\cmake-build-debug
 
 #=============================================================================
 # Targets provided globally by CMake.
-
-# Special rule for the target edit_cache
-edit_cache:
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "No interactive CMake dialog available..."
-	C:\Users\Murph\AppData\Local\JetBrains\Toolbox\apps\CLion\ch-0\202.6397.106\bin\cmake\win\bin\cmake.exe -E echo "No interactive CMake dialog available."
-.PHONY : edit_cache
-
-# Special rule for the target edit_cache
-edit_cache/fast: edit_cache
-
-.PHONY : edit_cache/fast
 
 # Special rule for the target rebuild_cache
 rebuild_cache:
@@ -97,16 +86,27 @@ rebuild_cache/fast: rebuild_cache
 
 .PHONY : rebuild_cache/fast
 
+# Special rule for the target edit_cache
+edit_cache:
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "No interactive CMake dialog available..."
+	C:\Users\Murph\AppData\Local\JetBrains\Toolbox\apps\CLion\ch-0\202.6397.106\bin\cmake\win\bin\cmake.exe -E echo "No interactive CMake dialog available."
+.PHONY : edit_cache
+
+# Special rule for the target edit_cache
+edit_cache/fast: edit_cache
+
+.PHONY : edit_cache/fast
+
 # The main all target
 all: cmake_check_build_system
-	cd /d F:\ANNS\WEAVESS_v1.0\cmake-build-debug && $(CMAKE_COMMAND) -E cmake_progress_start F:\ANNS\WEAVESS_v1.0\cmake-build-debug\CMakeFiles F:\ANNS\WEAVESS_v1.0\cmake-build-debug\src\CMakeFiles\progress.marks
-	cd /d F:\ANNS\WEAVESS_v1.0\cmake-build-debug && $(MAKE) $(MAKESILENT) -f CMakeFiles\Makefile2 src/all
-	$(CMAKE_COMMAND) -E cmake_progress_start F:\ANNS\WEAVESS_v1.0\cmake-build-debug\CMakeFiles 0
+	cd /d F:\ANNS\WEAVESS\cmake-build-debug && $(CMAKE_COMMAND) -E cmake_progress_start F:\ANNS\WEAVESS\cmake-build-debug\CMakeFiles F:\ANNS\WEAVESS\cmake-build-debug\src\CMakeFiles\progress.marks
+	cd /d F:\ANNS\WEAVESS\cmake-build-debug && $(MAKE) $(MAKESILENT) -f CMakeFiles\Makefile2 src/all
+	$(CMAKE_COMMAND) -E cmake_progress_start F:\ANNS\WEAVESS\cmake-build-debug\CMakeFiles 0
 .PHONY : all
 
 # The main clean target
 clean:
-	cd /d F:\ANNS\WEAVESS_v1.0\cmake-build-debug && $(MAKE) $(MAKESILENT) -f CMakeFiles\Makefile2 src/clean
+	cd /d F:\ANNS\WEAVESS\cmake-build-debug && $(MAKE) $(MAKESILENT) -f CMakeFiles\Makefile2 src/clean
 .PHONY : clean
 
 # The main clean target
@@ -116,18 +116,228 @@ clean/fast: clean
 
 # Prepare targets for installation.
 preinstall: all
-	cd /d F:\ANNS\WEAVESS_v1.0\cmake-build-debug && $(MAKE) $(MAKESILENT) -f CMakeFiles\Makefile2 src/preinstall
+	cd /d F:\ANNS\WEAVESS\cmake-build-debug && $(MAKE) $(MAKESILENT) -f CMakeFiles\Makefile2 src/preinstall
 .PHONY : preinstall
 
 # Prepare targets for installation.
 preinstall/fast:
-	cd /d F:\ANNS\WEAVESS_v1.0\cmake-build-debug && $(MAKE) $(MAKESILENT) -f CMakeFiles\Makefile2 src/preinstall
+	cd /d F:\ANNS\WEAVESS\cmake-build-debug && $(MAKE) $(MAKESILENT) -f CMakeFiles\Makefile2 src/preinstall
 .PHONY : preinstall/fast
 
 # clear depends
 depend:
-	cd /d F:\ANNS\WEAVESS_v1.0\cmake-build-debug && $(CMAKE_COMMAND) -S$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR) --check-build-system CMakeFiles\Makefile.cmake 1
+	cd /d F:\ANNS\WEAVESS\cmake-build-debug && $(CMAKE_COMMAND) -S$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR) --check-build-system CMakeFiles\Makefile.cmake 1
 .PHONY : depend
+
+# Convenience name for target.
+src/CMakeFiles/weavess.dir/rule:
+	cd /d F:\ANNS\WEAVESS\cmake-build-debug && $(MAKE) $(MAKESILENT) -f CMakeFiles\Makefile2 src/CMakeFiles/weavess.dir/rule
+.PHONY : src/CMakeFiles/weavess.dir/rule
+
+# Convenience name for target.
+weavess: src/CMakeFiles/weavess.dir/rule
+
+.PHONY : weavess
+
+# fast build rule for target.
+weavess/fast:
+	cd /d F:\ANNS\WEAVESS\cmake-build-debug && $(MAKE) $(MAKESILENT) -f src\CMakeFiles\weavess.dir\build.make src/CMakeFiles/weavess.dir/build
+.PHONY : weavess/fast
+
+# Convenience name for target.
+src/CMakeFiles/weavess_s.dir/rule:
+	cd /d F:\ANNS\WEAVESS\cmake-build-debug && $(MAKE) $(MAKESILENT) -f CMakeFiles\Makefile2 src/CMakeFiles/weavess_s.dir/rule
+.PHONY : src/CMakeFiles/weavess_s.dir/rule
+
+# Convenience name for target.
+weavess_s: src/CMakeFiles/weavess_s.dir/rule
+
+.PHONY : weavess_s
+
+# fast build rule for target.
+weavess_s/fast:
+	cd /d F:\ANNS\WEAVESS\cmake-build-debug && $(MAKE) $(MAKESILENT) -f src\CMakeFiles\weavess_s.dir\build.make src/CMakeFiles/weavess_s.dir/build
+.PHONY : weavess_s/fast
+
+index_component_coarse.obj: index_component_coarse.cpp.obj
+
+.PHONY : index_component_coarse.obj
+
+# target to build an object file
+index_component_coarse.cpp.obj:
+	cd /d F:\ANNS\WEAVESS\cmake-build-debug && $(MAKE) $(MAKESILENT) -f src\CMakeFiles\weavess.dir\build.make src/CMakeFiles/weavess.dir/index_component_coarse.cpp.obj
+	cd /d F:\ANNS\WEAVESS\cmake-build-debug && $(MAKE) $(MAKESILENT) -f src\CMakeFiles\weavess_s.dir\build.make src/CMakeFiles/weavess_s.dir/index_component_coarse.cpp.obj
+.PHONY : index_component_coarse.cpp.obj
+
+index_component_coarse.i: index_component_coarse.cpp.i
+
+.PHONY : index_component_coarse.i
+
+# target to preprocess a source file
+index_component_coarse.cpp.i:
+	cd /d F:\ANNS\WEAVESS\cmake-build-debug && $(MAKE) $(MAKESILENT) -f src\CMakeFiles\weavess.dir\build.make src/CMakeFiles/weavess.dir/index_component_coarse.cpp.i
+	cd /d F:\ANNS\WEAVESS\cmake-build-debug && $(MAKE) $(MAKESILENT) -f src\CMakeFiles\weavess_s.dir\build.make src/CMakeFiles/weavess_s.dir/index_component_coarse.cpp.i
+.PHONY : index_component_coarse.cpp.i
+
+index_component_coarse.s: index_component_coarse.cpp.s
+
+.PHONY : index_component_coarse.s
+
+# target to generate assembly for a file
+index_component_coarse.cpp.s:
+	cd /d F:\ANNS\WEAVESS\cmake-build-debug && $(MAKE) $(MAKESILENT) -f src\CMakeFiles\weavess.dir\build.make src/CMakeFiles/weavess.dir/index_component_coarse.cpp.s
+	cd /d F:\ANNS\WEAVESS\cmake-build-debug && $(MAKE) $(MAKESILENT) -f src\CMakeFiles\weavess_s.dir\build.make src/CMakeFiles/weavess_s.dir/index_component_coarse.cpp.s
+.PHONY : index_component_coarse.cpp.s
+
+index_component_conn.obj: index_component_conn.cpp.obj
+
+.PHONY : index_component_conn.obj
+
+# target to build an object file
+index_component_conn.cpp.obj:
+	cd /d F:\ANNS\WEAVESS\cmake-build-debug && $(MAKE) $(MAKESILENT) -f src\CMakeFiles\weavess.dir\build.make src/CMakeFiles/weavess.dir/index_component_conn.cpp.obj
+	cd /d F:\ANNS\WEAVESS\cmake-build-debug && $(MAKE) $(MAKESILENT) -f src\CMakeFiles\weavess_s.dir\build.make src/CMakeFiles/weavess_s.dir/index_component_conn.cpp.obj
+.PHONY : index_component_conn.cpp.obj
+
+index_component_conn.i: index_component_conn.cpp.i
+
+.PHONY : index_component_conn.i
+
+# target to preprocess a source file
+index_component_conn.cpp.i:
+	cd /d F:\ANNS\WEAVESS\cmake-build-debug && $(MAKE) $(MAKESILENT) -f src\CMakeFiles\weavess.dir\build.make src/CMakeFiles/weavess.dir/index_component_conn.cpp.i
+	cd /d F:\ANNS\WEAVESS\cmake-build-debug && $(MAKE) $(MAKESILENT) -f src\CMakeFiles\weavess_s.dir\build.make src/CMakeFiles/weavess_s.dir/index_component_conn.cpp.i
+.PHONY : index_component_conn.cpp.i
+
+index_component_conn.s: index_component_conn.cpp.s
+
+.PHONY : index_component_conn.s
+
+# target to generate assembly for a file
+index_component_conn.cpp.s:
+	cd /d F:\ANNS\WEAVESS\cmake-build-debug && $(MAKE) $(MAKESILENT) -f src\CMakeFiles\weavess.dir\build.make src/CMakeFiles/weavess.dir/index_component_conn.cpp.s
+	cd /d F:\ANNS\WEAVESS\cmake-build-debug && $(MAKE) $(MAKESILENT) -f src\CMakeFiles\weavess_s.dir\build.make src/CMakeFiles/weavess_s.dir/index_component_conn.cpp.s
+.PHONY : index_component_conn.cpp.s
+
+index_component_eva.obj: index_component_eva.cpp.obj
+
+.PHONY : index_component_eva.obj
+
+# target to build an object file
+index_component_eva.cpp.obj:
+	cd /d F:\ANNS\WEAVESS\cmake-build-debug && $(MAKE) $(MAKESILENT) -f src\CMakeFiles\weavess.dir\build.make src/CMakeFiles/weavess.dir/index_component_eva.cpp.obj
+	cd /d F:\ANNS\WEAVESS\cmake-build-debug && $(MAKE) $(MAKESILENT) -f src\CMakeFiles\weavess_s.dir\build.make src/CMakeFiles/weavess_s.dir/index_component_eva.cpp.obj
+.PHONY : index_component_eva.cpp.obj
+
+index_component_eva.i: index_component_eva.cpp.i
+
+.PHONY : index_component_eva.i
+
+# target to preprocess a source file
+index_component_eva.cpp.i:
+	cd /d F:\ANNS\WEAVESS\cmake-build-debug && $(MAKE) $(MAKESILENT) -f src\CMakeFiles\weavess.dir\build.make src/CMakeFiles/weavess.dir/index_component_eva.cpp.i
+	cd /d F:\ANNS\WEAVESS\cmake-build-debug && $(MAKE) $(MAKESILENT) -f src\CMakeFiles\weavess_s.dir\build.make src/CMakeFiles/weavess_s.dir/index_component_eva.cpp.i
+.PHONY : index_component_eva.cpp.i
+
+index_component_eva.s: index_component_eva.cpp.s
+
+.PHONY : index_component_eva.s
+
+# target to generate assembly for a file
+index_component_eva.cpp.s:
+	cd /d F:\ANNS\WEAVESS\cmake-build-debug && $(MAKE) $(MAKESILENT) -f src\CMakeFiles\weavess.dir\build.make src/CMakeFiles/weavess.dir/index_component_eva.cpp.s
+	cd /d F:\ANNS\WEAVESS\cmake-build-debug && $(MAKE) $(MAKESILENT) -f src\CMakeFiles\weavess_s.dir\build.make src/CMakeFiles/weavess_s.dir/index_component_eva.cpp.s
+.PHONY : index_component_eva.cpp.s
+
+index_component_init.obj: index_component_init.cpp.obj
+
+.PHONY : index_component_init.obj
+
+# target to build an object file
+index_component_init.cpp.obj:
+	cd /d F:\ANNS\WEAVESS\cmake-build-debug && $(MAKE) $(MAKESILENT) -f src\CMakeFiles\weavess.dir\build.make src/CMakeFiles/weavess.dir/index_component_init.cpp.obj
+	cd /d F:\ANNS\WEAVESS\cmake-build-debug && $(MAKE) $(MAKESILENT) -f src\CMakeFiles\weavess_s.dir\build.make src/CMakeFiles/weavess_s.dir/index_component_init.cpp.obj
+.PHONY : index_component_init.cpp.obj
+
+index_component_init.i: index_component_init.cpp.i
+
+.PHONY : index_component_init.i
+
+# target to preprocess a source file
+index_component_init.cpp.i:
+	cd /d F:\ANNS\WEAVESS\cmake-build-debug && $(MAKE) $(MAKESILENT) -f src\CMakeFiles\weavess.dir\build.make src/CMakeFiles/weavess.dir/index_component_init.cpp.i
+	cd /d F:\ANNS\WEAVESS\cmake-build-debug && $(MAKE) $(MAKESILENT) -f src\CMakeFiles\weavess_s.dir\build.make src/CMakeFiles/weavess_s.dir/index_component_init.cpp.i
+.PHONY : index_component_init.cpp.i
+
+index_component_init.s: index_component_init.cpp.s
+
+.PHONY : index_component_init.s
+
+# target to generate assembly for a file
+index_component_init.cpp.s:
+	cd /d F:\ANNS\WEAVESS\cmake-build-debug && $(MAKE) $(MAKESILENT) -f src\CMakeFiles\weavess.dir\build.make src/CMakeFiles/weavess.dir/index_component_init.cpp.s
+	cd /d F:\ANNS\WEAVESS\cmake-build-debug && $(MAKE) $(MAKESILENT) -f src\CMakeFiles\weavess_s.dir\build.make src/CMakeFiles/weavess_s.dir/index_component_init.cpp.s
+.PHONY : index_component_init.cpp.s
+
+index_component_load.obj: index_component_load.cpp.obj
+
+.PHONY : index_component_load.obj
+
+# target to build an object file
+index_component_load.cpp.obj:
+	cd /d F:\ANNS\WEAVESS\cmake-build-debug && $(MAKE) $(MAKESILENT) -f src\CMakeFiles\weavess.dir\build.make src/CMakeFiles/weavess.dir/index_component_load.cpp.obj
+	cd /d F:\ANNS\WEAVESS\cmake-build-debug && $(MAKE) $(MAKESILENT) -f src\CMakeFiles\weavess_s.dir\build.make src/CMakeFiles/weavess_s.dir/index_component_load.cpp.obj
+.PHONY : index_component_load.cpp.obj
+
+index_component_load.i: index_component_load.cpp.i
+
+.PHONY : index_component_load.i
+
+# target to preprocess a source file
+index_component_load.cpp.i:
+	cd /d F:\ANNS\WEAVESS\cmake-build-debug && $(MAKE) $(MAKESILENT) -f src\CMakeFiles\weavess.dir\build.make src/CMakeFiles/weavess.dir/index_component_load.cpp.i
+	cd /d F:\ANNS\WEAVESS\cmake-build-debug && $(MAKE) $(MAKESILENT) -f src\CMakeFiles\weavess_s.dir\build.make src/CMakeFiles/weavess_s.dir/index_component_load.cpp.i
+.PHONY : index_component_load.cpp.i
+
+index_component_load.s: index_component_load.cpp.s
+
+.PHONY : index_component_load.s
+
+# target to generate assembly for a file
+index_component_load.cpp.s:
+	cd /d F:\ANNS\WEAVESS\cmake-build-debug && $(MAKE) $(MAKESILENT) -f src\CMakeFiles\weavess.dir\build.make src/CMakeFiles/weavess.dir/index_component_load.cpp.s
+	cd /d F:\ANNS\WEAVESS\cmake-build-debug && $(MAKE) $(MAKESILENT) -f src\CMakeFiles\weavess_s.dir\build.make src/CMakeFiles/weavess_s.dir/index_component_load.cpp.s
+.PHONY : index_component_load.cpp.s
+
+index_component_prune.obj: index_component_prune.cpp.obj
+
+.PHONY : index_component_prune.obj
+
+# target to build an object file
+index_component_prune.cpp.obj:
+	cd /d F:\ANNS\WEAVESS\cmake-build-debug && $(MAKE) $(MAKESILENT) -f src\CMakeFiles\weavess.dir\build.make src/CMakeFiles/weavess.dir/index_component_prune.cpp.obj
+	cd /d F:\ANNS\WEAVESS\cmake-build-debug && $(MAKE) $(MAKESILENT) -f src\CMakeFiles\weavess_s.dir\build.make src/CMakeFiles/weavess_s.dir/index_component_prune.cpp.obj
+.PHONY : index_component_prune.cpp.obj
+
+index_component_prune.i: index_component_prune.cpp.i
+
+.PHONY : index_component_prune.i
+
+# target to preprocess a source file
+index_component_prune.cpp.i:
+	cd /d F:\ANNS\WEAVESS\cmake-build-debug && $(MAKE) $(MAKESILENT) -f src\CMakeFiles\weavess.dir\build.make src/CMakeFiles/weavess.dir/index_component_prune.cpp.i
+	cd /d F:\ANNS\WEAVESS\cmake-build-debug && $(MAKE) $(MAKESILENT) -f src\CMakeFiles\weavess_s.dir\build.make src/CMakeFiles/weavess_s.dir/index_component_prune.cpp.i
+.PHONY : index_component_prune.cpp.i
+
+index_component_prune.s: index_component_prune.cpp.s
+
+.PHONY : index_component_prune.s
+
+# target to generate assembly for a file
+index_component_prune.cpp.s:
+	cd /d F:\ANNS\WEAVESS\cmake-build-debug && $(MAKE) $(MAKESILENT) -f src\CMakeFiles\weavess.dir\build.make src/CMakeFiles/weavess.dir/index_component_prune.cpp.s
+	cd /d F:\ANNS\WEAVESS\cmake-build-debug && $(MAKE) $(MAKESILENT) -f src\CMakeFiles\weavess_s.dir\build.make src/CMakeFiles/weavess_s.dir/index_component_prune.cpp.s
+.PHONY : index_component_prune.cpp.s
 
 # Help Target
 help:
@@ -137,6 +347,26 @@ help:
 	@echo ... depend
 	@echo ... edit_cache
 	@echo ... rebuild_cache
+	@echo ... weavess
+	@echo ... weavess_s
+	@echo ... index_component_coarse.obj
+	@echo ... index_component_coarse.i
+	@echo ... index_component_coarse.s
+	@echo ... index_component_conn.obj
+	@echo ... index_component_conn.i
+	@echo ... index_component_conn.s
+	@echo ... index_component_eva.obj
+	@echo ... index_component_eva.i
+	@echo ... index_component_eva.s
+	@echo ... index_component_init.obj
+	@echo ... index_component_init.i
+	@echo ... index_component_init.s
+	@echo ... index_component_load.obj
+	@echo ... index_component_load.i
+	@echo ... index_component_load.s
+	@echo ... index_component_prune.obj
+	@echo ... index_component_prune.i
+	@echo ... index_component_prune.s
 .PHONY : help
 
 
@@ -148,6 +378,6 @@ help:
 # No rule that depends on this can have commands that come from listfiles
 # because they might be regenerated.
 cmake_check_build_system:
-	cd /d F:\ANNS\WEAVESS_v1.0\cmake-build-debug && $(CMAKE_COMMAND) -S$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR) --check-build-system CMakeFiles\Makefile.cmake 0
+	cd /d F:\ANNS\WEAVESS\cmake-build-debug && $(CMAKE_COMMAND) -S$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR) --check-build-system CMakeFiles\Makefile.cmake 0
 .PHONY : cmake_check_build_system
 
