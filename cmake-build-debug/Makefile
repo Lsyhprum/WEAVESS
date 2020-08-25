@@ -67,10 +67,10 @@ RM = C:\Users\Murph\AppData\Local\JetBrains\Toolbox\apps\CLion\ch-0\202.6397.106
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = F:\ANNS\WEAVESS_v1.0
+CMAKE_SOURCE_DIR = F:\ANNS\WEAVESS
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = F:\ANNS\WEAVESS_v1.0\cmake-build-debug
+CMAKE_BINARY_DIR = F:\ANNS\WEAVESS\cmake-build-debug
 
 #=============================================================================
 # Targets provided globally by CMake.
@@ -99,9 +99,9 @@ rebuild_cache/fast: rebuild_cache
 
 # The main all target
 all: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start F:\ANNS\WEAVESS_v1.0\cmake-build-debug\CMakeFiles F:\ANNS\WEAVESS_v1.0\cmake-build-debug\CMakeFiles\progress.marks
+	$(CMAKE_COMMAND) -E cmake_progress_start F:\ANNS\WEAVESS\cmake-build-debug\CMakeFiles F:\ANNS\WEAVESS\cmake-build-debug\CMakeFiles\progress.marks
 	$(MAKE) $(MAKESILENT) -f CMakeFiles\Makefile2 all
-	$(CMAKE_COMMAND) -E cmake_progress_start F:\ANNS\WEAVESS_v1.0\cmake-build-debug\CMakeFiles 0
+	$(CMAKE_COMMAND) -E cmake_progress_start F:\ANNS\WEAVESS\cmake-build-debug\CMakeFiles 0
 .PHONY : all
 
 # The main clean target
@@ -130,6 +130,32 @@ depend:
 .PHONY : depend
 
 #=============================================================================
+# Target rules for targets named weavess
+
+# Build rule for target.
+weavess: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\Makefile2 weavess
+.PHONY : weavess
+
+# fast build rule for target.
+weavess/fast:
+	$(MAKE) $(MAKESILENT) -f src\CMakeFiles\weavess.dir\build.make src/CMakeFiles/weavess.dir/build
+.PHONY : weavess/fast
+
+#=============================================================================
+# Target rules for targets named weavess_s
+
+# Build rule for target.
+weavess_s: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\Makefile2 weavess_s
+.PHONY : weavess_s
+
+# fast build rule for target.
+weavess_s/fast:
+	$(MAKE) $(MAKESILENT) -f src\CMakeFiles\weavess_s.dir\build.make src/CMakeFiles/weavess_s.dir/build
+.PHONY : weavess_s/fast
+
+#=============================================================================
 # Target rules for targets named index_test
 
 # Build rule for target.
@@ -151,6 +177,8 @@ help:
 	@echo ... edit_cache
 	@echo ... rebuild_cache
 	@echo ... index_test
+	@echo ... weavess
+	@echo ... weavess_s
 .PHONY : help
 
 

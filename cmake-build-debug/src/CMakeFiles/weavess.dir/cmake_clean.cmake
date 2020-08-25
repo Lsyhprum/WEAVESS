@@ -1,6 +1,10 @@
 file(REMOVE_RECURSE
-  "CMakeFiles/weavess.dir/index.cpp.obj"
-  "CMakeFiles/weavess.dir/index_component_coarse.h.cpp.obj"
+  "CMakeFiles/weavess.dir/index_component_coarse.cpp.obj"
+  "CMakeFiles/weavess.dir/index_component_conn.cpp.obj"
+  "CMakeFiles/weavess.dir/index_component_eva.cpp.obj"
+  "CMakeFiles/weavess.dir/index_component_init.cpp.obj"
+  "CMakeFiles/weavess.dir/index_component_load.cpp.obj"
+  "CMakeFiles/weavess.dir/index_component_prune.cpp.obj"
   "libweavess.a"
   "libweavess.pdb"
 )

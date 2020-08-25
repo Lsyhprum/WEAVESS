@@ -48,7 +48,6 @@ namespace weavess {
             addr[i] = (addr[i] + off) % N;
         }
     }
-
 }
 
 #endif //WEAVESS_UTIL_H

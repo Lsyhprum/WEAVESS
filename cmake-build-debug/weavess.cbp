@@ -8,44 +8,140 @@
 		<Option virtualFolders="CMake Files\;CMake Files\src\;CMake Files\test\;"/>
 		<Build>
 			<Target title="all">
-				<Option working_dir="F:/ANNS/WEAVESS_v1.0/cmake-build-debug"/>
+				<Option working_dir="F:/ANNS/WEAVESS/cmake-build-debug"/>
 				<Option type="4"/>
 				<MakeCommands>
-					<Build command="F:/MinGW-W64/mingw64/bin/mingw32-make.exe -f &quot;F:/ANNS/WEAVESS_v1.0/cmake-build-debug/Makefile&quot;  VERBOSE=1 all"/>
-					<CompileFile command="F:/MinGW-W64/mingw64/bin/mingw32-make.exe -f &quot;F:/ANNS/WEAVESS_v1.0/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
-					<Clean command="F:/MinGW-W64/mingw64/bin/mingw32-make.exe -f &quot;F:/ANNS/WEAVESS_v1.0/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
-					<DistClean command="F:/MinGW-W64/mingw64/bin/mingw32-make.exe -f &quot;F:/ANNS/WEAVESS_v1.0/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<Build command="F:/MinGW-W64/mingw64/bin/mingw32-make.exe -f &quot;F:/ANNS/WEAVESS/cmake-build-debug/Makefile&quot;  VERBOSE=1 all"/>
+					<CompileFile command="F:/MinGW-W64/mingw64/bin/mingw32-make.exe -f &quot;F:/ANNS/WEAVESS/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="F:/MinGW-W64/mingw64/bin/mingw32-make.exe -f &quot;F:/ANNS/WEAVESS/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="F:/MinGW-W64/mingw64/bin/mingw32-make.exe -f &quot;F:/ANNS/WEAVESS/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
 				</MakeCommands>
 			</Target>
 			<Target title="edit_cache">
-				<Option working_dir="F:/ANNS/WEAVESS_v1.0/cmake-build-debug"/>
+				<Option working_dir="F:/ANNS/WEAVESS/cmake-build-debug"/>
 				<Option type="4"/>
 				<MakeCommands>
-					<Build command="F:/MinGW-W64/mingw64/bin/mingw32-make.exe -f &quot;F:/ANNS/WEAVESS_v1.0/cmake-build-debug/Makefile&quot;  VERBOSE=1 edit_cache"/>
-					<CompileFile command="F:/MinGW-W64/mingw64/bin/mingw32-make.exe -f &quot;F:/ANNS/WEAVESS_v1.0/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
-					<Clean command="F:/MinGW-W64/mingw64/bin/mingw32-make.exe -f &quot;F:/ANNS/WEAVESS_v1.0/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
-					<DistClean command="F:/MinGW-W64/mingw64/bin/mingw32-make.exe -f &quot;F:/ANNS/WEAVESS_v1.0/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<Build command="F:/MinGW-W64/mingw64/bin/mingw32-make.exe -f &quot;F:/ANNS/WEAVESS/cmake-build-debug/Makefile&quot;  VERBOSE=1 edit_cache"/>
+					<CompileFile command="F:/MinGW-W64/mingw64/bin/mingw32-make.exe -f &quot;F:/ANNS/WEAVESS/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="F:/MinGW-W64/mingw64/bin/mingw32-make.exe -f &quot;F:/ANNS/WEAVESS/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="F:/MinGW-W64/mingw64/bin/mingw32-make.exe -f &quot;F:/ANNS/WEAVESS/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
 				</MakeCommands>
 			</Target>
 			<Target title="rebuild_cache">
-				<Option working_dir="F:/ANNS/WEAVESS_v1.0/cmake-build-debug"/>
+				<Option working_dir="F:/ANNS/WEAVESS/cmake-build-debug"/>
 				<Option type="4"/>
 				<MakeCommands>
-					<Build command="F:/MinGW-W64/mingw64/bin/mingw32-make.exe -f &quot;F:/ANNS/WEAVESS_v1.0/cmake-build-debug/Makefile&quot;  VERBOSE=1 rebuild_cache"/>
-					<CompileFile command="F:/MinGW-W64/mingw64/bin/mingw32-make.exe -f &quot;F:/ANNS/WEAVESS_v1.0/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
-					<Clean command="F:/MinGW-W64/mingw64/bin/mingw32-make.exe -f &quot;F:/ANNS/WEAVESS_v1.0/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
-					<DistClean command="F:/MinGW-W64/mingw64/bin/mingw32-make.exe -f &quot;F:/ANNS/WEAVESS_v1.0/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<Build command="F:/MinGW-W64/mingw64/bin/mingw32-make.exe -f &quot;F:/ANNS/WEAVESS/cmake-build-debug/Makefile&quot;  VERBOSE=1 rebuild_cache"/>
+					<CompileFile command="F:/MinGW-W64/mingw64/bin/mingw32-make.exe -f &quot;F:/ANNS/WEAVESS/cmake-build-debug/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="F:/MinGW-W64/mingw64/bin/mingw32-make.exe -f &quot;F:/ANNS/WEAVESS/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="F:/MinGW-W64/mingw64/bin/mingw32-make.exe -f &quot;F:/ANNS/WEAVESS/cmake-build-debug/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="weavess">
+				<Option output="F:/ANNS/WEAVESS/cmake-build-debug/src/libweavess.a" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="F:/ANNS/WEAVESS/cmake-build-debug/src"/>
+				<Option object_output="./"/>
+				<Option type="2"/>
+				<Option compiler="gcc"/>
+				<Compiler>
+					<Add option="-DINFO"/>
+					<Add directory="F:/ANNS/WEAVESS/include"/>
+					<Add directory="F:/MinGW/boost_1_73_0"/>
+					<Add directory="F:/MinGW-W64/mingw64/bin/../lib/gcc/x86_64-w64-mingw32/8.1.0/include/c++"/>
+					<Add directory="F:/MinGW-W64/mingw64/bin/../lib/gcc/x86_64-w64-mingw32/8.1.0/include/c++/x86_64-w64-mingw32"/>
+					<Add directory="F:/MinGW-W64/mingw64/bin/../lib/gcc/x86_64-w64-mingw32/8.1.0/include/c++/backward"/>
+					<Add directory="F:/MinGW-W64/mingw64/bin/../lib/gcc/x86_64-w64-mingw32/8.1.0/include"/>
+					<Add directory="F:/MinGW-W64/mingw64/bin/../lib/gcc/x86_64-w64-mingw32/8.1.0/include-fixed"/>
+					<Add directory="F:/MinGW-W64/mingw64/bin/../lib/gcc/x86_64-w64-mingw32/8.1.0/../../../../x86_64-w64-mingw32/include"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="F:/MinGW-W64/mingw64/bin/mingw32-make.exe -f &quot;F:/ANNS/WEAVESS/cmake-build-debug/src/Makefile&quot;  VERBOSE=1 weavess"/>
+					<CompileFile command="F:/MinGW-W64/mingw64/bin/mingw32-make.exe -f &quot;F:/ANNS/WEAVESS/cmake-build-debug/src/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="F:/MinGW-W64/mingw64/bin/mingw32-make.exe -f &quot;F:/ANNS/WEAVESS/cmake-build-debug/src/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="F:/MinGW-W64/mingw64/bin/mingw32-make.exe -f &quot;F:/ANNS/WEAVESS/cmake-build-debug/src/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="weavess/fast">
+				<Option output="F:/ANNS/WEAVESS/cmake-build-debug/src/libweavess.a" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="F:/ANNS/WEAVESS/cmake-build-debug/src"/>
+				<Option object_output="./"/>
+				<Option type="2"/>
+				<Option compiler="gcc"/>
+				<Compiler>
+					<Add option="-DINFO"/>
+					<Add directory="F:/ANNS/WEAVESS/include"/>
+					<Add directory="F:/MinGW/boost_1_73_0"/>
+					<Add directory="F:/MinGW-W64/mingw64/bin/../lib/gcc/x86_64-w64-mingw32/8.1.0/include/c++"/>
+					<Add directory="F:/MinGW-W64/mingw64/bin/../lib/gcc/x86_64-w64-mingw32/8.1.0/include/c++/x86_64-w64-mingw32"/>
+					<Add directory="F:/MinGW-W64/mingw64/bin/../lib/gcc/x86_64-w64-mingw32/8.1.0/include/c++/backward"/>
+					<Add directory="F:/MinGW-W64/mingw64/bin/../lib/gcc/x86_64-w64-mingw32/8.1.0/include"/>
+					<Add directory="F:/MinGW-W64/mingw64/bin/../lib/gcc/x86_64-w64-mingw32/8.1.0/include-fixed"/>
+					<Add directory="F:/MinGW-W64/mingw64/bin/../lib/gcc/x86_64-w64-mingw32/8.1.0/../../../../x86_64-w64-mingw32/include"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="F:/MinGW-W64/mingw64/bin/mingw32-make.exe -f &quot;F:/ANNS/WEAVESS/cmake-build-debug/src/Makefile&quot;  VERBOSE=1 weavess/fast"/>
+					<CompileFile command="F:/MinGW-W64/mingw64/bin/mingw32-make.exe -f &quot;F:/ANNS/WEAVESS/cmake-build-debug/src/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="F:/MinGW-W64/mingw64/bin/mingw32-make.exe -f &quot;F:/ANNS/WEAVESS/cmake-build-debug/src/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="F:/MinGW-W64/mingw64/bin/mingw32-make.exe -f &quot;F:/ANNS/WEAVESS/cmake-build-debug/src/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="weavess_s">
+				<Option output="F:/ANNS/WEAVESS/cmake-build-debug/src/libweavess_s.dll" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="F:/ANNS/WEAVESS/cmake-build-debug/src"/>
+				<Option object_output="./"/>
+				<Option type="3"/>
+				<Option compiler="gcc"/>
+				<Compiler>
+					<Add option="-DINFO"/>
+					<Add directory="F:/ANNS/WEAVESS/include"/>
+					<Add directory="F:/MinGW/boost_1_73_0"/>
+					<Add directory="F:/MinGW-W64/mingw64/bin/../lib/gcc/x86_64-w64-mingw32/8.1.0/include/c++"/>
+					<Add directory="F:/MinGW-W64/mingw64/bin/../lib/gcc/x86_64-w64-mingw32/8.1.0/include/c++/x86_64-w64-mingw32"/>
+					<Add directory="F:/MinGW-W64/mingw64/bin/../lib/gcc/x86_64-w64-mingw32/8.1.0/include/c++/backward"/>
+					<Add directory="F:/MinGW-W64/mingw64/bin/../lib/gcc/x86_64-w64-mingw32/8.1.0/include"/>
+					<Add directory="F:/MinGW-W64/mingw64/bin/../lib/gcc/x86_64-w64-mingw32/8.1.0/include-fixed"/>
+					<Add directory="F:/MinGW-W64/mingw64/bin/../lib/gcc/x86_64-w64-mingw32/8.1.0/../../../../x86_64-w64-mingw32/include"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="F:/MinGW-W64/mingw64/bin/mingw32-make.exe -f &quot;F:/ANNS/WEAVESS/cmake-build-debug/src/Makefile&quot;  VERBOSE=1 weavess_s"/>
+					<CompileFile command="F:/MinGW-W64/mingw64/bin/mingw32-make.exe -f &quot;F:/ANNS/WEAVESS/cmake-build-debug/src/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="F:/MinGW-W64/mingw64/bin/mingw32-make.exe -f &quot;F:/ANNS/WEAVESS/cmake-build-debug/src/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="F:/MinGW-W64/mingw64/bin/mingw32-make.exe -f &quot;F:/ANNS/WEAVESS/cmake-build-debug/src/Makefile&quot;  VERBOSE=1 clean"/>
+				</MakeCommands>
+			</Target>
+			<Target title="weavess_s/fast">
+				<Option output="F:/ANNS/WEAVESS/cmake-build-debug/src/libweavess_s.dll" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="F:/ANNS/WEAVESS/cmake-build-debug/src"/>
+				<Option object_output="./"/>
+				<Option type="3"/>
+				<Option compiler="gcc"/>
+				<Compiler>
+					<Add option="-DINFO"/>
+					<Add directory="F:/ANNS/WEAVESS/include"/>
+					<Add directory="F:/MinGW/boost_1_73_0"/>
+					<Add directory="F:/MinGW-W64/mingw64/bin/../lib/gcc/x86_64-w64-mingw32/8.1.0/include/c++"/>
+					<Add directory="F:/MinGW-W64/mingw64/bin/../lib/gcc/x86_64-w64-mingw32/8.1.0/include/c++/x86_64-w64-mingw32"/>
+					<Add directory="F:/MinGW-W64/mingw64/bin/../lib/gcc/x86_64-w64-mingw32/8.1.0/include/c++/backward"/>
+					<Add directory="F:/MinGW-W64/mingw64/bin/../lib/gcc/x86_64-w64-mingw32/8.1.0/include"/>
+					<Add directory="F:/MinGW-W64/mingw64/bin/../lib/gcc/x86_64-w64-mingw32/8.1.0/include-fixed"/>
+					<Add directory="F:/MinGW-W64/mingw64/bin/../lib/gcc/x86_64-w64-mingw32/8.1.0/../../../../x86_64-w64-mingw32/include"/>
+				</Compiler>
+				<MakeCommands>
+					<Build command="F:/MinGW-W64/mingw64/bin/mingw32-make.exe -f &quot;F:/ANNS/WEAVESS/cmake-build-debug/src/Makefile&quot;  VERBOSE=1 weavess_s/fast"/>
+					<CompileFile command="F:/MinGW-W64/mingw64/bin/mingw32-make.exe -f &quot;F:/ANNS/WEAVESS/cmake-build-debug/src/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="F:/MinGW-W64/mingw64/bin/mingw32-make.exe -f &quot;F:/ANNS/WEAVESS/cmake-build-debug/src/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="F:/MinGW-W64/mingw64/bin/mingw32-make.exe -f &quot;F:/ANNS/WEAVESS/cmake-build-debug/src/Makefile&quot;  VERBOSE=1 clean"/>
 				</MakeCommands>
 			</Target>
 			<Target title="index_test">
-				<Option output="F:/ANNS/WEAVESS_v1.0/cmake-build-debug/test/index_test.exe" prefix_auto="0" extension_auto="0"/>
-				<Option working_dir="F:/ANNS/WEAVESS_v1.0/cmake-build-debug/test"/>
+				<Option output="F:/ANNS/WEAVESS/cmake-build-debug/test/index_test.exe" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="F:/ANNS/WEAVESS/cmake-build-debug/test"/>
 				<Option object_output="./"/>
 				<Option type="1"/>
 				<Option compiler="gcc"/>
 				<Compiler>
 					<Add option="-DINFO"/>
-					<Add directory="F:/ANNS/WEAVESS_v1.0/include"/>
+					<Add directory="F:/ANNS/WEAVESS/include"/>
 					<Add directory="F:/MinGW/boost_1_73_0"/>
 					<Add directory="F:/MinGW-W64/mingw64/bin/../lib/gcc/x86_64-w64-mingw32/8.1.0/include/c++"/>
 					<Add directory="F:/MinGW-W64/mingw64/bin/../lib/gcc/x86_64-w64-mingw32/8.1.0/include/c++/x86_64-w64-mingw32"/>
@@ -55,21 +151,21 @@
 					<Add directory="F:/MinGW-W64/mingw64/bin/../lib/gcc/x86_64-w64-mingw32/8.1.0/../../../../x86_64-w64-mingw32/include"/>
 				</Compiler>
 				<MakeCommands>
-					<Build command="F:/MinGW-W64/mingw64/bin/mingw32-make.exe -f &quot;F:/ANNS/WEAVESS_v1.0/cmake-build-debug/test/Makefile&quot;  VERBOSE=1 index_test"/>
-					<CompileFile command="F:/MinGW-W64/mingw64/bin/mingw32-make.exe -f &quot;F:/ANNS/WEAVESS_v1.0/cmake-build-debug/test/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
-					<Clean command="F:/MinGW-W64/mingw64/bin/mingw32-make.exe -f &quot;F:/ANNS/WEAVESS_v1.0/cmake-build-debug/test/Makefile&quot;  VERBOSE=1 clean"/>
-					<DistClean command="F:/MinGW-W64/mingw64/bin/mingw32-make.exe -f &quot;F:/ANNS/WEAVESS_v1.0/cmake-build-debug/test/Makefile&quot;  VERBOSE=1 clean"/>
+					<Build command="F:/MinGW-W64/mingw64/bin/mingw32-make.exe -f &quot;F:/ANNS/WEAVESS/cmake-build-debug/test/Makefile&quot;  VERBOSE=1 index_test"/>
+					<CompileFile command="F:/MinGW-W64/mingw64/bin/mingw32-make.exe -f &quot;F:/ANNS/WEAVESS/cmake-build-debug/test/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="F:/MinGW-W64/mingw64/bin/mingw32-make.exe -f &quot;F:/ANNS/WEAVESS/cmake-build-debug/test/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="F:/MinGW-W64/mingw64/bin/mingw32-make.exe -f &quot;F:/ANNS/WEAVESS/cmake-build-debug/test/Makefile&quot;  VERBOSE=1 clean"/>
 				</MakeCommands>
 			</Target>
 			<Target title="index_test/fast">
-				<Option output="F:/ANNS/WEAVESS_v1.0/cmake-build-debug/test/index_test.exe" prefix_auto="0" extension_auto="0"/>
-				<Option working_dir="F:/ANNS/WEAVESS_v1.0/cmake-build-debug/test"/>
+				<Option output="F:/ANNS/WEAVESS/cmake-build-debug/test/index_test.exe" prefix_auto="0" extension_auto="0"/>
+				<Option working_dir="F:/ANNS/WEAVESS/cmake-build-debug/test"/>
 				<Option object_output="./"/>
 				<Option type="1"/>
 				<Option compiler="gcc"/>
 				<Compiler>
 					<Add option="-DINFO"/>
-					<Add directory="F:/ANNS/WEAVESS_v1.0/include"/>
+					<Add directory="F:/ANNS/WEAVESS/include"/>
 					<Add directory="F:/MinGW/boost_1_73_0"/>
 					<Add directory="F:/MinGW-W64/mingw64/bin/../lib/gcc/x86_64-w64-mingw32/8.1.0/include/c++"/>
 					<Add directory="F:/MinGW-W64/mingw64/bin/../lib/gcc/x86_64-w64-mingw32/8.1.0/include/c++/x86_64-w64-mingw32"/>
@@ -79,23 +175,47 @@
 					<Add directory="F:/MinGW-W64/mingw64/bin/../lib/gcc/x86_64-w64-mingw32/8.1.0/../../../../x86_64-w64-mingw32/include"/>
 				</Compiler>
 				<MakeCommands>
-					<Build command="F:/MinGW-W64/mingw64/bin/mingw32-make.exe -f &quot;F:/ANNS/WEAVESS_v1.0/cmake-build-debug/test/Makefile&quot;  VERBOSE=1 index_test/fast"/>
-					<CompileFile command="F:/MinGW-W64/mingw64/bin/mingw32-make.exe -f &quot;F:/ANNS/WEAVESS_v1.0/cmake-build-debug/test/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
-					<Clean command="F:/MinGW-W64/mingw64/bin/mingw32-make.exe -f &quot;F:/ANNS/WEAVESS_v1.0/cmake-build-debug/test/Makefile&quot;  VERBOSE=1 clean"/>
-					<DistClean command="F:/MinGW-W64/mingw64/bin/mingw32-make.exe -f &quot;F:/ANNS/WEAVESS_v1.0/cmake-build-debug/test/Makefile&quot;  VERBOSE=1 clean"/>
+					<Build command="F:/MinGW-W64/mingw64/bin/mingw32-make.exe -f &quot;F:/ANNS/WEAVESS/cmake-build-debug/test/Makefile&quot;  VERBOSE=1 index_test/fast"/>
+					<CompileFile command="F:/MinGW-W64/mingw64/bin/mingw32-make.exe -f &quot;F:/ANNS/WEAVESS/cmake-build-debug/test/Makefile&quot;  VERBOSE=1 &quot;$file&quot;"/>
+					<Clean command="F:/MinGW-W64/mingw64/bin/mingw32-make.exe -f &quot;F:/ANNS/WEAVESS/cmake-build-debug/test/Makefile&quot;  VERBOSE=1 clean"/>
+					<DistClean command="F:/MinGW-W64/mingw64/bin/mingw32-make.exe -f &quot;F:/ANNS/WEAVESS/cmake-build-debug/test/Makefile&quot;  VERBOSE=1 clean"/>
 				</MakeCommands>
 			</Target>
 		</Build>
-		<Unit filename="F:/ANNS/WEAVESS_v1.0/test/IndexTest.cpp">
+		<Unit filename="F:/ANNS/WEAVESS/src/index_component_coarse.cpp">
+			<Option target="weavess"/>
+			<Option target="weavess_s"/>
+		</Unit>
+		<Unit filename="F:/ANNS/WEAVESS/src/index_component_conn.cpp">
+			<Option target="weavess"/>
+			<Option target="weavess_s"/>
+		</Unit>
+		<Unit filename="F:/ANNS/WEAVESS/src/index_component_eva.cpp">
+			<Option target="weavess"/>
+			<Option target="weavess_s"/>
+		</Unit>
+		<Unit filename="F:/ANNS/WEAVESS/src/index_component_init.cpp">
+			<Option target="weavess"/>
+			<Option target="weavess_s"/>
+		</Unit>
+		<Unit filename="F:/ANNS/WEAVESS/src/index_component_load.cpp">
+			<Option target="weavess"/>
+			<Option target="weavess_s"/>
+		</Unit>
+		<Unit filename="F:/ANNS/WEAVESS/src/index_component_prune.cpp">
+			<Option target="weavess"/>
+			<Option target="weavess_s"/>
+		</Unit>
+		<Unit filename="F:/ANNS/WEAVESS/test/IndexTest.cpp">
 			<Option target="index_test"/>
 		</Unit>
-		<Unit filename="F:/ANNS/WEAVESS_v1.0/CMakeLists.txt">
+		<Unit filename="F:/ANNS/WEAVESS/CMakeLists.txt">
 			<Option virtualFolder="CMake Files\"/>
 		</Unit>
-		<Unit filename="F:/ANNS/WEAVESS_v1.0/src/CMakeLists.txt">
+		<Unit filename="F:/ANNS/WEAVESS/src/CMakeLists.txt">
 			<Option virtualFolder="CMake Files\src\"/>
 		</Unit>
-		<Unit filename="F:/ANNS/WEAVESS_v1.0/test/CMakeLists.txt">
+		<Unit filename="F:/ANNS/WEAVESS/test/CMakeLists.txt">
 			<Option virtualFolder="CMake Files\test\"/>
 		</Unit>
 	</Project>

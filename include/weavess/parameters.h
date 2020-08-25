@@ -12,14 +12,14 @@ namespace weavess {
     class Parameters {
     public:
         template<typename T>
-        inline void Set(const std::string &name, const T &val) {
+        inline void set(const std::string &name, const T &val) {
             std::stringstream ss;
             ss << val;
             params[name] = ss.str();
         }
 
         template<typename T>
-        inline T Get(const std::string &name) const {
+        inline T get(const std::string &name) const {
             auto item = params.find(name);
             if (item == params.end()) {
                 throw std::invalid_argument("Invalid paramter name.");
