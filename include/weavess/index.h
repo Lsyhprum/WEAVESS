@@ -86,6 +86,39 @@ namespace weavess {
         unsigned K; //KNN Graph
     };
 
+    class IndexHash {
+    public:
+        int tablenum = 0;
+        int upbits = 0;
+        int codelength = 0;
+        int codelengthshift = 0;
+        int radius = 0;
+
+        typedef std::vector<unsigned int> Codes;
+        typedef std::unordered_map<unsigned int, std::vector<unsigned int> > HashBucket;
+        typedef std::vector<HashBucket> HashTable;
+
+        typedef std::vector<unsigned long> Codes64;
+        typedef std::unordered_map<unsigned long, std::vector<unsigned int> > HashBucket64;
+        typedef std::vector<HashBucket64> HashTable64;
+
+        std::vector<HashTable> htb;
+        std::vector<Codes> BaseCode;
+        std::vector<Codes> QueryCode;
+        std::vector<unsigned int> HammingBallMask;
+
+        std::vector<HashTable64> htb64;
+        std::vector<Codes64> BaseCode64;
+        std::vector<Codes64> QueryCode64;
+        std::vector<unsigned long> HammingBallMask64;
+
+        std::vector<unsigned int> HammingRadius;
+
+        // for statistic info
+        std::vector<unsigned int> VisitBucketNum;
+
+    };
+
     class IndexNSG {
     public:
         unsigned width;
@@ -103,7 +136,7 @@ namespace weavess {
         std::vector<unsigned> eps_;
     };
 
-    class Index : public IndexNSG, public IndexNSSG, public IndexKDTree {
+    class Index : public IndexNSG, public IndexNSSG, public IndexKDTree, public IndexHash {
     public:
         Parameters param_;
         float *data_ = nullptr;

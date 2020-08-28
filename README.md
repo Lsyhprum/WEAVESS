@@ -1,14 +1,12 @@
 # WEAVESS
 
-WEAVESS is a frame for testing the major graph-based approximate nearest neighbor search (ANNs) algorithms.
+WEAVESS is a frame for testing the major graph-based approximate nearest neighbor search (ANNS) algorithms.
 
 ### How to use
 
 ### Building Parameters
 
 #### KGraph
-
-#### EFANNA
 
 * **K** : 'K' of K-NNG
 * **L** : candidate pool size, larger is more accurate but slower, no smaller than K.
@@ -23,12 +21,15 @@ WEAVESS is a frame for testing the major graph-based approximate nearest neighbo
 | Crawl     | 400 | 420 |  12  | 15 | 100 |
 | GloVe-100 | 400 | 420 |  12  | 20 | 200 |
 
+#### EFANNA
+
+
+
 #### NSG
 
-| Dataset |  K  |  L  | iter |  S |  R  |
-|:-------:|:---:|:---:|:----:|:--:|:---:|
-|  SIFT1M | 200 | 200 |  10  | 10 | 100 |
-|  GIST1M | 400 | 400 |  12  | 15 | 100 |
++ **L_nsg** : controls the quality of the NSG, the larger the better.
++ **R_nsg** : controls the index size of the graph, the best R is related to the intrinsic dimension of the dataset.
++ **C_nsg** : controls the maximum candidate pool size during NSG contruction.
 
 | Dataset |  L_nsg |  R_nsg |  C_nsg  |
 |:-------:|:--:|:--:|:---:|
@@ -55,5 +56,34 @@ the larger the better but slower. The `SEARCH_L` cannot be samller than the `SEA
 
 ### TODO
 
+-[x] KGraph
+
+-[ ] IEH
+
+-[x] EFANNA
+
+-[ ] DPG
+
+-[x] NSG
+
+-[x] NSSG
+
+-[ ] NSW
+
+-[ ] HNSW
+
+-[ ] NGT
+
+-[ ] SPTAG
+
+-[ ] FANNG
+
+
+* DPG conn 实现
+* PruneInner，Link 公共代码合并
+* IEH 实现
+* coarse / eva 重构 —— search
+* Eva 重构
 * HNSW
-* IEH
+* 分类算法接口与 IndexBuilder 接口
+* 与原算法实现进行比较

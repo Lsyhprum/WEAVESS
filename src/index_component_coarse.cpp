@@ -5,8 +5,8 @@
 
 namespace weavess {
     void IndexComponentCoarseNNDescent::CoarseInner() {
-        const unsigned iter = index_->param_.get<unsigned>("iter");
-        const unsigned K = index_->param_.get<unsigned>("K");
+        const auto iter = index_->param_.get<unsigned>("iter");
+        const auto K = index_->param_.get<unsigned>("K");
 
         std::mt19937 rng(rand());
 

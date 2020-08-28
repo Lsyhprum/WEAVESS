@@ -37,7 +37,7 @@ namespace weavess {
         virtual void LoadInner(Index *index, char *data_file, Parameters &parameters);
     };
 
-    // init
+    // init - 入口点选择策略
     class IndexComponentInit : public IndexComponent {
     public:
         explicit IndexComponentInit(Index *index) : IndexComponent(index) {}
@@ -45,7 +45,7 @@ namespace weavess {
         virtual void InitInner() = 0;
     };
 
-    // 随机入口点
+    // init - 随机入口点
     class IndexComponentInitRandom : public IndexComponentInit {
     public:
         explicit IndexComponentInitRandom(Index *index) : IndexComponentInit(index) {}
@@ -53,6 +53,7 @@ namespace weavess {
         void InitInner() override;
     };
 
+    // init - KDTree
     class IndexComponentInitKDTree : public IndexComponentInit {
     public:
         explicit IndexComponentInitKDTree(Index *index) : IndexComponentInit(index) {}
@@ -76,7 +77,40 @@ namespace weavess {
         void getMergeLevelNodeList(Node *node, size_t treeid, int deepth);
     };
 
-    // coarse
+    // init - Hash
+    class IndexComponentInitHash : public IndexComponentInit {
+    public:
+        explicit IndexComponentInitHash(Index *index) : IndexComponentInit(index) {}
+
+        void InitInner() override;
+
+    private:
+        typedef std::vector<unsigned int> Codes;
+        typedef std::unordered_map<unsigned int, std::vector<unsigned int> > HashBucket;
+        typedef std::vector<HashBucket> HashTable;
+
+        typedef std::vector<unsigned long> Codes64;
+        typedef std::unordered_map<unsigned long, std::vector<unsigned int> > HashBucket64;
+        typedef std::vector<HashBucket64> HashTable64;
+
+        void verify();
+
+        void LoadCode32(char* filename, std::vector<Codes>& baseAll);
+
+        void LoadCode64(char* filename, std::vector<Codes64>& baseAll);
+
+        void buildIndexImpl();
+
+        void generateMask32();
+
+        void generateMask64();
+
+        void BuildHashTable32(int upbits, int lowbits, std::vector<Codes>& baseAll ,std::vector<HashTable>& tbAll);
+
+        void BuildHashTable64(int upbits, int lowbits, std::vector<Codes64>& baseAll ,std::vector<HashTable64>& tbAll);
+    };
+
+    // coarse — 初始图构建方法
     class IndexComponentCoarse : public IndexComponent {
     public:
         explicit IndexComponentCoarse(Index *index) : IndexComponent(index) {}
@@ -100,7 +134,7 @@ namespace weavess {
         void eval_recall(std::vector<unsigned> &ctrl_points, std::vector<std::vector<unsigned> > &acc_eval_set) ;
     };
 
-    // prune
+    // prune — 剪枝方法
     class IndexComponentPrune : public IndexComponent {
     public:
         explicit IndexComponentPrune(Index *index) : IndexComponent(index) {}
@@ -155,6 +189,26 @@ namespace weavess {
                                   SimpleNeighbor *cut_graph_);
 
         void get_neighbors(const unsigned q, const Parameters &parameter, std::vector<Neighbor> &pool);
+    };
+
+    class IndexComponentPruneDPG : public IndexComponentPrune {
+    public:
+        explicit IndexComponentPruneDPG(Index *index) : IndexComponentPrune(index) {}
+
+        void PruneInner() override;
+
+    private:
+        void sync_prune(unsigned q, std::vector<Neighbor> &pool,
+                        SimpleNeighbor *cut_graph_);
+
+        void Link(const Parameters &parameters, SimpleNeighbor *cut_graph_);
+
+        void get_neighbors(const unsigned q, const Parameters &parameter,
+                           std::vector<Neighbor> &pool);
+
+        void diversify_by_cut();
+
+        void add_backward_edges();
     };
 
     // connect
@@ -225,6 +279,14 @@ namespace weavess {
                          unsigned &distcount) override;
     };
 
+    // hash桶入口点 + NN-Expand
+    class IndexComponentEvaIEH : public IndexComponentEva {
+    public :
+        explicit IndexComponentEvaIEH(Index *index) : IndexComponentEva(index) {}
+
+        void SearchInner(const float *query, const float *x, size_t K, const Parameters &parameters, unsigned *indices, unsigned &distcount) override;
+    };
+
 
     class IndexBuilder {
     public:
@@ -237,11 +299,11 @@ namespace weavess {
         }
 
         enum TYPE {
-            INIT_RAND, INIT_KDT, INIT_IEH,
+            INIT_RAND, INIT_KDT, INIT_HASH,
             COARSE_NN_DESCENT,
-            PRUNE_NSG, PRUNE_NSSG, PRUNE_HNSW,
+            PRUNE_NSG, PRUNE_NSSG, PRUNE_HNSW, PRUNE_DPG,
             CONN_DFS, CONN_NSSG,
-            SEARCH_RAND, SEARCH_NSG
+            SEARCH_RAND, SEARCH_NSG, SEARCH_IEH
         };
 
         IndexBuilder *load(char *data_file, Parameters &parameters) {
@@ -265,6 +327,9 @@ namespace weavess {
                     break;
                 case INIT_KDT:
                     a = new IndexComponentInitKDTree(index);
+                    break;
+                case INIT_HASH:
+                    a = new IndexComponentInitHash(index);
                     break;
                 default:
                     std::cerr << "init index wrong type" << std::endl;
@@ -298,10 +363,12 @@ namespace weavess {
             std::cout << "__PRUNE__" << std::endl;
 
             IndexComponentPrune *a = nullptr;
-            if(type == PRUNE_NSG){
+            if (type == PRUNE_NSG) {
                 a = new IndexComponentPruneNSG(index);
-            }else if (type == PRUNE_NSSG) {
+            } else if (type == PRUNE_NSSG) {
                 a = new IndexComponentPruneNSSG(index);
+            } else if (type == PRUNE_DPG){
+                a = new IndexComponentPruneDPG(index);
             }else{
                 std::cerr << "PRUNE wrong type" << std::endl;
             }
@@ -342,6 +409,9 @@ namespace weavess {
                     break;
                 case SEARCH_NSG:
                     a = new IndexComponentEvaNSG(index);
+                    break;
+                case SEARCH_IEH:
+                    a = new IndexComponentEvaIEH(index);
                     break;
                 default:
                     std::cerr << "coarse KNN wrong type" << std::endl;
