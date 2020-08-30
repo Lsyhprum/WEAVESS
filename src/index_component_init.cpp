@@ -4,19 +4,26 @@
 #include "weavess/index_builder.h"
 
 namespace weavess {
-    void IndexComponentInitRandom::InitInner() {
-        std::cout << index_->n_ << std::endl;
+    // RAND
+    void IndexComponentCoarseKDT::CoarseInner() {
+        std::cout << "base data num : " << index_->n_ << std::endl;
+        std::cout << "query data num : " << index_->query_num_ << std::endl;
+        std::cout << "ground_data num : " << index_->ground_num_ << std::endl;
         std::cout << index_->param_.ToString() << std::endl;
+
         const unsigned L = index_->param_.get<unsigned>("L");
         const unsigned S = index_->param_.get<unsigned>("S");
 
         index_->graph_.reserve(index_->n_);
         std::mt19937 rng(rand());
+
+        // 初始化 graph
         for (unsigned i = 0; i < index_->n_; i++) {
             index_->graph_.push_back(nhood(L, S, rng, (unsigned) index_->n_));
         }
 
 #pragma omp parallel for
+        // 生成随机入口点，即局部连接中初始邻居nn_new, 数量为 S
         for (unsigned i = 0; i < index_->n_; i++) {
             std::vector<unsigned> tmp(S + 1);
 
@@ -30,68 +37,18 @@ namespace weavess {
                                                         index_->data_ + id * index_->dim_,
                                                         (unsigned) index_->dim_);
 
-                index_->graph_[i].pool.push_back(Neighbor(id, dist, true));
+                index_->graph_[i].pool.emplace_back(id, dist, true);
             }
             std::make_heap(index_->graph_[i].pool.begin(), index_->graph_[i].pool.end());
             index_->graph_[i].pool.reserve(L);
         }
     }
 
-
-
-//    void IndexComponentInitKDTree::InitInner() {
-//        float* mean_ = new float[index_->dim_];
-//        float* var_ = new float[index_->dim_];
-//        memset(mean_,0,index_->dim_*sizeof(float));
-//        memset(var_,0,index_->dim_*sizeof(float));
-//
-//        /* Compute mean values.  Only the first SAMPLE_NUM values need to be
-//          sampled to get a good estimate.
-//         */
-//        unsigned cnt = std::min((unsigned)index_->SAMPLE_NUM+1, count);
-//        for (unsigned j = 0; j < cnt; ++j) {
-//            const float* v = index_->data_ + indices[j] * index_->dim_;
-//            for (size_t k=0; k<index_->dim_; ++k) {
-//                mean_[k] += v[k];
-//            }
-//        }
-//        float div_factor = float(1)/cnt;
-//        for (size_t k=0; k<index_->dim_; ++k) {
-//            mean_[k] *= div_factor;
-//        }
-//
-//        /* Compute variances (no need to divide by count). */
-//
-//        for (unsigned j = 0; j < cnt; ++j) {
-//            const float* v = index_->data_ + indices[j] * index_->dim_;
-//            for (size_t k=0; k<index_->dim_; ++k) {
-//                float dist = v[k] - mean_[k];
-//                var_[k] += dist * dist;
-//            }
-//        }
-//
-//        /* Select one of the highest variance indices at random. */
-//        cutdim = selectDivision(rng, var_);
-//
-//        cutval = mean_[cutdim];
-//
-//        unsigned lim1, lim2;
-//
-//        planeSplit(indices, count, cutdim, cutval, lim1, lim2);
-//        //cut the subtree using the id which best balances the tree
-//        if (lim1>count/2) index = lim1;
-//        else if (lim2<count/2) index = lim2;
-//        else index = count/2;
-//
-//        /* If either list is empty, it means that all remaining features
-//         * are identical. Split in the middle to maintain a balanced tree.
-//         */
-//        if ((lim1==count)||(lim2==0)) index = count/2;
-//        delete[] mean_;
-//        delete[] var_;
-//    }
-
+    // HASH
     void IndexComponentInitHash::InitInner() {
+        std::cout << index_->n_ << std::endl;
+        std::cout << index_->param_.ToString() << std::endl;
+
         verify();
 
         buildIndexImpl();
@@ -172,16 +129,16 @@ namespace weavess {
 
         std::cout << "code length is "<<index_->codelength<<std::endl;
 
-        fpath = index_->param_.get<std::string>("qcfile");
-        std::cout << "Loading query code from " << str << std::endl;
-
-        if (index_->codelength <= 32 ){
-            LoadCode32(fpath, index_->QueryCode);
-        }else if(index_->codelength <= 64 ){
-            LoadCode64(fpath, index_->QueryCode64);
-        }else{
-            std::cout<<"code length not supported yet!"<<std::endl;
-        }
+//        fpath = index_->param_.get<std::string>("qcfile");
+//        std::cout << "Loading query code from " << str << std::endl;
+//
+//        if (index_->codelength <= 32 ){
+//            LoadCode32(fpath, index_->QueryCode);
+//        }else if(index_->codelength <= 64 ){
+//            LoadCode64(fpath, index_->QueryCode64);
+//        }else{
+//            std::cout<<"code length not supported yet!"<<std::endl;
+//        }
 
         std::cout << "code length is "<<index_->codelength<<std::endl;
     }

@@ -80,10 +80,8 @@ namespace weavess {
         std::vector<std::pair<Node *, size_t> > mlNodeList;
         std::vector<std::vector<unsigned>> LeafLists;
         omp_lock_t rootlock;
-        bool error_flag;
-        int max_deepth;
-        int ml;   //merge_level
-        unsigned K; //KNN Graph
+        bool error_flag = false;
+        int max_deepth = 0x0fffffff;
     };
 
     class IndexHash {
@@ -138,15 +136,29 @@ namespace weavess {
 
     class Index : public IndexNSG, public IndexNSSG, public IndexKDTree, public IndexHash {
     public:
-        Parameters param_;
         float *data_ = nullptr;
+        float *query_data_ = nullptr;
+        unsigned *ground_data_ = nullptr;
         unsigned n_{};
         unsigned dim_{};
+        unsigned query_num_{};
+        unsigned query_dim_{};
+        unsigned ground_num_{};
+        unsigned ground_dim_{};
 
+        Parameters param_;
         Distance *distance_ = nullptr;
 
+        // init
         std::vector<nhood> graph_;
+        // coarse
         std::vector<std::vector<unsigned> > final_graph_;
+
+        // search_init
+        //std::vector<std::vector<Neighbor> > entry_graph_;
+        //std::vector<nhood> entry_graph_;
+        std::vector<Neighbor> retset;
+
 
         explicit Index() {
             distance_ = new Distance();

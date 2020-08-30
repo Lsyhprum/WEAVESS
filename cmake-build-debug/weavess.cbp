@@ -190,7 +190,7 @@
 			<Option target="weavess"/>
 			<Option target="weavess_s"/>
 		</Unit>
-		<Unit filename="F:/ANNS/WEAVESS/src/index_component_eva.cpp">
+		<Unit filename="F:/ANNS/WEAVESS/src/index_component_entry.cpp">
 			<Option target="weavess"/>
 			<Option target="weavess_s"/>
 		</Unit>
@@ -203,6 +203,14 @@
 			<Option target="weavess_s"/>
 		</Unit>
 		<Unit filename="F:/ANNS/WEAVESS/src/index_component_prune.cpp">
+			<Option target="weavess"/>
+			<Option target="weavess_s"/>
+		</Unit>
+		<Unit filename="F:/ANNS/WEAVESS/src/index_component_route.cpp">
+			<Option target="weavess"/>
+			<Option target="weavess_s"/>
+		</Unit>
+		<Unit filename="F:/ANNS/WEAVESS/src/index_component_search.cpp">
 			<Option target="weavess"/>
 			<Option target="weavess_s"/>
 		</Unit>
