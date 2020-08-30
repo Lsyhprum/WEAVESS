@@ -31,13 +31,13 @@ namespace weavess {
         Index *index_ = nullptr;
     };
 
-    // load
+    // load - 加载数据
     class IndexComponentLoad : public IndexComponent {
     public :
-        virtual void LoadInner(Index *index, char *data_file, Parameters &parameters);
+        virtual void LoadInitInner(Index *index, char *data_file, char *query_file, char *ground_file, Parameters &parameters);
     };
 
-    // init
+    // init - 初始图入口点策略, 初始化全局 Index
     class IndexComponentInit : public IndexComponent {
     public:
         explicit IndexComponentInit(Index *index) : IndexComponent(index) {}
@@ -45,7 +45,7 @@ namespace weavess {
         virtual void InitInner() = 0;
     };
 
-    // 随机入口点
+    // init - RAND
     class IndexComponentInitRandom : public IndexComponentInit {
     public:
         explicit IndexComponentInitRandom(Index *index) : IndexComponentInit(index) {}
@@ -53,30 +53,40 @@ namespace weavess {
         void InitInner() override;
     };
 
-    class IndexComponentInitKDTree : public IndexComponentInit {
+    // init - Hash
+    class IndexComponentInitHash : public IndexComponentInit {
     public:
-        explicit IndexComponentInitKDTree(Index *index) : IndexComponentInit(index) {}
+        explicit IndexComponentInitHash(Index *index) : IndexComponentInit(index) {}
 
         void InitInner() override;
 
     private:
-        void
-        planeSplit(unsigned *indices, unsigned count, unsigned cutdim, float cutval, unsigned &lim1, unsigned &lim2);
+        typedef std::vector<unsigned int> Codes;
+        typedef std::unordered_map<unsigned int, std::vector<unsigned int> > HashBucket;
+        typedef std::vector<HashBucket> HashTable;
 
-        int selectDivision(std::mt19937 &rng, float *v);
+        typedef std::vector<unsigned long> Codes64;
+        typedef std::unordered_map<unsigned long, std::vector<unsigned int> > HashBucket64;
+        typedef std::vector<HashBucket64> HashTable64;
 
-        void DFSbuild(Node *node, std::mt19937 &rng, unsigned *indices, unsigned count, unsigned offset);
+        void verify();
 
-        void DFStest(unsigned level, unsigned dim, Node *node);
+        void LoadCode32(char* filename, std::vector<Codes>& baseAll);
 
-        Node *SearchToLeaf(Node *node, size_t id);
+        void LoadCode64(char* filename, std::vector<Codes64>& baseAll);
 
-        void mergeSubGraphs(size_t treeid, Node *node);
+        void buildIndexImpl();
 
-        void getMergeLevelNodeList(Node *node, size_t treeid, int deepth);
+        void generateMask32();
+
+        void generateMask64();
+
+        void BuildHashTable32(int upbits, int lowbits, std::vector<Codes>& baseAll ,std::vector<HashTable>& tbAll);
+
+        void BuildHashTable64(int upbits, int lowbits, std::vector<Codes64>& baseAll ,std::vector<HashTable64>& tbAll);
     };
 
-    // coarse
+    // coarse — 初始图构建方法
     class IndexComponentCoarse : public IndexComponent {
     public:
         explicit IndexComponentCoarse(Index *index) : IndexComponent(index) {}
@@ -84,6 +94,7 @@ namespace weavess {
         virtual void CoarseInner() = 0;
     };
 
+    // coarse NN
     class IndexComponentCoarseNNDescent : public IndexComponentCoarse {
     public:
         explicit IndexComponentCoarseNNDescent(Index *index) : IndexComponentCoarse(index) {}
@@ -100,7 +111,33 @@ namespace weavess {
         void eval_recall(std::vector<unsigned> &ctrl_points, std::vector<std::vector<unsigned> > &acc_eval_set) ;
     };
 
-    // prune
+    // coarse KDT
+    class IndexComponentCoarseKDT : public IndexComponentCoarse {
+    public:
+        explicit IndexComponentCoarseKDT(Index *index) : IndexComponentCoarse(index) {}
+
+        void CoarseInner();
+
+    private:
+        void meanSplit(std::mt19937& rng, unsigned* indices, unsigned count, unsigned& index, unsigned& cutdim, float& cutval);
+
+        void planeSplit(unsigned *indices, unsigned count, unsigned cutdim, float cutval, unsigned &lim1, unsigned &lim2);
+
+        int selectDivision(std::mt19937 &rng, float *v);
+
+        void DFSbuild(Index::Node *node, std::mt19937 &rng, unsigned *indices, unsigned count, unsigned offset);
+
+        void DFStest(unsigned level, unsigned dim, Index::Node *node);
+
+        Index::Node *SearchToLeaf(Index::Node *node, size_t id);
+
+        void mergeSubGraphs(size_t treeid, Index::Node *node);
+
+        void getMergeLevelNodeList(Index::Node *node, size_t treeid, int deepth);
+    };
+
+
+    // prune — 剪枝方法
     class IndexComponentPrune : public IndexComponent {
     public:
         explicit IndexComponentPrune(Index *index) : IndexComponent(index) {}
@@ -157,6 +194,33 @@ namespace weavess {
         void get_neighbors(const unsigned q, const Parameters &parameter, std::vector<Neighbor> &pool);
     };
 
+    class IndexComponentPruneDPG : public IndexComponentPrune {
+    public:
+        explicit IndexComponentPruneDPG(Index *index) : IndexComponentPrune(index) {}
+
+        void PruneInner() override;
+
+    private:
+        void sync_prune(unsigned q, std::vector<Neighbor> &pool,
+                        SimpleNeighbor *cut_graph_);
+
+        void Link(const Parameters &parameters, SimpleNeighbor *cut_graph_);
+
+        void get_neighbors(const unsigned q, const Parameters &parameter,
+                           std::vector<Neighbor> &pool);
+
+        void diversify_by_cut();
+
+        void add_backward_edges();
+    };
+
+    class IndexComponentRefineNNDescent : public IndexComponentPrune {
+    public:
+        explicit IndexComponentRefineNNDescent(Index *index) : IndexComponentPrune(index) {}
+
+        void PruneInner() override;
+    };
+
     // connect
     class IndexComponentConn : public IndexComponent {
     public:
@@ -195,34 +259,76 @@ namespace weavess {
         void DFS_expand(const Parameters &parameter);
     };
 
-    // search
-    class IndexComponentEva : public IndexComponent {
+    // entry
+    class IndexComponentEntry : public IndexComponent{
     public:
-        explicit IndexComponentEva(Index *index) : IndexComponent(index) {}
+        explicit IndexComponentEntry(Index *index) : IndexComponent(index) {}
 
-        void EvaInner(char *query_file, char *ground_truth_file);
+        virtual void EntryInner(unsigned query_id) = 0;
+    };
+
+    class IndexComponentEntryRand : public IndexComponentEntry{
+    public:
+        explicit IndexComponentEntryRand(Index *index) : IndexComponentEntry(index) {}
+
+        void EntryInner(unsigned query_id) override;
+    };
+
+    class IndexComponentEntryKDT : public IndexComponentEntry{
+    public:
+        explicit IndexComponentEntryKDT(Index *index) : IndexComponentEntry(index) {}
+
+        void EntryInner(unsigned query_id) override;
+    };
+
+    // route
+    class IndexComponentRoute : public IndexComponent {
+    public :
+        explicit IndexComponentRoute(Index *index) : IndexComponent(index) {}
+
+        virtual void RouteInner(unsigned query_id, unsigned K, unsigned *indices) = 0;
+    };
+
+    class IndexComponentRouteGreedy : public IndexComponentRoute {
+    public:
+        explicit IndexComponentRouteGreedy(Index *index) : IndexComponentRoute(index) {}
+
+        void RouteInner(unsigned query_id, unsigned K, unsigned *indices) override;
+    };
+
+    // search
+    class IndexComponentSearch : public IndexComponent {
+    public:
+        explicit IndexComponentSearch(Index *index) : IndexComponent(index) {}
+
+        void EvaInner();
 
         virtual void
-        SearchInner(const float *query, const float *x, size_t K, const Parameters &parameters, unsigned *indices,
-                    unsigned &distcount) = 0;
+        SearchInner(unsigned query_id, size_t K, unsigned *indices, unsigned &distcount) = 0;
     };
 
     // 随机入口点 + 贪心
-    class IndexComponentEvaRandom : public IndexComponentEva {
+    class IndexComponentSearchRandom : public IndexComponentSearch {
     public:
-        explicit IndexComponentEvaRandom(Index *index) : IndexComponentEva(index) {}
+        explicit IndexComponentSearchRandom(Index *index) : IndexComponentSearch(index) {}
 
-        void SearchInner(const float *query, const float *x, size_t K, const Parameters &parameters, unsigned *indices,
-                         unsigned &distcount) override;
+        void SearchInner(unsigned query_id, size_t K, unsigned *indices, unsigned &distcount) override;
     };
 
     // 中点入口点 + 贪心
-    class IndexComponentEvaNSG : public IndexComponentEva {
+    class IndexComponentSearchNSG : public IndexComponentSearch {
     public:
-        explicit IndexComponentEvaNSG(Index *index) : IndexComponentEva(index) {}
+        explicit IndexComponentSearchNSG(Index *index) : IndexComponentSearch(index) {}
 
-        void SearchInner(const float *query, const float *x, size_t K, const Parameters &parameters, unsigned *indices,
-                         unsigned &distcount) override;
+        void SearchInner(unsigned query_id, size_t K, unsigned *indices, unsigned &distcount) override;
+    };
+
+    // hash桶入口点 + NN-Expand
+    class IndexComponentSearchIEH : public IndexComponentSearch {
+    public :
+        explicit IndexComponentSearchIEH(Index *index) : IndexComponentSearch(index) {}
+
+        void SearchInner(unsigned query_id, size_t K, unsigned *indices, unsigned &distcount) override;
     };
 
 
@@ -237,18 +343,22 @@ namespace weavess {
         }
 
         enum TYPE {
-            INIT_RAND, INIT_KDT, INIT_IEH,
-            COARSE_NN_DESCENT,
-            PRUNE_NSG, PRUNE_NSSG, PRUNE_HNSW,
+            INIT_RAND,
+            COARSE_NN_DESCENT, COARSE_KDT, COARSE_HASH,
+            PRUNE_NSG, PRUNE_NSSG, PRUNE_HNSW, PRUNE_DPG, REFINE_NN_DESCENT,
             CONN_DFS, CONN_NSSG,
-            SEARCH_RAND, SEARCH_NSG
+            ENTRY_RAND, ENTRY_KDT,
+            SEARCH_NSG, SEARCH_IEH,
+            ROUTER_GREEDY
         };
 
-        IndexBuilder *load(char *data_file, Parameters &parameters) {
+        IndexBuilder *load(char *data_file, char *query_file, char *ground_file, Parameters &parameters) {
             std::cout << "__Load Data__" << std::endl;
 
             auto *a = new IndexComponentLoad();
-            a->LoadInner(index, data_file, parameters);
+            a->LoadInitInner(index, data_file, query_file, ground_file, parameters);
+
+            e = std::chrono::high_resolution_clock::now();
 
             return this;
         }
@@ -263,14 +373,13 @@ namespace weavess {
                 case INIT_RAND:
                     a = new IndexComponentInitRandom(index);
                     break;
-                case INIT_KDT:
-                    a = new IndexComponentInitKDTree(index);
-                    break;
                 default:
                     std::cerr << "init index wrong type" << std::endl;
             }
 
             a->InitInner();
+
+            e = std::chrono::high_resolution_clock::now();
 
             return this;
         }
@@ -283,6 +392,8 @@ namespace weavess {
                 case COARSE_NN_DESCENT:
                     a = new IndexComponentCoarseNNDescent(index);
                     break;
+                case COARSE_KDT:
+                    a = new IndexComponentCoarseKDT(index);
                 default:
                     std::cerr << "coarse KNN wrong type" << std::endl;
             }
@@ -294,14 +405,18 @@ namespace weavess {
             return this;
         }
 
-        IndexBuilder *prune(TYPE type) {
+        IndexBuilder *refine(TYPE type) {
             std::cout << "__PRUNE__" << std::endl;
 
             IndexComponentPrune *a = nullptr;
-            if(type == PRUNE_NSG){
+            if (type == PRUNE_NSG) {
                 a = new IndexComponentPruneNSG(index);
-            }else if (type == PRUNE_NSSG) {
+            } else if (type == PRUNE_NSSG) {
                 a = new IndexComponentPruneNSSG(index);
+            } else if (type == PRUNE_DPG){
+                a = new IndexComponentPruneDPG(index);
+            } else if (type == REFINE_NN_DESCENT) {
+                a = new IndexComponentRefineNNDescent(index);
             }else{
                 std::cerr << "PRUNE wrong type" << std::endl;
             }
@@ -332,22 +447,76 @@ namespace weavess {
             return this;
         }
 
-        IndexBuilder *eva(TYPE type, char *query_data, char *ground_data) {
-            std::cout << "__search__" << std::endl;
+        IndexBuilder *eva(TYPE entry_type, TYPE route_type) {
+            std::cout << "__EVA__" << std::endl;
 
-            IndexComponentEva *a = nullptr;
-            switch (type) {
-                case SEARCH_RAND:
-                    a = new IndexComponentEvaRandom(index);
-                    break;
-                case SEARCH_NSG:
-                    a = new IndexComponentEvaNSG(index);
-                    break;
-                default:
-                    std::cerr << "coarse KNN wrong type" << std::endl;
+            unsigned K = 50;
+            unsigned L_start = 50;
+            unsigned L_end = 500;
+            unsigned experiment_num = 15;
+            unsigned LI = (L_end - L_start) / experiment_num;
+
+
+            for (unsigned L = L_start; L <= L_end; L += LI) {
+                std::cout << "__ENTRY & Search__" << std::endl;
+                if (L < K) {
+                    std::cout << "search_L cannot be smaller than search_K! " << std::endl;
+                    exit(-1);
+                }
+
+                index->param_.set<unsigned>("L_search", L);
+                auto s1 = std::chrono::high_resolution_clock::now();
+                std::vector<std::vector<unsigned>> res;
+                unsigned distcount = 0;
+
+                std::cout << "__SEARCH__" << std::endl;
+                for (unsigned i = 0; i < index->query_num_; i++) {
+                    std::vector<unsigned> tmp(K);
+
+                    IndexComponentEntry *a = nullptr;
+                    if(entry_type == ENTRY_RAND){
+                        a = new IndexComponentEntryRand(index);
+                    }else{
+                        std::cerr << "entry wrong type" << std::endl;
+                        exit(-1);
+                    }
+                    a->EntryInner(i);
+
+                    IndexComponentRoute *b = nullptr;
+
+                    if(route_type == ROUTER_GREEDY) {
+                        b = new IndexComponentRouteGreedy(index);
+                    }else{
+                        std::cerr << "route wrong type" << std::endl;
+                        exit(-1);
+                    }
+                    b->RouteInner(i, K, tmp.data());
+
+                    res.push_back(tmp);
+                }
+
+                auto e1 = std::chrono::high_resolution_clock::now();
+                std::chrono::duration<double> diff = e1 - s1;
+                std::cout << "search time: " << diff.count() << "\n";
+
+                //float speedup = (float)(index_->n_ * query_num) / (float)distcount;
+                std::cout << "DistCount: " << distcount << std::endl;
+                //结果评估
+                int cnt = 0;
+                for (unsigned i = 0; i < index->ground_num_; i++) {
+                    for (unsigned j = 0; j < K; j++) {
+                        unsigned k = 0;
+                        for (; k < K; k++) {
+                            if (res[i][j] == index->ground_data_[i * index->ground_dim_ + k])
+                                break;
+                        }
+                        if (k == K)
+                            cnt++;
+                    }
+                }
+                float acc = 1 - (float) cnt / (index->ground_num_ * K);
+                std::cout << K << " NN accuracy: " << acc << std::endl;
             }
-
-            a->EvaInner(query_data, ground_data);
 
             e = std::chrono::high_resolution_clock::now();
 

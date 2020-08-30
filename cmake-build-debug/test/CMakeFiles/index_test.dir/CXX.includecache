@@ -37,6 +37,8 @@ utility
 -
 mmcobj.h
 -
+queue
+-
 stack
 -
 boost/dynamic_bitset.hpp
