@@ -85,10 +85,8 @@ F:/ANNS/WEAVESS/src/weavess/index_builder.h
 F:/ANNS/WEAVESS/src/index_component_entry.cpp
 weavess/index_builder.h
 F:/ANNS/WEAVESS/src/weavess/index_builder.h
-
-F:/ANNS/WEAVESS/src/index_component_init.cpp
-weavess/index_builder.h
-F:/ANNS/WEAVESS/src/weavess/index_builder.h
+functional
+-
 
 F:/ANNS/WEAVESS/src/index_component_load.cpp
 weavess/index.h
@@ -96,15 +94,11 @@ F:/ANNS/WEAVESS/src/weavess/index.h
 weavess/index_builder.h
 F:/ANNS/WEAVESS/src/weavess/index_builder.h
 
-F:/ANNS/WEAVESS/src/index_component_prune.cpp
+F:/ANNS/WEAVESS/src/index_component_refine.cpp
 weavess/index_builder.h
 F:/ANNS/WEAVESS/src/weavess/index_builder.h
 
 F:/ANNS/WEAVESS/src/index_component_route.cpp
-weavess/index_builder.h
-F:/ANNS/WEAVESS/src/weavess/index_builder.h
-
-F:/ANNS/WEAVESS/src/index_component_search.cpp
 weavess/index_builder.h
 F:/ANNS/WEAVESS/src/weavess/index_builder.h
 

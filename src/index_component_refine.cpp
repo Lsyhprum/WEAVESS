@@ -4,7 +4,7 @@
 #include "weavess/index_builder.h"
 
 namespace weavess {
-    // NSG
+    // NSG & NSSG
     void IndexComponentPruneNSG::PruneInner() {
         auto range = index_->param_.get<unsigned>("R_nsg");
 
@@ -25,6 +25,46 @@ namespace weavess {
             for (unsigned j = 0; j < pool_size; j++) {
                 index_->final_graph_[i][j] = pool[j].id;
             }
+        }
+    }
+
+    // NSG
+    void IndexComponentPruneNSG::Link(const Parameters &parameters, SimpleNeighbor *cut_graph_) {
+        /*
+        std::cout << " graph link" << std::endl;
+        unsigned progress=0;
+        unsigned percent = 100;
+        unsigned step_size = nd_/percent;
+        std::mutex progress_lock;
+        */
+        unsigned range = parameters.get<unsigned>("R_nsg");
+        std::vector<std::mutex> locks(index_->n_);
+
+#pragma omp parallel
+        {
+            // unsigned cnt = 0;
+            std::vector<Neighbor> pool, tmp;
+            boost::dynamic_bitset<> flags{index_->n_, 0};
+#pragma omp for schedule(dynamic, 100)
+            for (unsigned n = 0; n < index_->n_; ++n) {
+                pool.clear();
+                tmp.clear();
+                flags.reset();
+                get_neighbors(index_->data_ + index_->dim_ * n, parameters, flags, tmp, pool);
+                sync_prune(n, pool, parameters, flags, cut_graph_);
+                /*
+              cnt++;
+              if(cnt % step_size == 0){
+                LockGuard g(progress_lock);
+                std::cout<<progress++ <<"/"<< percent << " completed" << std::endl;
+                }
+                */
+            }
+        }
+
+#pragma omp for schedule(dynamic, 100)
+        for (unsigned n = 0; n < index_->n_; ++n) {
+            InterInsert(n, range, locks, cut_graph_);
         }
     }
 
@@ -303,47 +343,7 @@ namespace weavess {
         }
     }
 
-    void IndexComponentPruneNSG::Link(const Parameters &parameters, SimpleNeighbor *cut_graph_) {
-        /*
-        std::cout << " graph link" << std::endl;
-        unsigned progress=0;
-        unsigned percent = 100;
-        unsigned step_size = nd_/percent;
-        std::mutex progress_lock;
-        */
-        unsigned range = parameters.get<unsigned>("R_nsg");
-        std::vector<std::mutex> locks(index_->n_);
-
-#pragma omp parallel
-        {
-            // unsigned cnt = 0;
-            std::vector<Neighbor> pool, tmp;
-            boost::dynamic_bitset<> flags{index_->n_, 0};
-#pragma omp for schedule(dynamic, 100)
-            for (unsigned n = 0; n < index_->n_; ++n) {
-                pool.clear();
-                tmp.clear();
-                flags.reset();
-                get_neighbors(index_->data_ + index_->dim_ * n, parameters, flags, tmp, pool);
-                sync_prune(n, pool, parameters, flags, cut_graph_);
-                /*
-              cnt++;
-              if(cnt % step_size == 0){
-                LockGuard g(progress_lock);
-                std::cout<<progress++ <<"/"<< percent << " completed" << std::endl;
-                }
-                */
-            }
-        }
-
-#pragma omp for schedule(dynamic, 100)
-        for (unsigned n = 0; n < index_->n_; ++n) {
-            InterInsert(n, range, locks, cut_graph_);
-        }
-    }
-
     // NSSG
-
     void IndexComponentPruneNSSG::Link(const Parameters &parameters, SimpleNeighbor *cut_graph_) {
         unsigned range = parameters.get<unsigned>("R_nsg");
         std::vector<std::mutex> locks(index_->n_);
@@ -454,7 +454,6 @@ namespace weavess {
         }
     }
 
-    // 冗余待修改
     void IndexComponentPruneNSSG::sync_prune(unsigned q, std::vector<Neighbor> &pool,
                               const Parameters &parameters, float threshold,
                               SimpleNeighbor *cut_graph_) {
@@ -462,6 +461,7 @@ namespace weavess {
         index_->width = range;
         unsigned start = 0;
 
+        // 重复 ？
         boost::dynamic_bitset<> flags{index_->n_, 0};
         for (unsigned i = 0; i < pool.size(); ++i) {
             flags[pool[i].id] = 1;
@@ -511,167 +511,199 @@ namespace weavess {
         }
     }
 
-    void IndexComponentPruneNSSG::get_neighbors(const unsigned q, const Parameters &parameter,
-                                 std::vector<Neighbor> &pool) {
-        boost::dynamic_bitset<> flags{index_->n_, 0};
-        auto L = parameter.get<unsigned>("L_nsg");
-        flags[q] = true;
-        for (unsigned i = 0; i < index_->final_graph_[q].size(); i++) {
-            unsigned nid = index_->final_graph_[q][i];
-            for (unsigned nn = 0; nn < index_->final_graph_[nid].size(); nn++) {
-                unsigned nnid = index_->final_graph_[nid][nn];
-                if (flags[nnid]) continue;
-                flags[nnid] = true;
-                float dist = index_->distance_->compare(index_->data_ + index_->dim_ * q,
-                                                index_->data_ + index_->dim_ * nnid, index_->dim_);
-                pool.push_back(Neighbor(nnid, dist, true));
-                if (pool.size() >= L) break;
-            }
-            if (pool.size() >= L) break;
-        }
-    }
 
     // DPG
     void IndexComponentPruneDPG::PruneInner() {
-//        auto L = index_->param_.get<unsigned>("L_dpg"); // 待修改 —— 当参数传入
-//
-//        unsigned edge_num = L / 2;
-//
-//        auto *cut_graph_ = new SimpleNeighbor[index_->n_ * (size_t)edge_num];
-//
-//        Link(index_->param_, cut_graph_);
-//
-//        index_->final_graph_.resize(index_->n_);
-//
-//        for (size_t i = 0; i < index_->n_; i++) {
-//            SimpleNeighbor *pool = cut_graph_ + i * (size_t)edge_num;
-//            unsigned pool_size = 0;
-//            for (unsigned j = 0; j < edge_num; j++) {
-//                if (pool[j].distance == -1) break;
-//                pool_size = j;
-//            }
-//            pool_size++;
-//            index_->final_graph_[i].resize(pool_size);
-//            for (unsigned j = 0; j < pool_size; j++) {
-//                index_->final_graph_[i][j] = pool[j].id;
-//            }
-//        }
+        // 通过修改 K 确定 L_dpg
+        //auto L = index_->param_.get<unsigned>("L_dpg"); // 待修改 —— 当参数传入
+        auto K = index_->param_.get<unsigned>("K");
+
+        unsigned edge_num = K / 2;
+
+        auto *cut_graph_ = new SimpleNeighbor[index_->n_ * (size_t)edge_num];
+
+        Link(index_->param_, cut_graph_);
+
+        index_->final_graph_.resize(index_->n_);
+
+        for (size_t i = 0; i < index_->n_; i++) {
+            SimpleNeighbor *pool = cut_graph_ + i * (size_t)edge_num;
+            unsigned pool_size = 0;
+            for (unsigned j = 0; j < edge_num; j++) {
+                if (pool[j].distance == -1) break;
+                pool_size = j;
+            }
+            pool_size++;
+            index_->final_graph_[i].resize(pool_size);
+            for (unsigned j = 0; j < pool_size; j++) {
+                index_->final_graph_[i][j] = pool[j].id;
+            }
+        }
     }
-//
-//    void IndexComponentPruneDPG::Link(const Parameters &parameters, SimpleNeighbor *cut_graph_) {
-//        std::vector<std::mutex> locks(index_->n_);
-//
-//#pragma omp parallel
-//        {
-//            // unsigned cnt = 0;
-//            std::vector<Neighbor> pool;
-////            boost::dynamic_bitset<> flags{index_->n_, 0};
-//#pragma omp for schedule(dynamic, 100)
-//            for (unsigned n = 0; n < index_->n_; ++n) {
-//                pool.clear();
-////                tmp.clear();
-////                flags.reset();
-//                //get_neighbors(n, parameters, pool);
-//                sync_prune(n, pool, cut_graph_);
-//                /*
-//              cnt++;
-//              if(cnt % step_size == 0){
-//                LockGuard g(progress_lock);
-//                std::cout<<progress++ <<"/"<< percent << " completed" << std::endl;
-//                }
-//                */
-//            }
-//        }
-//
-//#pragma omp for schedule(dynamic, 100)
-////        for (unsigned n = 0; n < index_->n_; ++n) {
-////            InterInsert(n, range, locks, cut_graph_);
-////        }
-//    }
-//
-//    void IndexComponentPruneDPG::get_neighbors(const unsigned q, const Parameters &parameter,
-//                                                std::vector<Neighbor> &pool) {
-//        boost::dynamic_bitset<> flags{index_->n_, 0};
-//        auto L = parameter.get<unsigned>("L_dpg");
-//        for(unsigned i = 0; i < index_->final_graph_[q].size(); i ++){
-//            unsigned nid = index_->final_graph_[q][i];
-//            for (unsigned nn = 0; nn < index_->final_graph_[nid].size(); nn++) {
-//                unsigned nnid = index_->final_graph_[nid][nn];
-//                if (flags[nnid]) continue;
-//                flags[nnid] = true;
-//                float dist = index_->distance_->compare(index_->data_ + index_->dim_ * q,
-//                                                        index_->data_ + index_->dim_ * nnid, index_->dim_);
-//                pool.push_back(Neighbor(nnid, dist, true));
-//                if (pool.size() >= L) break;
-//            }
-//            if (pool.size() >= L) break;
-//
-//        }
-//    }
-//
-//    void IndexComponentPruneDPG::sync_prune(unsigned q, SimpleNeighbor *cut_graph_) {
-//        const auto edge_num = index_->param_.get<unsigned>("L_dpg");
-//
-//        // diversify_by_cut
-//        std::vector<Neighbor> pool;
-//        std::vector<int> hit;
-//
-//        for(unsigned nn = 0; nn < index_->final_graph_[q].size(); nn ++){
-//            unsigned id = index_->final_graph_[q][nn];
-//            float dist =
-//                    index_->distance_->compare(index_->data_ + index_->dim_ * (size_t)q,
-//                                               index_->data_ + index_->dim_ * (size_t)id, (unsigned)index_->dim_);
-//            pool.emplace_back(id, dist, true);
-//
-//            hit.push_back(0);
-//        }
-//
-//        // delete ?????
+
+    void IndexComponentPruneDPG::Link(const Parameters &parameters, SimpleNeighbor *cut_graph_) {
+        auto K = index_->param_.get<unsigned>("K");
+
+        unsigned edge_num = K / 2;
+
+        std::vector<std::mutex> locks(index_->n_);
+
+#pragma omp parallel
+        {
+#pragma omp for schedule(dynamic, 100)
+            for (unsigned n = 0; n < index_->n_; ++n) {
+                sync_prune(n, cut_graph_);
+                /*
+              cnt++;
+              if(cnt % step_size == 0){
+                LockGuard g(progress_lock);
+                std::cout<<progress++ <<"/"<< percent << " completed" << std::endl;
+                }
+                */
+            }
+        }
+
+#pragma omp for schedule(dynamic, 100)
+        for (unsigned n = 0; n < index_->n_; ++n) {
+            InterInsert(n, edge_num, locks, cut_graph_);
+        }
+    }
+
+    void IndexComponentPruneDPG::InterInsert(unsigned n, unsigned range, std::vector<std::mutex> &locks, SimpleNeighbor *cut_graph_) {
+        SimpleNeighbor *src_pool = cut_graph_ + (size_t)n * (size_t)range;
+        for (size_t i = 0; i < range; i++) {
+            if (src_pool[i].distance == -1) break;
+
+            SimpleNeighbor sn(n, src_pool[i].distance);
+            size_t des = src_pool[i].id;
+            SimpleNeighbor *des_pool = cut_graph_ + des * (size_t)range;
+
+            std::vector<SimpleNeighbor> temp_pool;
+            int dup = 0;
+            {
+                LockGuard guard(locks[des]);
+                for (size_t j = 0; j < range; j++) {
+                    if (des_pool[j].distance == -1) break;
+                    if (n == des_pool[j].id) {
+                        dup = 1;
+                        break;
+                    }
+                    temp_pool.push_back(des_pool[j]);
+                }
+            }
+            if (dup) continue;
+
+            temp_pool.push_back(sn);
+            if (temp_pool.size() > range) {
+                std::vector<SimpleNeighbor> result;
+                unsigned start = 0;
+                std::sort(temp_pool.begin(), temp_pool.end());
+                result.push_back(temp_pool[start]);
+                while (result.size() < range && (++start) < temp_pool.size()) {
+                    auto &p = temp_pool[start];
+                    bool occlude = false;
+                    for (unsigned t = 0; t < result.size(); t++) {
+                        if (p.id == result[t].id) {
+                            occlude = true;
+                            break;
+                        }
+                        float djk = index_->distance_->compare(index_->data_ + index_->dim_ * (size_t)result[t].id,
+                                                               index_->data_ + index_->dim_ * (size_t)p.id,
+                                                               (unsigned)index_->dim_);
+                        if (djk < p.distance /* dik */) {
+                            occlude = true;
+                            break;
+                        }
+                    }
+                    if (!occlude) result.push_back(p);
+                }
+                {
+                    LockGuard guard(locks[des]);
+                    for (unsigned t = 0; t < result.size(); t++) {
+                        des_pool[t] = result[t];
+                    }
+                }
+            } else {
+                LockGuard guard(locks[des]);
+                for (unsigned t = 0; t < range; t++) {
+                    if (des_pool[t].distance == -1) {
+                        des_pool[t] = sn;
+                        if (t + 1 < range) des_pool[t + 1].distance = -1;
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
+    void IndexComponentPruneDPG::sync_prune(unsigned q, SimpleNeighbor *cut_graph_) {
+        const auto K = index_->param_.get<unsigned>("K");
+
+        unsigned edge_num = K / 2;
+
+        std::vector<Neighbor> pool;
+        std::vector<int> hit;
+
+        for(unsigned nn = 0; nn < index_->final_graph_[q].size(); nn ++){
+            unsigned id = index_->final_graph_[q][nn];
+            float dist =
+                    index_->distance_->compare(index_->data_ + index_->dim_ * (size_t)q,
+                                               index_->data_ + index_->dim_ * (size_t)id, (unsigned)index_->dim_);
+            pool.emplace_back(id, dist, true);
+
+            hit.push_back(0);
+        }
+
 //        std::sort(pool.begin(), pool.end());
 //        unsigned start = 0;
-//        std::vector<Neighbor> result;
+        std::vector<Neighbor> result;
 //        if (pool[start].id == q) start++;
 //        result.push_back(pool[start]);
-//
-//        for(int i = 0; i < pool.size() - 1; i ++){
-//            unsigned aid = pool[i].id;
-//            for(int j = i + 1; j < pool.size(); j ++){
-//                unsigned bid = pool[j].id;
-//
-//                float dist =
-//                        index_->distance_->compare(index_->data_ + index_->dim_ * (size_t)aid,
-//                                                   index_->data_ + index_->dim_ * (size_t)bid, (unsigned)index_->dim_);
-//                if(dist < pool[j].distance){
-//                    hit[j] ++;
-//                }
-//            }
-//        }
-//
-//        std::vector<int> tmp_hit;
-//
-//        for(const auto &i : hit)
-//            tmp_hit.push_back(i);
-//
-//        std::sort(tmp_hit.begin(), tmp_hit.end());
-//
-//        int cut = tmp_hit[edge_num];
-//
-//        for(int i = 0; i < pool.size(); i ++){
-//            if(hit[i] <= cut)
-//                result.push_back(pool[i]);
-//        }
-//
-//        SimpleNeighbor *des_pool = cut_graph_ + (size_t)q * (size_t)edge_num;
-//        for (size_t t = 0; t < result.size(); t++) {
-//            des_pool[t].id = result[t].id;
-//            des_pool[t].distance = result[t].distance;
-//        }
-//        if (result.size() < edge_num) {
-//            des_pool[result.size()].distance = -1;
-//        }
-//    }
+
+        for(int i = 0; i < pool.size() - 1; i ++){
+            unsigned aid = pool[i].id;
+            for(int j = i + 1; j < pool.size(); j ++){
+                if (i == j)
+                    continue;
+
+                unsigned bid = pool[j].id;
+
+                float dist =
+                        index_->distance_->compare(index_->data_ + index_->dim_ * (size_t)aid,
+                                                   index_->data_ + index_->dim_ * (size_t)bid, (unsigned)index_->dim_);
+                if(dist < pool[j].distance){
+                    hit[j] ++;
+                }
+            }
+        }
+
+        std::vector<int> tmp_hit;
+
+        for(const auto &i : hit)
+            tmp_hit.push_back(i);
+
+        std::sort(tmp_hit.begin(), tmp_hit.end());
+
+        int cut = tmp_hit[edge_num];
+
+        for(int i = 0; i < pool.size(); i ++){
+            if(hit[i] <= cut)
+                result.push_back(pool[i]);
+        }
+
+        SimpleNeighbor *des_pool = cut_graph_ + (size_t)q * (size_t)edge_num;
+        for (size_t t = 0; t < result.size(); t++) {
+            des_pool[t].id = result[t].id;
+            des_pool[t].distance = result[t].distance;
+        }
+        if (result.size() < edge_num) {
+            des_pool[result.size()].distance = -1;
+        }
+    }
 
 
+
+    // NN-Descent
     void IndexComponentRefineNNDescent::PruneInner() {
         assert(index_->final_graph_.size() == index_->n_);
 
