@@ -4,27 +4,18 @@
 #include "weavess/index_builder.h"
 
 namespace weavess {
+
     // NN-Descent
     void IndexComponentCoarseNNDescent::CoarseInner() {
-        const auto iter = index_->param_.get<unsigned>("iter");
+
+        // 初始化随机入口点
+        init();
+
+        // NN-Descent
+        NNDescent();
+
+        // graph_ -> final_graph_ / 释放内存
         const auto K = index_->param_.get<unsigned>("K");
-
-        std::mt19937 rng(rand());
-
-        // 采样用于评估每次迭代效果，与算法无关
-        std::vector<unsigned> control_points(_CONTROL_NUM);
-        std::vector<std::vector<unsigned> > acc_eval_set(_CONTROL_NUM);
-        GenRandom(rng, &control_points[0], control_points.size(), index_->n_);
-        generate_control_set(control_points, acc_eval_set, index_->n_);
-
-        for (unsigned it = 0; it < iter; it++) {
-            join();
-            update(index_->param_);
-            //checkDup();
-            eval_recall(control_points, acc_eval_set);
-            std::cout << "iter: " << it << std::endl;
-        }
-
         index_->final_graph_.reserve(index_->n_);
 
         for (unsigned i = 0; i < index_->n_; i++) {
@@ -43,6 +34,61 @@ namespace weavess {
             std::vector<unsigned>().swap(index_->graph_[i].rnn_new);
         }
         std::vector<nhood>().swap(index_->graph_);
+    }
+
+    void IndexComponentCoarseNNDescent::init() {
+        std::cout << index_->n_ << std::endl;
+        std::cout << index_->param_.ToString() << std::endl;
+
+        const auto L = index_->param_.get<unsigned>("L");
+        const auto S = index_->param_.get<unsigned>("S");
+
+        index_->graph_.reserve(index_->n_);
+        std::mt19937 rng(rand());
+        for (unsigned i = 0; i < index_->n_; i++) {
+            index_->graph_.emplace_back(L, S, rng, (unsigned) index_->n_);
+        }
+
+#pragma omp parallel for
+        for (unsigned i = 0; i < index_->n_; i++) {
+            std::vector<unsigned> tmp(S + 1);
+
+            weavess::GenRandom(rng, tmp.data(), S + 1, index_->n_);
+
+            for (unsigned j = 0; j < S; j++) {
+                unsigned id = tmp[j];
+
+                if (id == i)continue;
+                float dist = index_->distance_->compare(index_->data_ + i * index_->dim_,
+                                                        index_->data_ + id * index_->dim_,
+                                                        (unsigned) index_->dim_);
+
+                index_->graph_[i].pool.emplace_back(id, dist, true);
+            }
+            std::make_heap(index_->graph_[i].pool.begin(), index_->graph_[i].pool.end());
+            index_->graph_[i].pool.reserve(L);
+        }
+    }
+
+    void IndexComponentCoarseNNDescent::NNDescent(){
+        const auto iter = index_->param_.get<unsigned>("iter");
+
+
+        std::mt19937 rng(rand());
+
+        // 采样用于评估每次迭代效果，与算法无关
+        std::vector<unsigned> control_points(_CONTROL_NUM);
+        std::vector<std::vector<unsigned> > acc_eval_set(_CONTROL_NUM);
+        GenRandom(rng, &control_points[0], control_points.size(), index_->n_);
+        generate_control_set(control_points, acc_eval_set, index_->n_);
+
+        for (unsigned it = 0; it < iter; it++) {
+            join();
+            update(index_->param_);
+            //checkDup();
+            eval_recall(control_points, acc_eval_set);
+            std::cout << "iter: " << it << std::endl;
+        }
     }
 
     void IndexComponentCoarseNNDescent::IndexComponentCoarseNNDescent::join() {
@@ -201,7 +247,7 @@ namespace weavess {
         const auto TreeNum = index_->param_.get<unsigned>("nTrees");
         const auto TreeNumBuild = index_->param_.get<unsigned>("nTrees");
 //        index_->ml = index_->param_.get<unsigned>("mLevel");
-        unsigned K = index_->param_.get<unsigned>("K");
+        const auto K = index_->param_.get<unsigned>("K");
 
         // 选择树根
         std::vector<int> indices(index_->n_);
@@ -209,10 +255,10 @@ namespace weavess {
         std::vector<Index::Node*> ActiveSet;
         std::vector<Index::Node*> NewSet;
         for(unsigned i = 0; i < (unsigned)TreeNum; i++){
-            Index::Node* node = new Index::Node;
+            auto* node = new Index::Node;
             node->DivDim = -1;
-            node->Lchild = NULL;
-            node->Rchild = NULL;
+            node->Lchild = nullptr;
+            node->Rchild = nullptr;
             node->StartIdx = 0;
             node->EndIdx = index_->n_;
             node->treeid = i;
@@ -241,13 +287,14 @@ namespace weavess {
                 std::mt19937 rng(seed ^ omp_get_thread_num());
                 std::vector<unsigned>& myids = index_->LeafLists[node->treeid];
 
+                // 根据特征值进行划分
                 meanSplit(rng, &myids[0]+node->StartIdx, node->EndIdx - node->StartIdx, mid, cutdim, cutval);
 
                 node->DivDim = cutdim;
                 node->DivVal = cutval;
                 //node->StartIdx = offset;
                 //node->EndIdx = offset + count;
-                Index::Node* nodeL = new Index::Node(); Index::Node* nodeR = new Index::Node();
+                auto* nodeL = new Index::Node(); auto* nodeR = new Index::Node();
                 nodeR->treeid = nodeL->treeid = node->treeid;
                 nodeL->StartIdx = node->StartIdx;
                 nodeL->EndIdx = node->StartIdx+mid;
@@ -272,7 +319,9 @@ namespace weavess {
             //std::cout<<i<<":"<<node->EndIdx-node->StartIdx<<std::endl;
             //omp_unset_lock(&rootlock);
             std::mt19937 rng(seed ^ omp_get_thread_num());
+            // 查找树根对应节点
             std::vector<unsigned>& myids = index_->LeafLists[node->treeid];
+            // 添加规定深度下的所有子节点
             DFSbuild(node, rng, &myids[0]+node->StartIdx, node->EndIdx-node->StartIdx, node->StartIdx);
         }
         //DFStest(0,0,tree_roots_[0]);
@@ -292,15 +341,15 @@ namespace weavess {
             mergeSubGraphs(index_->mlNodeList[i].second, index_->mlNodeList[i].first);
         }
 
-
         std::cout << "merge tree completed" << std::endl;
 
         index_->final_graph_.reserve(index_->n_);
         std::mt19937 rng(seed ^ omp_get_thread_num());
         std::set<unsigned> result;
         for (unsigned i = 0; i < index_->n_; i++) {
+            std::cout << i << std::endl;
             std::vector<unsigned> tmp;
-            typename Index::CandidateHeap::reverse_iterator it = index_->knn_graph[i].rbegin();
+            auto it = index_->knn_graph[i].rbegin();
             for(;it!= index_->knn_graph[i].rend();it++ ){
                 tmp.push_back(it->row_id);
             }
@@ -477,11 +526,11 @@ namespace weavess {
     }
 
     void IndexComponentCoarseKDT::DFStest(unsigned level, unsigned dim, Index::Node* node){
-        if(node->Lchild !=NULL){
+        if(node->Lchild !=nullptr){
             DFStest(++level, node->DivDim, node->Lchild);
             //if(level > 15)
             std::cout<<"dim: "<<node->DivDim<<"--cutval: "<<node->DivVal<<"--S: "<<node->StartIdx<<"--E: "<<node->EndIdx<<" TREE: "<<node->treeid<<std::endl;
-            if(node->Lchild->Lchild ==NULL){
+            if(node->Lchild->Lchild ==nullptr){
                 std::vector<unsigned>& tmp = index_->LeafLists[node->treeid];
                 for(unsigned i = node->Rchild->StartIdx; i < node->Rchild->EndIdx; i++){
                     const float* tmpfea =index_->data_ + tmp[i] * index_->dim_+ node->DivDim;
@@ -490,7 +539,7 @@ namespace weavess {
                 std::cout<<std::endl;
             }
         }
-        else if(node->Rchild !=NULL){
+        else if(node->Rchild !=nullptr){
             DFStest(++level, node->DivDim, node->Rchild);
         }
         else{
@@ -504,14 +553,14 @@ namespace weavess {
         }
     }
 
-    void IndexComponentCoarseKDT::getMergeLevelNodeList(Index::Node* node, size_t treeid, int deepth){
+    void IndexComponentCoarseKDT::getMergeLevelNodeList(Index::Node* node, size_t treeid, unsigned deepth){
         auto ml = index_->param_.get<unsigned>("mLevel");
-        if(node->Lchild != NULL && node->Rchild != NULL && deepth < ml){
+        if(node->Lchild != nullptr && node->Rchild != nullptr && deepth < ml){
             deepth++;
             getMergeLevelNodeList(node->Lchild, treeid, deepth);
             getMergeLevelNodeList(node->Rchild, treeid, deepth);
         }else if(deepth == ml){
-            index_->mlNodeList.push_back(std::make_pair(node,treeid));
+            index_->mlNodeList.emplace_back(node,treeid);
         }else{
             index_->error_flag = true;
             if(deepth < index_->max_deepth)index_->max_deepth = deepth;
@@ -519,7 +568,7 @@ namespace weavess {
     }
 
     Index::Node* IndexComponentCoarseKDT::SearchToLeaf(Index::Node* node, size_t id){
-        if(node->Lchild != NULL && node->Rchild !=NULL){
+        if(node->Lchild != nullptr && node->Rchild !=nullptr){
             const float* v = index_->data_ + id * index_->dim_;
             if(v[node->DivDim] < node->DivVal)
                 return SearchToLeaf(node->Lchild, id);
@@ -533,7 +582,7 @@ namespace weavess {
     void IndexComponentCoarseKDT::mergeSubGraphs(size_t treeid, Index::Node* node){
         auto K = index_->param_.get<unsigned>("K");
 
-        if(node->Lchild != NULL && node->Rchild != NULL){
+        if(node->Lchild != nullptr && node->Rchild != nullptr){
             mergeSubGraphs(treeid, node->Lchild);
             mergeSubGraphs(treeid, node->Rchild);
 
@@ -550,6 +599,8 @@ namespace weavess {
                 start = node->Rchild->StartIdx;
                 end = node->Rchild->EndIdx;
             }
+
+            //std::cout << start << " " << end << std::endl;
 
             for(;start < end; start++){
 

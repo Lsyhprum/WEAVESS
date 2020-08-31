@@ -7,11 +7,9 @@ set(CMAKE_DEPENDS_CHECK_CXX
   "F:/ANNS/WEAVESS/src/index_component_coarse.cpp" "F:/ANNS/WEAVESS/cmake-build-debug/src/CMakeFiles/weavess.dir/index_component_coarse.cpp.obj"
   "F:/ANNS/WEAVESS/src/index_component_conn.cpp" "F:/ANNS/WEAVESS/cmake-build-debug/src/CMakeFiles/weavess.dir/index_component_conn.cpp.obj"
   "F:/ANNS/WEAVESS/src/index_component_entry.cpp" "F:/ANNS/WEAVESS/cmake-build-debug/src/CMakeFiles/weavess.dir/index_component_entry.cpp.obj"
-  "F:/ANNS/WEAVESS/src/index_component_init.cpp" "F:/ANNS/WEAVESS/cmake-build-debug/src/CMakeFiles/weavess.dir/index_component_init.cpp.obj"
   "F:/ANNS/WEAVESS/src/index_component_load.cpp" "F:/ANNS/WEAVESS/cmake-build-debug/src/CMakeFiles/weavess.dir/index_component_load.cpp.obj"
-  "F:/ANNS/WEAVESS/src/index_component_prune.cpp" "F:/ANNS/WEAVESS/cmake-build-debug/src/CMakeFiles/weavess.dir/index_component_prune.cpp.obj"
+  "F:/ANNS/WEAVESS/src/index_component_refine.cpp" "F:/ANNS/WEAVESS/cmake-build-debug/src/CMakeFiles/weavess.dir/index_component_refine.cpp.obj"
   "F:/ANNS/WEAVESS/src/index_component_route.cpp" "F:/ANNS/WEAVESS/cmake-build-debug/src/CMakeFiles/weavess.dir/index_component_route.cpp.obj"
-  "F:/ANNS/WEAVESS/src/index_component_search.cpp" "F:/ANNS/WEAVESS/cmake-build-debug/src/CMakeFiles/weavess.dir/index_component_search.cpp.obj"
   )
 set(CMAKE_CXX_COMPILER_ID "GNU")
 

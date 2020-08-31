@@ -194,23 +194,15 @@
 			<Option target="weavess"/>
 			<Option target="weavess_s"/>
 		</Unit>
-		<Unit filename="F:/ANNS/WEAVESS/src/index_component_init.cpp">
-			<Option target="weavess"/>
-			<Option target="weavess_s"/>
-		</Unit>
 		<Unit filename="F:/ANNS/WEAVESS/src/index_component_load.cpp">
 			<Option target="weavess"/>
 			<Option target="weavess_s"/>
 		</Unit>
-		<Unit filename="F:/ANNS/WEAVESS/src/index_component_prune.cpp">
+		<Unit filename="F:/ANNS/WEAVESS/src/index_component_refine.cpp">
 			<Option target="weavess"/>
 			<Option target="weavess_s"/>
 		</Unit>
 		<Unit filename="F:/ANNS/WEAVESS/src/index_component_route.cpp">
-			<Option target="weavess"/>
-			<Option target="weavess_s"/>
-		</Unit>
-		<Unit filename="F:/ANNS/WEAVESS/src/index_component_search.cpp">
 			<Option target="weavess"/>
 			<Option target="weavess_s"/>
 		</Unit>

@@ -5,7 +5,7 @@
 #include "weavess/index_builder.h"
 
 namespace weavess {
-    void IndexComponentLoad::LoadInitInner(Index *index, char *data_file, char *query_file, char *ground_file, Parameters &parameters) {
+    void IndexComponentLoad::LoadInner(Index *index, char *data_file, char *query_file, char *ground_file, Parameters &parameters) {
 
         // base_data
         float *data = nullptr;

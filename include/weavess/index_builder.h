@@ -34,56 +34,8 @@ namespace weavess {
     // load - 加载数据
     class IndexComponentLoad : public IndexComponent {
     public :
-        virtual void LoadInitInner(Index *index, char *data_file, char *query_file, char *ground_file, Parameters &parameters);
-    };
-
-    // init - 初始图入口点策略, 初始化全局 Index
-    class IndexComponentInit : public IndexComponent {
-    public:
-        explicit IndexComponentInit(Index *index) : IndexComponent(index) {}
-
-        virtual void InitInner() = 0;
-    };
-
-    // init - RAND
-    class IndexComponentInitRandom : public IndexComponentInit {
-    public:
-        explicit IndexComponentInitRandom(Index *index) : IndexComponentInit(index) {}
-
-        void InitInner() override;
-    };
-
-    // init - Hash
-    class IndexComponentInitHash : public IndexComponentInit {
-    public:
-        explicit IndexComponentInitHash(Index *index) : IndexComponentInit(index) {}
-
-        void InitInner() override;
-
-    private:
-        typedef std::vector<unsigned int> Codes;
-        typedef std::unordered_map<unsigned int, std::vector<unsigned int> > HashBucket;
-        typedef std::vector<HashBucket> HashTable;
-
-        typedef std::vector<unsigned long> Codes64;
-        typedef std::unordered_map<unsigned long, std::vector<unsigned int> > HashBucket64;
-        typedef std::vector<HashBucket64> HashTable64;
-
-        void verify();
-
-        void LoadCode32(char* filename, std::vector<Codes>& baseAll);
-
-        void LoadCode64(char* filename, std::vector<Codes64>& baseAll);
-
-        void buildIndexImpl();
-
-        void generateMask32();
-
-        void generateMask64();
-
-        void BuildHashTable32(int upbits, int lowbits, std::vector<Codes>& baseAll ,std::vector<HashTable>& tbAll);
-
-        void BuildHashTable64(int upbits, int lowbits, std::vector<Codes64>& baseAll ,std::vector<HashTable64>& tbAll);
+        virtual void
+        LoadInner(Index *index, char *data_file, char *query_file, char *ground_file, Parameters &parameters);
     };
 
     // coarse — 初始图构建方法
@@ -99,16 +51,20 @@ namespace weavess {
     public:
         explicit IndexComponentCoarseNNDescent(Index *index) : IndexComponentCoarse(index) {}
 
-        void CoarseInner();
+        void CoarseInner() override;
 
     private:
-        void join() ;
+        void init();
 
-        void update(const Parameters &parameters) ;
+        void NNDescent();
 
-        void generate_control_set(std::vector<unsigned> &c, std::vector<std::vector<unsigned> > &v, unsigned N) ;
+        void join();
 
-        void eval_recall(std::vector<unsigned> &ctrl_points, std::vector<std::vector<unsigned> > &acc_eval_set) ;
+        void update(const Parameters &parameters);
+
+        void generate_control_set(std::vector<unsigned> &c, std::vector<std::vector<unsigned> > &v, unsigned N);
+
+        void eval_recall(std::vector<unsigned> &ctrl_points, std::vector<std::vector<unsigned> > &acc_eval_set);
     };
 
     // coarse KDT
@@ -119,9 +75,11 @@ namespace weavess {
         void CoarseInner();
 
     private:
-        void meanSplit(std::mt19937& rng, unsigned* indices, unsigned count, unsigned& index, unsigned& cutdim, float& cutval);
+        void meanSplit(std::mt19937 &rng, unsigned *indices, unsigned count, unsigned &index, unsigned &cutdim,
+                       float &cutval);
 
-        void planeSplit(unsigned *indices, unsigned count, unsigned cutdim, float cutval, unsigned &lim1, unsigned &lim2);
+        void
+        planeSplit(unsigned *indices, unsigned count, unsigned cutdim, float cutval, unsigned &lim1, unsigned &lim2);
 
         int selectDivision(std::mt19937 &rng, float *v);
 
@@ -133,7 +91,7 @@ namespace weavess {
 
         void mergeSubGraphs(size_t treeid, Index::Node *node);
 
-        void getMergeLevelNodeList(Index::Node *node, size_t treeid, int deepth);
+        void getMergeLevelNodeList(Index::Node *node, size_t treeid, unsigned deepth);
     };
 
 
@@ -149,7 +107,7 @@ namespace weavess {
     public:
         explicit IndexComponentPruneNSG(Index *index) : IndexComponentPrune(index) {}
 
-        void PruneInner() override ;
+        void PruneInner() override;
 
     protected:
         virtual void Link(const Parameters &parameters, SimpleNeighbor *cut_graph_);
@@ -184,12 +142,12 @@ namespace weavess {
 
     private:
         void InterInsert(unsigned n, unsigned range, float threshold,
-                                   std::vector<std::mutex> &locks,
-                                   SimpleNeighbor *cut_graph_);
+                         std::vector<std::mutex> &locks,
+                         SimpleNeighbor *cut_graph_);
 
         void sync_prune(unsigned q, std::vector<Neighbor> &pool,
-                                  const Parameters &parameters, float threshold,
-                                  SimpleNeighbor *cut_graph_);
+                        const Parameters &parameters, float threshold,
+                        SimpleNeighbor *cut_graph_);
 
         void get_neighbors(const unsigned q, const Parameters &parameter, std::vector<Neighbor> &pool);
     };
@@ -201,17 +159,11 @@ namespace weavess {
         void PruneInner() override;
 
     private:
-        void sync_prune(unsigned q, std::vector<Neighbor> &pool,
-                        SimpleNeighbor *cut_graph_);
+        void sync_prune(unsigned q, SimpleNeighbor *cut_graph_);
 
         void Link(const Parameters &parameters, SimpleNeighbor *cut_graph_);
 
-        void get_neighbors(const unsigned q, const Parameters &parameter,
-                           std::vector<Neighbor> &pool);
-
-        void diversify_by_cut();
-
-        void add_backward_edges();
+        void InterInsert(unsigned n, unsigned range, std::vector<std::mutex> &locks, SimpleNeighbor *cut_graph_);
     };
 
     class IndexComponentRefineNNDescent : public IndexComponentPrune {
@@ -220,6 +172,7 @@ namespace weavess {
 
         void PruneInner() override;
     };
+
 
     // connect
     class IndexComponentConn : public IndexComponent {
@@ -242,16 +195,16 @@ namespace weavess {
         void DFS(boost::dynamic_bitset<> &flag, unsigned root, unsigned &cnt);
 
         void findroot(boost::dynamic_bitset<> &flag, unsigned &root,
-                                             const Parameters &parameter);
+                      const Parameters &parameter);
 
         void get_neighbors(const float *query, const Parameters &parameter,
-                                                  std::vector<Neighbor> &retset,
-                                                  std::vector<Neighbor> &fullset);
+                           std::vector<Neighbor> &retset,
+                           std::vector<Neighbor> &fullset);
     };
 
-    class IndexComponentConnNSSG : public IndexComponentConn {
+    class IndexComponentConnDFS_EXPAND : public IndexComponentConn {
     public:
-        explicit IndexComponentConnNSSG(Index *index) : IndexComponentConn(index) {}
+        explicit IndexComponentConnDFS_EXPAND(Index *index) : IndexComponentConn(index) {}
 
         void ConnInner() override;
 
@@ -259,27 +212,48 @@ namespace weavess {
         void DFS_expand(const Parameters &parameter);
     };
 
+    class IndexComponentConnDPG : public IndexComponentConn {
+    public:
+        explicit IndexComponentConnDPG(Index *index) : IndexComponentConn(index) {}
+
+        void ConnInner() override;
+    };
+
+
     // entry
-    class IndexComponentEntry : public IndexComponent{
+    class IndexComponentEntry : public IndexComponent {
     public:
         explicit IndexComponentEntry(Index *index) : IndexComponent(index) {}
 
         virtual void EntryInner(unsigned query_id) = 0;
     };
 
-    class IndexComponentEntryRand : public IndexComponentEntry{
+    class IndexComponentEntryRand : public IndexComponentEntry {
     public:
         explicit IndexComponentEntryRand(Index *index) : IndexComponentEntry(index) {}
 
         void EntryInner(unsigned query_id) override;
     };
 
-    class IndexComponentEntryKDT : public IndexComponentEntry{
+    class IndexComponentEntryKDT : public IndexComponentEntry {
     public:
         explicit IndexComponentEntryKDT(Index *index) : IndexComponentEntry(index) {}
 
         void EntryInner(unsigned query_id) override;
+
+    private:
+        void
+        SearchNearLeaf(Index::Node *node, std::stack<Index::Node *> &st, const size_t tree_id, const size_t query_id,
+                       size_t Nnode, std::vector<Neighbor> &retset);
     };
+
+    class IndexComponentEntryCentroid : public IndexComponentEntry {
+    public:
+        explicit IndexComponentEntryCentroid(Index *index) : IndexComponentEntry(index) {}
+
+        void EntryInner(unsigned query_id) override;
+    };
+
 
     // route
     class IndexComponentRoute : public IndexComponent {
@@ -296,41 +270,6 @@ namespace weavess {
         void RouteInner(unsigned query_id, unsigned K, unsigned *indices) override;
     };
 
-    // search
-    class IndexComponentSearch : public IndexComponent {
-    public:
-        explicit IndexComponentSearch(Index *index) : IndexComponent(index) {}
-
-        void EvaInner();
-
-        virtual void
-        SearchInner(unsigned query_id, size_t K, unsigned *indices, unsigned &distcount) = 0;
-    };
-
-    // 随机入口点 + 贪心
-    class IndexComponentSearchRandom : public IndexComponentSearch {
-    public:
-        explicit IndexComponentSearchRandom(Index *index) : IndexComponentSearch(index) {}
-
-        void SearchInner(unsigned query_id, size_t K, unsigned *indices, unsigned &distcount) override;
-    };
-
-    // 中点入口点 + 贪心
-    class IndexComponentSearchNSG : public IndexComponentSearch {
-    public:
-        explicit IndexComponentSearchNSG(Index *index) : IndexComponentSearch(index) {}
-
-        void SearchInner(unsigned query_id, size_t K, unsigned *indices, unsigned &distcount) override;
-    };
-
-    // hash桶入口点 + NN-Expand
-    class IndexComponentSearchIEH : public IndexComponentSearch {
-    public :
-        explicit IndexComponentSearchIEH(Index *index) : IndexComponentSearch(index) {}
-
-        void SearchInner(unsigned query_id, size_t K, unsigned *indices, unsigned &distcount) override;
-    };
-
 
     class IndexBuilder {
     public:
@@ -343,41 +282,18 @@ namespace weavess {
         }
 
         enum TYPE {
-            INIT_RAND,
             COARSE_NN_DESCENT, COARSE_KDT, COARSE_HASH,
             PRUNE_NSG, PRUNE_NSSG, PRUNE_HNSW, PRUNE_DPG, REFINE_NN_DESCENT,
-            CONN_DFS, CONN_NSSG,
-            ENTRY_RAND, ENTRY_KDT,
-            SEARCH_NSG, SEARCH_IEH,
+            CONN_DFS, CONN_DFS_EXPAND,
+            ENTRY_RAND, ENTRY_KDT, ENTRY_CEN,
             ROUTER_GREEDY
         };
 
         IndexBuilder *load(char *data_file, char *query_file, char *ground_file, Parameters &parameters) {
-            std::cout << "__Load Data__" << std::endl;
+            std::cout << "__LOAD DATA__" << std::endl;
 
             auto *a = new IndexComponentLoad();
-            a->LoadInitInner(index, data_file, query_file, ground_file, parameters);
-
-            e = std::chrono::high_resolution_clock::now();
-
-            return this;
-        }
-
-        IndexBuilder *init(TYPE type) {
-            std::cout << "__Init Graph__" << std::endl;
-
-            s = std::chrono::high_resolution_clock::now();
-
-            IndexComponentInit *a = nullptr;
-            switch (type) {
-                case INIT_RAND:
-                    a = new IndexComponentInitRandom(index);
-                    break;
-                default:
-                    std::cerr << "init index wrong type" << std::endl;
-            }
-
-            a->InitInner();
+            a->LoadInner(index, data_file, query_file, ground_file, parameters);
 
             e = std::chrono::high_resolution_clock::now();
 
@@ -385,17 +301,16 @@ namespace weavess {
         }
 
         IndexBuilder *coarse(TYPE type) {
-            std::cout << "__COARSE KNN__" << std::endl;
-
             IndexComponentCoarse *a = nullptr;
-            switch (type) {
-                case COARSE_NN_DESCENT:
-                    a = new IndexComponentCoarseNNDescent(index);
-                    break;
-                case COARSE_KDT:
-                    a = new IndexComponentCoarseKDT(index);
-                default:
-                    std::cerr << "coarse KNN wrong type" << std::endl;
+
+            if(type == COARSE_NN_DESCENT){
+                std::cout << "__COARSE KNN : NN_DESCENT__" << std::endl;
+                a = new IndexComponentCoarseNNDescent(index);
+            }else if(type == COARSE_KDT){
+                std::cout << "__COARSE KNN : KDT__" << std::endl;
+                a = new IndexComponentCoarseKDT(index);
+            }else{
+                std::cerr << "coarse KNN wrong type" << std::endl;
             }
 
             a->CoarseInner();
@@ -406,18 +321,21 @@ namespace weavess {
         }
 
         IndexBuilder *refine(TYPE type) {
-            std::cout << "__PRUNE__" << std::endl;
-
             IndexComponentPrune *a = nullptr;
+
             if (type == PRUNE_NSG) {
+                std::cout << "__REFINE : NSG__" << std::endl;
                 a = new IndexComponentPruneNSG(index);
             } else if (type == PRUNE_NSSG) {
+                std::cout << "__REFINE : NSSG__" << std::endl;
                 a = new IndexComponentPruneNSSG(index);
-            } else if (type == PRUNE_DPG){
+            } else if (type == PRUNE_DPG) {
+                std::cout << "__REFINE : DPG__" << std::endl;
                 a = new IndexComponentPruneDPG(index);
             } else if (type == REFINE_NN_DESCENT) {
+                std::cout << "__REFINE : NN_DESCENT__" << std::endl;
                 a = new IndexComponentRefineNNDescent(index);
-            }else{
+            } else {
                 std::cerr << "PRUNE wrong type" << std::endl;
             }
 
@@ -432,11 +350,11 @@ namespace weavess {
             std::cout << "__CONNECT__" << std::endl;
 
             IndexComponentConn *a = nullptr;
-            if(type == CONN_DFS){
+            if (type == CONN_DFS) {
                 a = new IndexComponentConnDFS(index);
-            } else if (type == CONN_NSSG){
-                a = new IndexComponentConnNSSG(index);
-            }else{
+            } else if (type == CONN_DFS_EXPAND) {
+                a = new IndexComponentConnDFS_EXPAND(index);
+            } else {
                 std::cerr << "PRUNE wrong type" << std::endl;
             }
 
@@ -469,14 +387,17 @@ namespace weavess {
                 std::vector<std::vector<unsigned>> res;
                 unsigned distcount = 0;
 
-                std::cout << "__SEARCH__" << std::endl;
                 for (unsigned i = 0; i < index->query_num_; i++) {
                     std::vector<unsigned> tmp(K);
 
                     IndexComponentEntry *a = nullptr;
-                    if(entry_type == ENTRY_RAND){
+                    if (entry_type == ENTRY_RAND) {
                         a = new IndexComponentEntryRand(index);
-                    }else{
+                    } else if (entry_type == ENTRY_KDT) {
+                        a = new IndexComponentEntryKDT(index);
+                    } else if (entry_type == ENTRY_CEN) {
+                        a = new IndexComponentEntryCentroid(index);
+                    }else {
                         std::cerr << "entry wrong type" << std::endl;
                         exit(-1);
                     }
@@ -484,9 +405,9 @@ namespace weavess {
 
                     IndexComponentRoute *b = nullptr;
 
-                    if(route_type == ROUTER_GREEDY) {
+                    if (route_type == ROUTER_GREEDY) {
                         b = new IndexComponentRouteGreedy(index);
-                    }else{
+                    } else {
                         std::cerr << "route wrong type" << std::endl;
                         exit(-1);
                     }

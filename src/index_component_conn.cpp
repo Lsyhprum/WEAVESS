@@ -36,7 +36,7 @@ namespace weavess {
         while (!s.empty()) {
             unsigned next = index_->n_ + 1;
             for (unsigned i = 0; i < index_->final_graph_[tmp].size(); i++) {
-                if (flag[index_->final_graph_[tmp][i]] == false) {
+                if (!flag[index_->final_graph_[tmp][i]]) {
                     next = index_->final_graph_[tmp][i];
                     break;
                 }
@@ -55,8 +55,7 @@ namespace weavess {
         }
     }
 
-    void IndexComponentConnDFS::findroot(boost::dynamic_bitset<> &flag, unsigned &root,
-                            const Parameters &parameter) {
+    void IndexComponentConnDFS::findroot(boost::dynamic_bitset<> &flag, unsigned &root, const Parameters &parameter) {
         unsigned id = index_->n_;
         for (unsigned i = 0; i < index_->n_; i++) {
             if (flag[i] == false) {
@@ -160,12 +159,13 @@ namespace weavess {
         }
     }
 
+
     // NSSG
-    void IndexComponentConnNSSG::ConnInner() {
+    void IndexComponentConnDFS_EXPAND::ConnInner() {
         DFS_expand(index_->param_);
     }
 
-    void IndexComponentConnNSSG::DFS_expand(const Parameters &parameter) {
+    void IndexComponentConnDFS_EXPAND::DFS_expand(const Parameters &parameter) {
         unsigned n_try = parameter.get<unsigned>("n_try");
         unsigned range = parameter.get<unsigned>("R_nsg");
 
@@ -219,6 +219,49 @@ namespace weavess {
                 }
             }
         }
+    }
+
+
+    // DPG
+    void IndexComponentConnDPG::ConnInner() {
+        // ofstream os(hubs_path, ios::binary);
+        // vector <hub_pair > hubs;
+        std::vector<std::vector<unsigned>> rknn_graph;
+        rknn_graph.resize(index_->n_);
+
+        int count = 0;
+
+        for (unsigned i = 0; i < index_->n_; ++i) {
+            auto const &knn = index_->final_graph_[i];
+            //uint32_t K = M[i]; // knn.size();
+            for (unsigned j = 0; j < knn.size(); j++) {
+                rknn_graph[knn[j]].push_back(i);
+            }
+        }
+
+        for (unsigned i = 0; i < index_->n_; ++i) {
+            std::vector<unsigned> rknn_list = rknn_graph[i];
+            count += rknn_list.size();
+
+            for (unsigned j = 0; j < rknn_list.size(); ++j) {
+                index_->final_graph_[i].push_back(rknn_list[j]);
+//                graph[i].push_back(Neighbor(rknn_list[j].id, rknn_list[j].dist,
+//                                            true)); // rknn_list[j]);
+                // sum += exp(-1 * sqrt(rknn_list[j].dist) * beta); // a
+                // function with dist
+            }
+
+            std::sort(index_->final_graph_[i].begin(), index_->final_graph_[i].end());
+            for(unsigned j = 1; j < index_->final_graph_[i].size(); j ++){
+                if(index_->final_graph_[i][j] == index_->final_graph_[i][j-1]){
+                    index_->final_graph_[i].erase(index_->final_graph_[i].begin() + j);
+                    j -- ;
+                }
+            }
+
+            //M[i] = graph[i].size();
+        }
+        fprintf(stderr, "inverse edges: %d\n", count);
     }
 
 

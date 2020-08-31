@@ -21,12 +21,14 @@ namespace weavess {
 
     class IndexKDTree {
     public:
+        // 节点不保存数据，只维护一个 LeafLists 中对应的数据编号
         struct Node {
             int DivDim;
             float DivVal;
             size_t StartIdx, EndIdx;
             unsigned treeid;
             Node *Lchild, *Rchild;
+            bool visit = false;
 
             ~Node() {
                 if (Lchild != nullptr) Lchild->~Node();
@@ -76,9 +78,9 @@ namespace weavess {
             RAND_DIM = 5
         };
 
-        std::vector<Node *> tree_roots_;
-        std::vector<std::pair<Node *, size_t> > mlNodeList;
-        std::vector<std::vector<unsigned>> LeafLists;
+        std::vector<Node *> tree_roots_;                    // 存储树根
+        std::vector<std::pair<Node *, size_t> > mlNodeList;  //  ml 层 节点 和对应树根编号
+        std::vector<std::vector<unsigned>> LeafLists;       // 存储每个随机截断树的对应节点
         omp_lock_t rootlock;
         bool error_flag = false;
         int max_deepth = 0x0fffffff;
@@ -134,7 +136,7 @@ namespace weavess {
         std::vector<unsigned> eps_;
     };
 
-    class Index : public IndexNSG, public IndexNSSG, public IndexKDTree, public IndexHash {
+    class Index : public IndexNSG, public IndexNSSG, public IndexKDTree, public IndexHash, public IndexDPG {
     public:
         float *data_ = nullptr;
         float *query_data_ = nullptr;

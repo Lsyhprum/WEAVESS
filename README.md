@@ -14,21 +14,21 @@ WEAVESS is a frame for testing the major graph-based approximate nearest neighbo
 
 ## Algorithms
 
-|  Algo  | Init Entry Access |  Init Framework |     Refine     | Connection   |Entry Access | Routing |
-|:------:| :---------------: | :--------------:| :------------: | :----------: | :----------:| :-----: |
-| KGraph |   Random          |  NN-Descent     |  None          |     None     | Random      |  Greedy |
-| IEH    |                   |  **Hash**       |                |              | Random      |  Greedy |
-| EFANNA |                   |  **KDTree**     |  NN-Descent    |     None     | Random      |  Greedy |
-| NSG    |   Random          |  NN-Descent     |      **MRNG**  |     DFS      |             |  Greedy |
-| NSSG   |   Random          |  NN-Descent     |      **SSG**   |              | Random      |  Greedy |
-| DPG    |   Random          |  NN-Descent     |      **DPG**   |              | Random      |  Greedy |
-| NSW    |                   |                 |                |              |             |         |
-| HNSW   |                   |                 |                |              |             |         |
-| NGT    |                   |                 |                |              |             |         |
-| SPTAG  |                   |                 |                |              |             |         |
-| FANNG  |                   |                 |                |              |             |         |
-|DiskANN |                   |                 |                |              |             |         |
-| HCNNG  |                   |                 |                |              |             |         |
+|  Algo  |  Init Framework |     Refine     | Connection   |Entry Access | Routing |
+|:------:| :--------------:| :------------: | :----------: | :----------:| :-----: |
+| KGraph |  NN-Descent     |                |              | Random      |  Greedy |
+| IEH    |  **Hash**       |                |              | Random      |  Greedy |
+| EFANNA |  **KDTree**     |  NN-Descent    |              | **KDTree**  |  Greedy |
+| NSG    |  NN-Descent     |  **MRNG**      |**DFS**       | **Centroid**|  Greedy |
+| NSSG   |  NN-Descent     |  **SSG**       |**DFS_expand**| Random      |  Greedy |
+| DPG    |  NN-Descent     |  **DPG**       |              | Random      |  Greedy |
+| NSW    |                 |                |              |             |         |
+| HNSW   |                 |                |              |             |         |
+| NGT    |                 |                |              |             |         |
+| SPTAG  |                 |                |              |             |         |
+| FANNG  |                 |                |              |             |         |
+|DiskANN |                 |                |              |             |         |
+| HCNNG  |                 |                |              |             |         |
 
 
 
@@ -56,8 +56,16 @@ WEAVESS is a frame for testing the major graph-based approximate nearest neighbo
 
 * **nTrees** : 'nTrees' is the number of trees used to build the graph (larger is more accurate but slower)
 * **mLevel** : conquer-to-depth (smaller is more accurate but slower) 
-* **K_efanna** : is the 'K' of kNN graph.
-* **I_efanna** : search iteration times, usually = 4
+
+* **K** : 'K' of K-NNG
+* **L** : candidate pool size, larger is more accurate but slower, no smaller than K.
+* **iter** : NN-Descent iteration times, iter usually = 4
+* **S** : number of neighbors in local join, larger is more accurate but slower.
+* **R** : number of reverse neighbors, larger is more accurate but slower.
+
+|  Dataset  |  nTrees | mLevel |  K  |  L  | iter |  S |  R  |
+|:---------:|:-------:|:------:|:---:|:---:|:----:|:--:|:---:|
+| SIFT1M    |    8    |  8     | 200 | 200 | 4    | 10 | 100 |
 
 ### NSG
 
@@ -81,6 +89,11 @@ WEAVESS is a frame for testing the major graph-based approximate nearest neighbo
 | GloVe-100 | 500 | 50  |  60   |
 
 
+### DPG
+
+* **L_dpg** : neighbors per data point, the value is half of KGraph.
+
+
 ## Search Parameters
 
 + `SEARCH_K` controls the number of result neighbors we want to query.
@@ -90,17 +103,17 @@ the larger the better but slower. The `SEARCH_L` cannot be samller than the `SEA
 
 ## TODO
 
--[x] KGraph
+-[ ] KGraph
 
 -[ ] IEH
 
--[x] EFANNA
+-[ ] EFANNA
 
 -[ ] DPG
 
--[x] NSG
+-[ ] NSG
 
--[x] NSSG
+-[ ] NSSG
 
 -[ ] NSW
 
@@ -113,15 +126,13 @@ the larger the better but slower. The `SEARCH_L` cannot be samller than the `SEA
 -[ ] FANNG
 
 
-* DPG conn 实现
-* PruneInner，Link 公共代码合并
 * IEH 实现
-* coarse / eva 重构 —— search
-* Eva 重构
+* NSW 
 * HNSW
+* KGraph 修改
+* EFANNA knn_graph 修改  参数缺失 内存不够
 * 分离算法接口与 IndexBuilder 接口
 * 与原算法实现进行比较
 * SIMD 优化
-* LoadInitInner 修改
-* KGraph 修改
-* EFANNA knn_graph 修改
+* PruneInner，Link 公共代码合并
+* coarse / eva 重构 —— search

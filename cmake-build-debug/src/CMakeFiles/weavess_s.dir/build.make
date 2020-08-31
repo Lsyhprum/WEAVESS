@@ -118,24 +118,10 @@ src/CMakeFiles/weavess_s.dir/index_component_entry.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/weavess_s.dir/index_component_entry.cpp.s"
 	cd /d F:\ANNS\WEAVESS\cmake-build-debug\src && F:\MinGW-W64\mingw64\bin\g++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S F:\ANNS\WEAVESS\src\index_component_entry.cpp -o CMakeFiles\weavess_s.dir\index_component_entry.cpp.s
 
-src/CMakeFiles/weavess_s.dir/index_component_init.cpp.obj: src/CMakeFiles/weavess_s.dir/flags.make
-src/CMakeFiles/weavess_s.dir/index_component_init.cpp.obj: src/CMakeFiles/weavess_s.dir/includes_CXX.rsp
-src/CMakeFiles/weavess_s.dir/index_component_init.cpp.obj: ../src/index_component_init.cpp
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=F:\ANNS\WEAVESS\cmake-build-debug\CMakeFiles --progress-num=$(CMAKE_PROGRESS_4) "Building CXX object src/CMakeFiles/weavess_s.dir/index_component_init.cpp.obj"
-	cd /d F:\ANNS\WEAVESS\cmake-build-debug\src && F:\MinGW-W64\mingw64\bin\g++.exe  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles\weavess_s.dir\index_component_init.cpp.obj -c F:\ANNS\WEAVESS\src\index_component_init.cpp
-
-src/CMakeFiles/weavess_s.dir/index_component_init.cpp.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/weavess_s.dir/index_component_init.cpp.i"
-	cd /d F:\ANNS\WEAVESS\cmake-build-debug\src && F:\MinGW-W64\mingw64\bin\g++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E F:\ANNS\WEAVESS\src\index_component_init.cpp > CMakeFiles\weavess_s.dir\index_component_init.cpp.i
-
-src/CMakeFiles/weavess_s.dir/index_component_init.cpp.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/weavess_s.dir/index_component_init.cpp.s"
-	cd /d F:\ANNS\WEAVESS\cmake-build-debug\src && F:\MinGW-W64\mingw64\bin\g++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S F:\ANNS\WEAVESS\src\index_component_init.cpp -o CMakeFiles\weavess_s.dir\index_component_init.cpp.s
-
 src/CMakeFiles/weavess_s.dir/index_component_load.cpp.obj: src/CMakeFiles/weavess_s.dir/flags.make
 src/CMakeFiles/weavess_s.dir/index_component_load.cpp.obj: src/CMakeFiles/weavess_s.dir/includes_CXX.rsp
 src/CMakeFiles/weavess_s.dir/index_component_load.cpp.obj: ../src/index_component_load.cpp
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=F:\ANNS\WEAVESS\cmake-build-debug\CMakeFiles --progress-num=$(CMAKE_PROGRESS_5) "Building CXX object src/CMakeFiles/weavess_s.dir/index_component_load.cpp.obj"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=F:\ANNS\WEAVESS\cmake-build-debug\CMakeFiles --progress-num=$(CMAKE_PROGRESS_4) "Building CXX object src/CMakeFiles/weavess_s.dir/index_component_load.cpp.obj"
 	cd /d F:\ANNS\WEAVESS\cmake-build-debug\src && F:\MinGW-W64\mingw64\bin\g++.exe  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles\weavess_s.dir\index_component_load.cpp.obj -c F:\ANNS\WEAVESS\src\index_component_load.cpp
 
 src/CMakeFiles/weavess_s.dir/index_component_load.cpp.i: cmake_force
@@ -146,24 +132,24 @@ src/CMakeFiles/weavess_s.dir/index_component_load.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/weavess_s.dir/index_component_load.cpp.s"
 	cd /d F:\ANNS\WEAVESS\cmake-build-debug\src && F:\MinGW-W64\mingw64\bin\g++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S F:\ANNS\WEAVESS\src\index_component_load.cpp -o CMakeFiles\weavess_s.dir\index_component_load.cpp.s
 
-src/CMakeFiles/weavess_s.dir/index_component_prune.cpp.obj: src/CMakeFiles/weavess_s.dir/flags.make
-src/CMakeFiles/weavess_s.dir/index_component_prune.cpp.obj: src/CMakeFiles/weavess_s.dir/includes_CXX.rsp
-src/CMakeFiles/weavess_s.dir/index_component_prune.cpp.obj: ../src/index_component_prune.cpp
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=F:\ANNS\WEAVESS\cmake-build-debug\CMakeFiles --progress-num=$(CMAKE_PROGRESS_6) "Building CXX object src/CMakeFiles/weavess_s.dir/index_component_prune.cpp.obj"
-	cd /d F:\ANNS\WEAVESS\cmake-build-debug\src && F:\MinGW-W64\mingw64\bin\g++.exe  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles\weavess_s.dir\index_component_prune.cpp.obj -c F:\ANNS\WEAVESS\src\index_component_prune.cpp
+src/CMakeFiles/weavess_s.dir/index_component_refine.cpp.obj: src/CMakeFiles/weavess_s.dir/flags.make
+src/CMakeFiles/weavess_s.dir/index_component_refine.cpp.obj: src/CMakeFiles/weavess_s.dir/includes_CXX.rsp
+src/CMakeFiles/weavess_s.dir/index_component_refine.cpp.obj: ../src/index_component_refine.cpp
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=F:\ANNS\WEAVESS\cmake-build-debug\CMakeFiles --progress-num=$(CMAKE_PROGRESS_5) "Building CXX object src/CMakeFiles/weavess_s.dir/index_component_refine.cpp.obj"
+	cd /d F:\ANNS\WEAVESS\cmake-build-debug\src && F:\MinGW-W64\mingw64\bin\g++.exe  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles\weavess_s.dir\index_component_refine.cpp.obj -c F:\ANNS\WEAVESS\src\index_component_refine.cpp
 
-src/CMakeFiles/weavess_s.dir/index_component_prune.cpp.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/weavess_s.dir/index_component_prune.cpp.i"
-	cd /d F:\ANNS\WEAVESS\cmake-build-debug\src && F:\MinGW-W64\mingw64\bin\g++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E F:\ANNS\WEAVESS\src\index_component_prune.cpp > CMakeFiles\weavess_s.dir\index_component_prune.cpp.i
+src/CMakeFiles/weavess_s.dir/index_component_refine.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/weavess_s.dir/index_component_refine.cpp.i"
+	cd /d F:\ANNS\WEAVESS\cmake-build-debug\src && F:\MinGW-W64\mingw64\bin\g++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E F:\ANNS\WEAVESS\src\index_component_refine.cpp > CMakeFiles\weavess_s.dir\index_component_refine.cpp.i
 
-src/CMakeFiles/weavess_s.dir/index_component_prune.cpp.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/weavess_s.dir/index_component_prune.cpp.s"
-	cd /d F:\ANNS\WEAVESS\cmake-build-debug\src && F:\MinGW-W64\mingw64\bin\g++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S F:\ANNS\WEAVESS\src\index_component_prune.cpp -o CMakeFiles\weavess_s.dir\index_component_prune.cpp.s
+src/CMakeFiles/weavess_s.dir/index_component_refine.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/weavess_s.dir/index_component_refine.cpp.s"
+	cd /d F:\ANNS\WEAVESS\cmake-build-debug\src && F:\MinGW-W64\mingw64\bin\g++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S F:\ANNS\WEAVESS\src\index_component_refine.cpp -o CMakeFiles\weavess_s.dir\index_component_refine.cpp.s
 
 src/CMakeFiles/weavess_s.dir/index_component_route.cpp.obj: src/CMakeFiles/weavess_s.dir/flags.make
 src/CMakeFiles/weavess_s.dir/index_component_route.cpp.obj: src/CMakeFiles/weavess_s.dir/includes_CXX.rsp
 src/CMakeFiles/weavess_s.dir/index_component_route.cpp.obj: ../src/index_component_route.cpp
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=F:\ANNS\WEAVESS\cmake-build-debug\CMakeFiles --progress-num=$(CMAKE_PROGRESS_7) "Building CXX object src/CMakeFiles/weavess_s.dir/index_component_route.cpp.obj"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=F:\ANNS\WEAVESS\cmake-build-debug\CMakeFiles --progress-num=$(CMAKE_PROGRESS_6) "Building CXX object src/CMakeFiles/weavess_s.dir/index_component_route.cpp.obj"
 	cd /d F:\ANNS\WEAVESS\cmake-build-debug\src && F:\MinGW-W64\mingw64\bin\g++.exe  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles\weavess_s.dir\index_component_route.cpp.obj -c F:\ANNS\WEAVESS\src\index_component_route.cpp
 
 src/CMakeFiles/weavess_s.dir/index_component_route.cpp.i: cmake_force
@@ -174,30 +160,14 @@ src/CMakeFiles/weavess_s.dir/index_component_route.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/weavess_s.dir/index_component_route.cpp.s"
 	cd /d F:\ANNS\WEAVESS\cmake-build-debug\src && F:\MinGW-W64\mingw64\bin\g++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S F:\ANNS\WEAVESS\src\index_component_route.cpp -o CMakeFiles\weavess_s.dir\index_component_route.cpp.s
 
-src/CMakeFiles/weavess_s.dir/index_component_search.cpp.obj: src/CMakeFiles/weavess_s.dir/flags.make
-src/CMakeFiles/weavess_s.dir/index_component_search.cpp.obj: src/CMakeFiles/weavess_s.dir/includes_CXX.rsp
-src/CMakeFiles/weavess_s.dir/index_component_search.cpp.obj: ../src/index_component_search.cpp
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --progress-dir=F:\ANNS\WEAVESS\cmake-build-debug\CMakeFiles --progress-num=$(CMAKE_PROGRESS_8) "Building CXX object src/CMakeFiles/weavess_s.dir/index_component_search.cpp.obj"
-	cd /d F:\ANNS\WEAVESS\cmake-build-debug\src && F:\MinGW-W64\mingw64\bin\g++.exe  $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -o CMakeFiles\weavess_s.dir\index_component_search.cpp.obj -c F:\ANNS\WEAVESS\src\index_component_search.cpp
-
-src/CMakeFiles/weavess_s.dir/index_component_search.cpp.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Preprocessing CXX source to CMakeFiles/weavess_s.dir/index_component_search.cpp.i"
-	cd /d F:\ANNS\WEAVESS\cmake-build-debug\src && F:\MinGW-W64\mingw64\bin\g++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E F:\ANNS\WEAVESS\src\index_component_search.cpp > CMakeFiles\weavess_s.dir\index_component_search.cpp.i
-
-src/CMakeFiles/weavess_s.dir/index_component_search.cpp.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green "Compiling CXX source to assembly CMakeFiles/weavess_s.dir/index_component_search.cpp.s"
-	cd /d F:\ANNS\WEAVESS\cmake-build-debug\src && F:\MinGW-W64\mingw64\bin\g++.exe $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S F:\ANNS\WEAVESS\src\index_component_search.cpp -o CMakeFiles\weavess_s.dir\index_component_search.cpp.s
-
 # Object files for target weavess_s
 weavess_s_OBJECTS = \
 "CMakeFiles/weavess_s.dir/index_component_coarse.cpp.obj" \
 "CMakeFiles/weavess_s.dir/index_component_conn.cpp.obj" \
 "CMakeFiles/weavess_s.dir/index_component_entry.cpp.obj" \
-"CMakeFiles/weavess_s.dir/index_component_init.cpp.obj" \
 "CMakeFiles/weavess_s.dir/index_component_load.cpp.obj" \
-"CMakeFiles/weavess_s.dir/index_component_prune.cpp.obj" \
-"CMakeFiles/weavess_s.dir/index_component_route.cpp.obj" \
-"CMakeFiles/weavess_s.dir/index_component_search.cpp.obj"
+"CMakeFiles/weavess_s.dir/index_component_refine.cpp.obj" \
+"CMakeFiles/weavess_s.dir/index_component_route.cpp.obj"
 
 # External object files for target weavess_s
 weavess_s_EXTERNAL_OBJECTS =
@@ -205,16 +175,14 @@ weavess_s_EXTERNAL_OBJECTS =
 src/libweavess_s.dll: src/CMakeFiles/weavess_s.dir/index_component_coarse.cpp.obj
 src/libweavess_s.dll: src/CMakeFiles/weavess_s.dir/index_component_conn.cpp.obj
 src/libweavess_s.dll: src/CMakeFiles/weavess_s.dir/index_component_entry.cpp.obj
-src/libweavess_s.dll: src/CMakeFiles/weavess_s.dir/index_component_init.cpp.obj
 src/libweavess_s.dll: src/CMakeFiles/weavess_s.dir/index_component_load.cpp.obj
-src/libweavess_s.dll: src/CMakeFiles/weavess_s.dir/index_component_prune.cpp.obj
+src/libweavess_s.dll: src/CMakeFiles/weavess_s.dir/index_component_refine.cpp.obj
 src/libweavess_s.dll: src/CMakeFiles/weavess_s.dir/index_component_route.cpp.obj
-src/libweavess_s.dll: src/CMakeFiles/weavess_s.dir/index_component_search.cpp.obj
 src/libweavess_s.dll: src/CMakeFiles/weavess_s.dir/build.make
 src/libweavess_s.dll: src/CMakeFiles/weavess_s.dir/linklibs.rsp
 src/libweavess_s.dll: src/CMakeFiles/weavess_s.dir/objects1.rsp
 src/libweavess_s.dll: src/CMakeFiles/weavess_s.dir/link.txt
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir=F:\ANNS\WEAVESS\cmake-build-debug\CMakeFiles --progress-num=$(CMAKE_PROGRESS_9) "Linking CXX shared library libweavess_s.dll"
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir=F:\ANNS\WEAVESS\cmake-build-debug\CMakeFiles --progress-num=$(CMAKE_PROGRESS_7) "Linking CXX shared library libweavess_s.dll"
 	cd /d F:\ANNS\WEAVESS\cmake-build-debug\src && $(CMAKE_COMMAND) -E cmake_link_script CMakeFiles\weavess_s.dir\link.txt --verbose=$(VERBOSE)
 
 # Rule to build all files generated by this target.
