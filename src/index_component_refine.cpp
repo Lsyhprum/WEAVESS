@@ -739,5 +739,101 @@ namespace weavess {
     }
 
 
+    // VAMANA
+    void IndexComponentRefineVAMANA::PruneInner() {
+        init_graph();
+    }
+
+    void IndexComponentRefineVAMANA::init_graph() {
+        auto *center = new float[index_->dim_];
+        for (unsigned j = 0; j < index_->dim_; j++) center[j] = 0;
+        for (unsigned i = 0; i < index_->n_; i++) {
+            for (unsigned j = 0; j < index_->dim_; j++) {
+                center[j] += index_->data_[i * index_->dim_ + j];
+            }
+        }
+        for (unsigned j = 0; j < index_->dim_; j++) {
+            center[j] /= index_->n_;
+        }
+
+        // 数据库内质心 ？ 数据库外质心 ？
+//        std::vector<Neighbor> tmp, pool;
+//        index_->ep_ = rand() % index_->n_;  // random initialize navigating point
+//        get_neighbors(center, tmp, pool);
+//        index_->ep_ = tmp[0].id;
+
+        // 迭代
+            // L = 从 s 出发贪婪访问到的所有点，为 p 重新选邻居
+
+            // 对 p 邻居添加反向边，出度超出上届时，裁边
+    }
+
+    void IndexComponentRefineVAMANA::get_neighbors(const float *query, std::vector<Neighbor> &retset, std::vector<Neighbor> &fullset) {
+        auto L = index_->param_.get<unsigned>("L_nsg");
+
+        retset.resize(L + 1);
+        std::vector<unsigned> init_ids(L);
+        // initializer_->Search(query, nullptr, L, parameter, init_ids.data());
+
+        boost::dynamic_bitset<> flags{index_->n_, 0};
+        L = 0;
+        for (unsigned i = 0; i < init_ids.size() && i < index_->final_graph_[index_->ep_].size(); i++) {
+            init_ids[i] = index_->final_graph_[index_->ep_][i];
+            flags[init_ids[i]] = true;
+            L++;
+        }
+        while (L < init_ids.size()) {
+            unsigned id = rand() % index_->n_;
+            if (flags[id]) continue;
+            init_ids[L] = id;
+            L++;
+            flags[id] = true;
+        }
+
+        L = 0;
+        for (unsigned i = 0; i < init_ids.size(); i++) {
+            unsigned id = init_ids[i];
+            if (id >= index_->n_) continue;
+            // std::cout<<id<<std::endl;
+            float dist = index_->distance_->compare(index_->data_ + index_->dim_ * (size_t)id, query,
+                                                    (unsigned)index_->dim_);
+            retset[i] = Neighbor(id, dist, true);
+            // flags[id] = 1;
+            L++;
+        }
+
+        std::sort(retset.begin(), retset.begin() + L);
+        int k = 0;
+        while (k < (int)L) {
+            int nk = L;
+
+            if (retset[k].flag) {
+                retset[k].flag = false;
+                unsigned n = retset[k].id;
+
+                for (unsigned m = 0; m < index_->final_graph_[n].size(); ++m) {
+                    unsigned id = index_->final_graph_[n][m];
+                    if (flags[id]) continue;
+                    flags[id] = 1;
+
+                    float dist = index_->distance_->compare(query, index_->data_ + index_->dim_ * (size_t)id,
+                                                            (unsigned)index_->dim_);
+                    Neighbor nn(id, dist, true);
+                    fullset.push_back(nn);
+                    if (dist >= retset[L - 1].distance) continue;
+                    int r = InsertIntoPool(retset.data(), L, nn);
+
+                    if (L + 1 < retset.size()) ++L;
+                    if (r < nk) nk = r;
+                }
+            }
+            if (nk <= k)
+                k = nk;
+            else
+                ++k;
+        }
+    }
+
+
 }
 

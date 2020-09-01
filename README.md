@@ -21,13 +21,13 @@ WEAVESS is a frame for testing the major graph-based approximate nearest neighbo
 | EFANNA |  **KDTree**     |  NN-Descent    |              | **KDTree**  |  Greedy |
 | NSG    |  NN-Descent     |  **MRNG**      |**DFS**       | **Centroid**|  Greedy |
 | NSSG   |  NN-Descent     |  **SSG**       |**DFS_expand**| Random      |  Greedy |
-| DPG    |  NN-Descent     |  **DPG**       |              | Random      |  Greedy |
+| DPG    |  NN-Descent     |  **DPG**       |**Reverse**   | Random      |  Greedy |
 | NSW    |                 |                |              |             |         |
 | HNSW   |                 |                |              |             |         |
 | NGT    |                 |                |              |             |         |
 | SPTAG  |                 |                |              |             |         |
 | FANNG  |                 |                |              |             |         |
-|DiskANN |                 |                |              |             |         |
+|Vamana  |  NN-Descent     |  **Vamana**    |              |             |         |
 | HCNNG  |                 |                |              |             |         |
 
 

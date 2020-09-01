@@ -95,7 +95,7 @@ namespace weavess {
     };
 
 
-    // prune — 剪枝方法
+    // refine
     class IndexComponentPrune : public IndexComponent {
     public:
         explicit IndexComponentPrune(Index *index) : IndexComponent(index) {}
@@ -171,6 +171,18 @@ namespace weavess {
         explicit IndexComponentRefineNNDescent(Index *index) : IndexComponentPrune(index) {}
 
         void PruneInner() override;
+    };
+
+    class IndexComponentRefineVAMANA : public IndexComponentPrune {
+    public:
+        explicit IndexComponentRefineVAMANA(Index *index) : IndexComponentPrune(index){}
+
+        void PruneInner() override;
+
+    private:
+        void init_graph();
+
+        void get_neighbors(const float *query, std::vector<Neighbor> &retset, std::vector<Neighbor> &fullset)
     };
 
 
