@@ -136,3 +136,4 @@ the larger the better but slower. The `SEARCH_L` cannot be samller than the `SEA
 * SIMD 优化
 * PruneInner，Link 公共代码合并
 * coarse / eva 重构 —— search
+* 检查数据结构是否清空

@@ -2,6 +2,7 @@
 // Created by Murph on 2020/8/25.
 //
 #include "weavess/index_builder.h"
+#include <weavess/min_heap.h>
 
 namespace weavess {
     // NSG & NSSG
@@ -342,6 +343,7 @@ namespace weavess {
             }
         }
     }
+
 
     // NSSG
     void IndexComponentPruneNSSG::Link(const Parameters &parameters, SimpleNeighbor *cut_graph_) {
@@ -739,12 +741,75 @@ namespace weavess {
     }
 
 
+
     // VAMANA
     void IndexComponentRefineVAMANA::PruneInner() {
-        init_graph();
+
+        std::vector<Neighbor> pool, retset;
+
+        init_graph(pool);
+
+        auto L = index_->param_.get<unsigned>("L");
+        auto range = index_->param_.get<unsigned>("R_nsg");
+
+        auto *cut_graph_ = new SimpleNeighbor[index_->n_ * (size_t)range];
+
+        for(unsigned j = 0; j < 2; j ++)
+            for(unsigned i = 0; i < index_->n_; i ++){
+                if(i == index_->ep_) continue;
+
+                // insert To pool 待修改 —— 裁边策略
+                retset = pool;
+                greedySearch(i, pool, retset);
+
+                float alpha = 1;
+                if(j == 1)
+                    alpha = index_->param_.get<float>("alpha");
+
+                boost::dynamic_bitset<> flags{index_->n_, 0};
+
+                sync_prune(i, alpha, retset, flags, cut_graph_);
+
+                // 添加到 final_graph
+                index_->final_graph_.resize(index_->n_);
+
+                SimpleNeighbor *pool = cut_graph_ + i * (size_t)range;
+                unsigned pool_size = 0;
+                for (unsigned j = 0; j < range; j++) {
+                    if (pool[j].distance == -1) break;
+                    pool_size = j;
+                }
+                pool_size++;
+                index_->final_graph_[i].resize(pool_size);
+                for (unsigned j = 0; j < pool_size; j++) {
+                    index_->final_graph_[i][j] = pool[j].id;
+                }
+
+
+                // 添加反向边
+                for(int n = 0; n < retset.size(); n ++){
+                    std::vector<Neighbor> reverse_pool;
+                    unsigned nn_id = retset[n].id;
+                    index_->final_graph_[nn_id].push_back(i);
+                    boost::dynamic_bitset<> flags_tmp{index_->n_, 0};
+                    sync_prune(nn_id, alpha, reverse_pool, flags_tmp, cut_graph_);
+
+                    SimpleNeighbor *pool = cut_graph_ + i * (size_t)range;
+                    unsigned pool_size = 0;
+                    for (unsigned j = 0; j < range; j++) {
+                        if (pool[j].distance == -1) break;
+                        pool_size = j;
+                    }
+                    pool_size++;
+                    index_->final_graph_[i].resize(pool_size);
+                    for (unsigned j = 0; j < pool_size; j++) {
+                        index_->final_graph_[i][j] = pool[j].id;
+                    }
+                }
+            }
     }
 
-    void IndexComponentRefineVAMANA::init_graph() {
+    void IndexComponentRefineVAMANA::init_graph(std::vector<Neighbor> &pool) {
         auto *center = new float[index_->dim_];
         for (unsigned j = 0; j < index_->dim_; j++) center[j] = 0;
         for (unsigned i = 0; i < index_->n_; i++) {
@@ -756,21 +821,16 @@ namespace weavess {
             center[j] /= index_->n_;
         }
 
-        // 数据库内质心 ？ 数据库外质心 ？
-//        std::vector<Neighbor> tmp, pool;
-//        index_->ep_ = rand() % index_->n_;  // random initialize navigating point
-//        get_neighbors(center, tmp, pool);
-//        index_->ep_ = tmp[0].id;
-
-        // 迭代
-            // L = 从 s 出发贪婪访问到的所有点，为 p 重新选邻居
-
-            // 对 p 邻居添加反向边，出度超出上届时，裁边
+        std::vector<Neighbor> tmp;
+        index_->ep_ = rand() % index_->n_;  // random initialize navigating point
+        get_neighbors(center, tmp, pool);
+        index_->ep_ = tmp[0].id;
     }
 
     void IndexComponentRefineVAMANA::get_neighbors(const float *query, std::vector<Neighbor> &retset, std::vector<Neighbor> &fullset) {
-        auto L = index_->param_.get<unsigned>("L_nsg");
+        auto L = index_->param_.get<unsigned>("L");
 
+        retset.clear();
         retset.resize(L + 1);
         std::vector<unsigned> init_ids(L);
         // initializer_->Search(query, nullptr, L, parameter, init_ids.data());
@@ -831,6 +891,101 @@ namespace weavess {
                 k = nk;
             else
                 ++k;
+        }
+
+        std::sort(fullset.begin(), fullset.begin()+L);
+    }
+
+    void IndexComponentRefineVAMANA::greedySearch(const unsigned query_id, const std::vector<Neighbor> &pool, std::vector<Neighbor> &retset){
+        const auto L = index_->param_.get<unsigned>("L");
+
+        std::vector<char> flags(index_->n_);
+
+        int k=0;
+        while(k < (int)L) {
+            int nk = L;
+
+            if (retset[k].flag) {
+                retset[k].flag = false;
+                unsigned n = retset[k].id;
+
+                for (unsigned m = 0; m < index_->final_graph_[n].size(); ++m) {
+                    unsigned id = index_->final_graph_[n][m];
+                    if (flags[id])continue;
+                    flags[id] = 1;
+                    float dist = index_->distance_->compare(index_->query_data_ + index_->query_dim_ * query_id,
+                                                            index_->data_ + index_->dim_ * id, (unsigned) index_->dim_);
+                    if (dist >= retset[L - 1].distance)continue;
+                    Neighbor nn(id, dist, true);
+                    int r = InsertIntoPool(retset.data(), L, nn);
+
+                    //if(L+1 < retset.size()) ++L;
+                    if (r < nk)nk = r;
+                }
+                //lock to here
+            }
+            if (nk <= k)k = nk;
+            else ++k;
+        }
+
+    }
+
+    void IndexComponentRefineVAMANA::sync_prune(unsigned q, float alpha, std::vector<Neighbor> &pool, boost::dynamic_bitset<> &flags,
+                                            SimpleNeighbor *cut_graph_) {
+        auto range = index_->param_.get<unsigned>("R");
+        index_->width = range;
+        unsigned start = 0;
+
+        for (unsigned nn = 0; nn < index_->final_graph_[q].size(); nn++) {
+            unsigned id = index_->final_graph_[q][nn];
+            if (flags[id]) continue;
+            float dist =
+                    index_->distance_->compare(index_->data_ + index_->dim_ * (size_t)q,
+                                               index_->data_ + index_->dim_ * (size_t)id, (unsigned)index_->dim_);
+            pool.emplace_back(id, dist, true);
+        }
+
+        std::sort(pool.begin(), pool.end());
+
+        std::vector<Neighbor> picked;
+
+        if(pool.size() > range){
+            MinHeap<float, Neighbor> skipped;
+
+            for(size_t i = pool.size() - 1; i >= 0; --i){
+                bool skip = false;
+                float cur_dist = pool[i].distance;
+                for(size_t j = 0; j < picked.size(); j ++){
+                    float dist = index_->distance_->compare(index_->data_ + index_->dim_ * (size_t)picked[j].id,
+                                                            index_->data_ + index_->dim_ * (size_t) pool[i].id, (unsigned)index_->dim_);
+                    if(alpha * dist < cur_dist) {
+                        skip = true;
+                        break;
+                    }
+                }
+
+                if(!skip){
+                    picked.push_back(pool[i]);
+                }else {
+                    // save_remains  ??
+                    skipped.push(cur_dist, pool[i]);
+                }
+
+                if(picked.size() == range)
+                    break;
+            }
+        }else{
+            picked = pool;
+        }
+
+
+        SimpleNeighbor *des_pool = cut_graph_ + (size_t)q * (size_t)range;
+        for (size_t t = 0; t < picked.size(); t++) {
+            des_pool[t].id = picked[t].id;
+            des_pool[t].distance = picked[t].distance;
+        }
+        if (picked.size() < range) {
+            des_pool[picked.size()].distance = -1;
         }
     }
 
