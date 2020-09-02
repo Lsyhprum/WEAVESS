@@ -72,7 +72,7 @@ namespace weavess {
     public:
         explicit IndexComponentCoarseKDT(Index *index) : IndexComponentCoarse(index) {}
 
-        void CoarseInner();
+        void CoarseInner() override;
 
     private:
         void meanSplit(std::mt19937 &rng, unsigned *indices, unsigned count, unsigned &index, unsigned &cutdim,
@@ -95,7 +95,7 @@ namespace weavess {
     };
 
 
-    // prune — 剪枝方法
+    // refine
     class IndexComponentPrune : public IndexComponent {
     public:
         explicit IndexComponentPrune(Index *index) : IndexComponent(index) {}
@@ -149,7 +149,7 @@ namespace weavess {
                         const Parameters &parameters, float threshold,
                         SimpleNeighbor *cut_graph_);
 
-        void get_neighbors(const unsigned q, const Parameters &parameter, std::vector<Neighbor> &pool);
+        void get_neighbors(unsigned q, const Parameters &parameter, std::vector<Neighbor> &pool);
     };
 
     class IndexComponentPruneDPG : public IndexComponentPrune {
@@ -171,6 +171,23 @@ namespace weavess {
         explicit IndexComponentRefineNNDescent(Index *index) : IndexComponentPrune(index) {}
 
         void PruneInner() override;
+    };
+
+    class IndexComponentRefineVAMANA : public IndexComponentPrune {
+    public:
+        explicit IndexComponentRefineVAMANA(Index *index) : IndexComponentPrune(index){}
+
+        void PruneInner() override;
+
+    private:
+        void init_graph(std::vector<Neighbor> &pool);
+
+        void get_neighbors(const float *query, std::vector<Neighbor> &retset, std::vector<Neighbor> &fullset);
+
+        void greedySearch(const unsigned query_id, const std::vector<Neighbor> &pool, std::vector<Neighbor> &retset);
+
+        void sync_prune(unsigned q, float alpha, std::vector<Neighbor> &pool, boost::dynamic_bitset<> &flags,
+                        SimpleNeighbor *cut_graph_);
     };
 
 
@@ -243,7 +260,7 @@ namespace weavess {
 
     private:
         void
-        SearchNearLeaf(Index::Node *node, std::stack<Index::Node *> &st, const size_t tree_id, const size_t query_id,
+        SearchNearLeaf(Index::Node *node, std::stack<Index::Node *> &st, size_t tree_id, size_t query_id,
                        size_t Nnode, std::vector<Neighbor> &retset);
     };
 

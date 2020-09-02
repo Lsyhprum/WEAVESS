@@ -79,7 +79,7 @@ void NSSG(std::string base_path, std::string query_path, std::string ground_path
     builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
             -> coarse(weavess::IndexBuilder::COARSE_NN_DESCENT)
             -> refine(weavess::IndexBuilder::PRUNE_NSSG)
-            -> connect(weavess::IndexBuilder::CONN_NSSG)
+            -> connect(weavess::IndexBuilder::CONN_DFS_EXPAND)
             -> eva(weavess::IndexBuilder::ENTRY_RAND, weavess::IndexBuilder::ROUTER_GREEDY);
 
     std::cout << "Time cost: " << builder->GetBuildTime().count() << std::endl;
@@ -112,10 +112,27 @@ void DPG(std::string base_path, std::string query_path, std::string ground_path)
     //parameters.set<unsigned>("L_dpg", 100);  // half of "L"  ---> 200K --> 100 L
 
     auto *builder = new weavess::IndexBuilder();
-    builder -> load(&base_path[0], parameters)
+    builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
             -> coarse(weavess::IndexBuilder::COARSE_NN_DESCENT)
-            -> prune(weavess::IndexBuilder::PRUNE_DPG)
-            -> eva(weavess::IndexBuilder::ENTRY_RAND, &query_path[0], &ground_path[0]);
+            -> refine(weavess::IndexBuilder::PRUNE_DPG)
+            -> eva(weavess::IndexBuilder::ENTRY_RAND, weavess::IndexBuilder::ROUTER_GREEDY);
+    std::cout << "Time cost: " << builder->GetBuildTime().count() << std::endl;
+}
+
+void Vamana(std::string base_path, std::string query_path, std::string ground_path){
+    weavess::Parameters parameters;
+    parameters.set<unsigned>("K", 200);
+    parameters.set<unsigned>("L", 200);
+    parameters.set<unsigned>("iter", 10);
+    parameters.set<unsigned>("S", 10);
+    parameters.set<unsigned>("R", 100);
+
+    auto *builder = new weavess::IndexBuilder();
+    builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
+            -> coarse(weavess::IndexBuilder::COARSE_NN_DESCENT)
+            -> refine(weavess::IndexBuilder::REFINE_VAMANA);
+            //-> eva(weavess::IndexBuilder::ENTRY_RAND, weavess::IndexBuilder::ROUTER_GREEDY);
+
     std::cout << "Time cost: " << builder->GetBuildTime().count() << std::endl;
 }
 

@@ -21,13 +21,13 @@ WEAVESS is a frame for testing the major graph-based approximate nearest neighbo
 | EFANNA |  **KDTree**     |  NN-Descent    |              | **KDTree**  |  Greedy |
 | NSG    |  NN-Descent     |  **MRNG**      |**DFS**       | **Centroid**|  Greedy |
 | NSSG   |  NN-Descent     |  **SSG**       |**DFS_expand**| Random      |  Greedy |
-| DPG    |  NN-Descent     |  **DPG**       |              | Random      |  Greedy |
+| DPG    |  NN-Descent     |  **DPG**       |**Reverse**   | Random      |  Greedy |
 | NSW    |                 |                |              |             |         |
 | HNSW   |                 |                |              |             |         |
 | NGT    |                 |                |              |             |         |
 | SPTAG  |                 |                |              |             |         |
 | FANNG  |                 |                |              |             |         |
-|DiskANN |                 |                |              |             |         |
+|Vamana  |  NN-Descent     |  **Vamana**    |              |             |         |
 | HCNNG  |                 |                |              |             |         |
 
 
@@ -136,3 +136,4 @@ the larger the better but slower. The `SEARCH_L` cannot be samller than the `SEA
 * SIMD 优化
 * PruneInner，Link 公共代码合并
 * coarse / eva 重构 —— search
+* 检查数据结构是否清空
