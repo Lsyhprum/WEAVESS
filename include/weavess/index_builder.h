@@ -94,6 +94,21 @@ namespace weavess {
         void getMergeLevelNodeList(Index::Node *node, size_t treeid, unsigned deepth);
     };
 
+    // coarse mst
+    class IndexComponentCoarseMST : public IndexComponentCoarse {
+    public:
+        explicit IndexComponentCoarseMST(Index *index) : IndexComponentCoarse(index) {}
+
+        void CoarseInner() override;
+
+    private:
+        int rand_int(const int & min, const int & max);
+
+        std::vector<std::vector< Index::Edge > >  create_exact_mst(int *idx_points, int left, int right, int max_mst_degree);
+
+        void create_clusters(int *idx_points, int left, int right, std::vector<std::vector< Index::Edge > > &graph, int minsize_cl, std::vector<omp_lock_t> &locks, int max_mst_degree);
+    };
+
 
     // refine
     class IndexComponentPrune : public IndexComponent {
@@ -299,8 +314,8 @@ namespace weavess {
         }
 
         enum TYPE {
-            COARSE_NN_DESCENT, COARSE_KDT, COARSE_HASH,
-            PRUNE_NSG, PRUNE_NSSG, PRUNE_HNSW, PRUNE_DPG, REFINE_NN_DESCENT,
+            COARSE_NN_DESCENT, COARSE_KDT, COARSE_HASH, COARSE_MST,
+            PRUNE_NSG, PRUNE_NSSG, PRUNE_HNSW, PRUNE_DPG, REFINE_NN_DESCENT, REFINE_VAMANA,
             CONN_DFS, CONN_DFS_EXPAND,
             ENTRY_RAND, ENTRY_KDT, ENTRY_CEN,
             ROUTER_GREEDY
@@ -326,6 +341,9 @@ namespace weavess {
             }else if(type == COARSE_KDT){
                 std::cout << "__COARSE KNN : KDT__" << std::endl;
                 a = new IndexComponentCoarseKDT(index);
+            }else if(type == COARSE_MST){
+                std::cout << "__COARSE KNN : MST__" << std::endl;
+                a = new IndexComponentCoarseMST(index);
             }else{
                 std::cerr << "coarse KNN wrong type" << std::endl;
             }

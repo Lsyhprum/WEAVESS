@@ -136,6 +136,19 @@ void Vamana(std::string base_path, std::string query_path, std::string ground_pa
     std::cout << "Time cost: " << builder->GetBuildTime().count() << std::endl;
 }
 
+void HCNNG(std::string base_path, std::string query_path, std::string ground_path) {
+    weavess::Parameters parameters;
+    // 设置参数
+
+    auto *builder = new weavess::IndexBuilder();
+    builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
+            -> coarse(weavess::IndexBuilder::COARSE_MST);
+
+    std::cout << "Time cost: " << builder->GetBuildTime().count() << std::endl;
+
+
+}
+
 //void NSW(std::string base_path, std::string query_path, std::string ground_path){}
 //
 //void HNSW(std::string base_path, std::string query_path, std::string ground_path){}

@@ -2,6 +2,12 @@
 // Created by Murph on 2020/8/24.
 //
 #include "weavess/index_builder.h"
+#include <algorithm>
+#include <thread>
+#include <tuple>
+#include <unordered_set>
+
+#define not_in_set(_elto,_set) (_set.find(_elto)==_set.end())
 
 namespace weavess {
 
@@ -633,4 +639,228 @@ namespace weavess {
             }
         }
     }
+
+    // MST
+    int IndexComponentCoarseMST::rand_int(const int & min, const int & max) {
+        static thread_local std::mt19937* generator = nullptr;
+        if (!generator) generator = new std::mt19937(clock() + std::hash<std::thread::id>()(std::this_thread::get_id()));
+        std::uniform_int_distribution<int> distribution(min, max);
+        return distribution(*generator);
+    }
+
+    std::tuple<std::vector<std::vector< Index::Edge > >, float> kruskal(std::vector<Index::Edge> &edges, int N, int max_mst_degree){
+        sort(edges.begin(), edges.end());
+        std::vector<std::vector< Index::Edge >> MST(N);
+        auto *disjset = new Index::DisjointSet(N);
+        float cost = 0;
+        for(Index::Edge &e : edges){
+            if(disjset->find(e.v1) != disjset->find(e.v2) && MST[e.v1].size()<max_mst_degree && MST[e.v2].size()<max_mst_degree){
+                MST[e.v1].push_back(e);
+                MST[e.v2].push_back(Index::Edge(e.v2, e.v1, e.weight));
+                disjset->_union(e.v1, e.v2);
+                cost += e.weight;
+
+            }
+        }
+        delete disjset;
+        return make_tuple(MST, cost);
+    }
+
+    std::vector<std::vector< Index::Edge > >  IndexComponentCoarseMST::create_exact_mst(int *idx_points, int left, int right, int max_mst_degree){
+        int N = right-left+1;
+        if(N==1){
+            index_->xxx++;
+            printf("%d\n", index_->xxx);
+        }
+        float cost;
+        std::vector<Index::Edge> full;
+        std::vector<std::vector< Index::Edge > > mst;
+        full.reserve(N*(N-1));
+        for(int i=0; i<N; i++){
+            for(int j=0; j<N; j++)
+                if(i!=j){
+                    float dist = index_->distance_->compare(index_->data_ + idx_points[left+i] * index_->dim_,
+                                                            index_->data_ + idx_points[left+j] * index_->dim_,
+                                                            (unsigned) index_->dim_);
+                }
+
+        }
+        tie(mst, cost) = kruskal(full, N, max_mst_degree);
+        return mst;
+    }
+
+    bool check_in_neighbors(int u, std::vector<Index::Edge> &neigh){
+        for(int i=0; i<neigh.size(); i++)
+            if(neigh[i].v2 == u)
+                return true;
+        return false;
+    }
+
+    void IndexComponentCoarseMST::create_clusters(int *idx_points, int left, int right, std::vector<std::vector< Index::Edge > > &graph, int minsize_cl, std::vector<omp_lock_t> &locks, int max_mst_degree){
+        int num_points = right - left + 1;
+
+        if(num_points<minsize_cl){
+            std::vector<std::vector< Index::Edge > > mst = create_exact_mst(idx_points, left, right, max_mst_degree);
+            for(int i=0; i<num_points; i++){
+                for(int j=0; j<mst[i].size(); j++){
+                    omp_set_lock(&locks[idx_points[left+i]]);
+                    if(!check_in_neighbors(idx_points[left+mst[i][j].v2], graph[idx_points[left+i]]))
+                        graph[idx_points[left+i]].push_back(Index::Edge(idx_points[left+i], idx_points[left+mst[i][j].v2], mst[i][j].weight));
+                    omp_unset_lock(&locks[idx_points[left+i]]);
+                }
+            }
+        }else{
+            int x = rand_int(left, right);
+            int y = rand_int(left, right);
+            while(y==x) y = rand_int(left, right);
+
+            std::vector<std::pair<float,int> > dx(num_points);
+            std::vector<std::pair<float,int> > dy(num_points);
+            std::unordered_set<int> taken;
+            for(int i=0; i<num_points; i++){
+                float dist = index_->distance_->compare(index_->data_ + idx_points[x] * index_->dim_,
+                                                        index_->data_ + idx_points[left+i] * index_->dim_,
+                                                        (unsigned) index_->dim_);
+                dx[i] = std::make_pair(dist, idx_points[left+i]);
+
+                dist = index_->distance_->compare(index_->data_ + idx_points[y] * index_->dim_,
+                                                  index_->data_ + idx_points[left+i] * index_->dim_,
+                                                  (unsigned) index_->dim_);
+                dy[i] = std::make_pair(dist, idx_points[left+i]);
+            }
+            sort(dx.begin(), dx.end());
+            sort(dy.begin(), dy.end());
+            int i = 0, j = 0, turn = rand_int(0, 1), p = left, q = right;
+            while(i<num_points || j<num_points){
+                if(turn == 0){
+                    if(i<num_points){
+                        if(not_in_set(dx[i].second, taken)){
+                            idx_points[p] = dx[i].second;
+                            taken.insert(dx[i].second);
+                            p++;
+                            turn = (turn+1)%2;
+                        }
+                        i++;
+                    }else{
+                        turn = (turn+1)%2;
+                    }
+                }else{
+                    if(j<num_points){
+                        if(not_in_set(dy[j].second, taken)){
+                            idx_points[q] = dy[j].second;
+                            taken.insert(dy[j].second);
+                            q--;
+                            turn = (turn+1)%2;
+                        }
+                        j++;
+                    }else{
+                        turn = (turn+1)%2;
+                    }
+                }
+            }
+
+            dx.clear();
+            dy.clear();
+            taken.clear();
+            std::vector<std::pair<float,int> >().swap(dx);
+            std::vector<std::pair<float,int> >().swap(dy);
+
+            create_clusters(idx_points, left, p-1, graph, minsize_cl, locks, max_mst_degree);
+            create_clusters(idx_points, p, right, graph, minsize_cl, locks, max_mst_degree);
+        }
+    }
+
+    void sort_edges(std::vector<std::vector< Index::Edge > > &G){
+        int N = G.size();
+#pragma omp parallel for
+        for(int i=0; i<N; i++)
+            sort(G[i].begin(), G[i].end());
+    }
+
+    std::vector<int> get_sizeadj(std::vector<std::vector< Index::Edge > > &G){
+        std::vector<int> NE(G.size());
+        for(int i=0; i<G.size(); i++)
+            NE[i] = G[i].size();
+        return NE;
+    }
+
+    template<typename SomeType>
+    float mean_v(std::vector<SomeType> a){
+        float s = 0;
+        for(float x: a) s += x;
+        return s/a.size();
+    }
+
+    template<typename SomeType>
+    float sum_v(std::vector<SomeType> a){
+        float s = 0;
+        for(float x: a) s += x;
+        return s;
+    }
+
+    template<typename SomeType>
+    float max_v(std::vector<SomeType> a){
+        float mx = a[0];
+        for(float x: a) mx = std::max(mx,x);
+        return mx;
+    }
+
+    template<typename SomeType>
+    float min_v(std::vector<SomeType> a){
+        float mn = a[0];
+        for(float x: a) mn = std::min(mn,x);
+        return mn;
+    }
+
+    template<typename SomeType>
+    float std_v(std::vector<SomeType> a){
+        float m = mean_v(a), s = 0, n = a.size();
+        for(float x: a) s += (x-m)*(x-m);
+        return sqrt(s/(n-1));
+    }
+
+    void print_stats_graph(std::vector<std::vector< Index::Edge > > &G){
+        std::vector<int> sizeadj;
+        sizeadj = get_sizeadj(G);
+        printf("num edges:\t%.0lf\n", sum_v(sizeadj)/2);
+        printf("max degree:\t%.0lf\n", max_v(sizeadj));
+        printf("min degree:\t%.0lf\n", min_v(sizeadj));
+        printf("avg degree:\t%.2lf\n", mean_v(sizeadj));
+        printf("std degree:\t%.2lf\n\n", std_v(sizeadj));
+    }
+
+    void IndexComponentCoarseMST::CoarseInner() {
+        std::cout << index_->n_ << std::endl;
+        std::cout << index_->param_.ToString() << std::endl;
+
+        auto minsize_cl = index_->param_.get<unsigned>("S");
+        auto num_cl = index_->param_.get<unsigned>("N");
+        int max_mst_degree = 3;
+
+        std::vector<std::vector< Index::Edge > > G(index_->n_);
+        std::vector<omp_lock_t> locks(index_->n_);
+
+        // MST 图
+        for(int i = 0; i < index_->n_; i ++){
+            omp_init_lock(&locks[i]);
+            G[i].reserve(max_mst_degree * num_cl);
+        }
+
+        printf("creating clusters...\n");
+#pragma omp parallel for
+        for(int i=0; i<num_cl; i++){
+            int * idx_points = new int[index_->n_];
+            for(int j=0; j<index_->n_; j++)
+                idx_points[j] = j;
+            create_clusters(idx_points, 0 , index_->n_-1, G, minsize_cl, locks, max_mst_degree);
+            printf("end cluster %d\n", i);
+            delete[] idx_points;
+        }
+
+        printf("sorting...\n");
+        sort_edges(G);
+        print_stats_graph(G);
+
+    }
+
 }
