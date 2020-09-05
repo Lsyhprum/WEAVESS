@@ -78,6 +78,13 @@ namespace weavess {
             }
         };
 
+        struct Tnode {
+            unsigned div_dim;
+            std::vector <unsigned> left;
+            std::vector <unsigned> right;
+        };
+        std::vector <Tnode> Tn;
+
         int xxx = 0;
     };
 

@@ -861,6 +861,38 @@ namespace weavess {
         sort_edges(G);
         print_stats_graph(G);
 
+        for (size_t i = 0; i < index_->n_; i++) {
+            auto size = G[i].size();
+            long long min_diff =1e6, min_diff_dim = -1;
+            for (size_t j = 0; j < index_->dim_; j++) {
+                int lnum = 0, rnum = 0;
+                for (size_t k = 0; k < size; k++) {
+                    if (*(index_->data_ + G[i][k].v2 + j) < *(index_->data_ + i + j)) {
+                        lnum++;
+                    }
+                    else {
+                        rnum++;
+                    }
+                }
+                long long diff = lnum - rnum;
+                if (diff < 0) diff = -diff;
+                if (diff < min_diff) {
+                    min_diff = diff;
+                    min_diff_dim = j;
+                }
+            }
+
+            index_->Tn[i].div_dim = min_diff_dim;
+            for (size_t k = 0; k < size; k++) {
+                if (*(index_->data_ + G[i][k].v2 + min_diff_dim) < *(index_->data_ + i + min_diff_dim)) {
+                    index_->Tn[i].left.push_back(G[i][k].v2);
+                }
+                else {
+                    index_->Tn[i].right.push_back(G[i][k].v2);
+                }
+            }
+        }
+
     }
 
 }

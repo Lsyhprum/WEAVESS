@@ -135,8 +135,14 @@ the larger the better but slower. The `SEARCH_L` cannot be samller than the `SEA
 
 -[ ] HCNNG
 
-
+* route 缺失 flag
+* NSW 
+* HNSW
+* 根据 SPTAG 分层算法确定分治构图如何进行
+* 重写 Coarse 部分逻辑，分为 Increment Coarse 、 Iteration Coarse、 DivideAngConquer Coarse
 * IEH 实现
+* 重写 HCNNG MST 算法， 去掉原数据结构
+* EFANNA 随机截断树和 HCNNG 的 KDT 数据结构进行统一
 * KGraph 修改
 * EFANNA knn_graph 修改  参数缺失 内存不够
 * 分离算法接口与 IndexBuilder 接口
@@ -145,5 +151,4 @@ the larger the better but slower. The `SEARCH_L` cannot be samller than the `SEA
 * PruneInner，Link 公共代码合并
 * coarse / eva 重构 —— search
 * 检查数据结构是否清空
-* NSW 
-* HNSW
+

@@ -302,6 +302,13 @@ namespace weavess {
         void RouteInner(unsigned query_id, unsigned K, unsigned *indices) override;
     };
 
+    class IndexComponentRouteGuided : public IndexComponentRoute {
+    public:
+        explicit IndexComponentRouteGuided(Index *index) : IndexComponentRoute(index) {}
+
+        void RouteInner(unsigned query_id, unsigned K, unsigned *indices) override;
+    };
+
 
     class IndexBuilder {
     public:
@@ -315,10 +322,10 @@ namespace weavess {
 
         enum TYPE {
             COARSE_NN_DESCENT, COARSE_KDT, COARSE_HASH, COARSE_MST,
-            PRUNE_NSG, PRUNE_NSSG, PRUNE_HNSW, PRUNE_DPG, REFINE_NN_DESCENT, REFINE_VAMANA,
+            PRUNE_NSG, PRUNE_NSSG, PRUNE_HNSW, PRUNE_DPG, REFINE_NN_DESCENT, REFINE_VAMANA, PRUNE_MST,
             CONN_DFS, CONN_DFS_EXPAND,
             ENTRY_RAND, ENTRY_KDT, ENTRY_CEN,
-            ROUTER_GREEDY
+            ROUTER_GREEDY, ROUTER_GUIDED
         };
 
         IndexBuilder *load(char *data_file, char *query_file, char *ground_file, Parameters &parameters) {
@@ -442,6 +449,8 @@ namespace weavess {
 
                     if (route_type == ROUTER_GREEDY) {
                         b = new IndexComponentRouteGreedy(index);
+                    } else if(route_type == ROUTER_GUIDED) {
+                        b = new IndexComponentRouteGuided(index);
                     } else {
                         std::cerr << "route wrong type" << std::endl;
                         exit(-1);

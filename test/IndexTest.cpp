@@ -142,7 +142,8 @@ void HCNNG(std::string base_path, std::string query_path, std::string ground_pat
 
     auto *builder = new weavess::IndexBuilder();
     builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
-            -> coarse(weavess::IndexBuilder::COARSE_MST);
+            -> coarse(weavess::IndexBuilder::COARSE_MST)
+            ->
 
     std::cout << "Time cost: " << builder->GetBuildTime().count() << std::endl;
 
