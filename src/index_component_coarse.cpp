@@ -895,4 +895,218 @@ namespace weavess {
 
     }
 
+
+    // NSW
+    void IndexComponentCoarseNSW::CoarseInner(){
+        std::cout << index_->n_ << std::endl;
+        std::cout << index_->param_.ToString() << std::endl;
+
+        // 参数检查
+
+        // 增量式构建索引
+        AddBatch();
+
+        // 性能评价
+
+    }
+
+    void IndexComponentCoarseNSW::AddBatch() {
+
+        size_t futureNextNodeId = index_->NextNodeId_ + index_->data_len;
+
+//        LOG(LIB_INFO) << "Current nextNodeId: " << NextNodeId_
+//                      << " futureNextNodeId + 1 after batch addition: " << futureNextNodeId;
+
+        // 2) One entry should be added before all the threads are started, or else add() will not work properly
+
+
+        bool isEmpty = false;
+
+        {
+            std::unique_lock<std::mutex> lock(index_->ElListGuard_);
+            isEmpty = index_->ElList_.empty();
+        }
+        int start_add=0;
+
+        if (isEmpty){
+            addCriticalSection(new Index::MSWNode(index_->data_, index_->NextNodeId_));
+            start_add = 1;
+        }
+
+        // Skip the first element, one element is already added
+        for (size_t id = start_add; id < index_->data_len; ++id) {
+            auto* node = new Index::MSWNode(index_->data_ + index_->dim_ * id, id + index_->NextNodeId_);
+            add(node, futureNextNodeId);
+        }
+
+        UpdateNextNodeId(futureNextNodeId);
+//        CompactIdsIfNeeded();
+//        if (bCheckIDs) CheckIDs();
+//        LOG(LIB_INFO) << "The number of data points: " << ElList_.size() << " NextNodeId_ = " << NextNodeId_;
+    }
+
+    void IndexComponentCoarseNSW::UpdateNextNodeId(size_t newNextNodeId)
+    {
+        index_->NextNodeId_ = newNextNodeId;
+    }
+
+    void IndexComponentCoarseNSW::addCriticalSection(Index::MSWNode *newElement){
+        std::unique_lock<std::mutex> lock(index_->ElListGuard_);
+
+        if (nullptr == index_->pEntryPoint_) {
+            // When adding the very first element, assign the value of the entry point!
+            index_->pEntryPoint_ = newElement;
+            //CHECK(index_->ElList_.empty());
+        }
+        index_->ElList_.insert(std::make_pair(newElement->getId(), newElement));
+    }
+
+    void IndexComponentCoarseNSW::searchForIndexing(const float *queryObj,
+                                              std::priority_queue<Index::EvaluatedMSWNodeDirect> &resultSet,
+                                              int nextNodeIdUpperBound) const
+    {
+/*
+ * The trick of using large dense bitsets instead of unordered_set was
+ * borrowed from Wei Dong's kgraph: https://github.com/aaalgo/kgraph
+ *
+ * This trick works really well even in a multi-threaded mode. Indeed, the amount
+ * of allocated memory is small. For example, if one has 8M entries, the size of
+ * the bitmap is merely 1 MB. Furthermore, setting 1MB of entries to zero via memset would take only
+ * a fraction of millisecond.
+ */
+        std::vector<bool>                        visitedBitset(nextNodeIdUpperBound); // seems to be working efficiently even in a multi-threaded mode.
+
+        std::vector<Index::MSWNode*> neighborCopy;
+
+        /**
+         * Search for the k most closest elements to the query.
+         */
+        Index::MSWNode* provider = index_->pEntryPoint_;
+//        CHECK_MSG(provider != nullptr, "Bug: there is not entry point set!")
+
+        std::priority_queue <float>                  closestDistQueue;
+        std::priority_queue <Index::EvaluatedMSWNodeReverse>   candidateSet;
+
+        unsigned NN_ = index_->param_.get<unsigned>("NN_");
+        unsigned efConstruction_ = index_->param_.get<unsigned>("efConstruction_");
+
+        float d = index_->distance_->compare(index_->data_ + provider->getId() * index_->dim_, queryObj, index_->dim_);
+//        float d = use_proxy_dist_ ?  space_.ProxyDistance(provider->getData(), queryObj) :
+//                   space_.IndexTimeDistance(provider->getData(), queryObj);
+        Index::EvaluatedMSWNodeReverse ev(d, provider);
+
+        candidateSet.push(ev);
+        closestDistQueue.push(d);
+
+        if (closestDistQueue.size() > efConstruction_) {
+            closestDistQueue.pop();
+        }
+
+        int nodeId = provider->getId();
+//        CHECK_MSG(nodeId < nextNodeIdUpperBound,
+//                  "Bug: nodeId (" + ConvertToString(nodeId) + ") > nextNodeIdUpperBound (" + ConvertToString(nextNodeIdUpperBound));
+
+        visitedBitset[nodeId] = true;
+        resultSet.emplace(d, provider);
+
+        if (resultSet.size() > NN_) { // TODO check somewhere that NN > 0
+            resultSet.pop();
+        }
+
+        while (!candidateSet.empty()) {
+            const Index::EvaluatedMSWNodeReverse& currEv = candidateSet.top();
+            float lowerBound = closestDistQueue.top();
+
+            /*
+             * Check if we reached a local minimum.
+             */
+            if (currEv.getDistance() > lowerBound) {
+                break;
+            }
+            Index::MSWNode* currNode = currEv.getMSWNode();
+
+            /*
+             * This lock protects currNode from being modified
+             * while we are accessing elements of currNode.
+             */
+            size_t neighborQty = 0;
+            {
+                std::unique_lock<std::mutex> lock(currNode->accessGuard_);
+
+                //const vector<MSWNode*>& neighbor = currNode->getAllFriends();
+                const std::vector<Index::MSWNode*>& neighbor = currNode->getAllFriends();
+                neighborQty = neighbor.size();
+                if (neighborQty > neighborCopy.size()) neighborCopy.resize(neighborQty);
+                for (size_t k = 0; k < neighborQty; ++k)
+                    neighborCopy[k]=neighbor[k];
+            }
+
+            // Can't access curEv anymore! The reference would become invalid
+            candidateSet.pop();
+
+            // calculate distance to each neighbor
+            for (size_t neighborId = 0; neighborId < neighborQty; ++neighborId) {
+                Index::MSWNode* pNeighbor = neighborCopy[neighborId];
+
+                int nodeId = pNeighbor->getId();
+//                CHECK_MSG(nodeId < nextNodeIdUpperBound,
+//                          "Bug: nodeId (" + ConvertToString(nodeId) + ") > nextNodeIdUpperBound (" + ConvertToString(nextNodeIdUpperBound));
+                if (!visitedBitset[nodeId]) {
+                    visitedBitset[nodeId] = true;
+                    d = index_->distance_->compare(index_->data_ + index_->dim_ * pNeighbor->getId(), queryObj, index_->dim_);
+//                    d = use_proxy_dist_ ? space_.ProxyDistance(pNeighbor->getData(), queryObj) :
+//                        space_.IndexTimeDistance(pNeighbor->getData(), queryObj);
+
+                    if (closestDistQueue.size() < efConstruction_ || d < closestDistQueue.top()) {
+                        closestDistQueue.push(d);
+                        if (closestDistQueue.size() > efConstruction_) {
+                            closestDistQueue.pop();
+                        }
+                        candidateSet.emplace(d, pNeighbor);
+                    }
+
+                    if (resultSet.size() < NN_ || resultSet.top().getDistance() > d) {
+                        resultSet.emplace(d, pNeighbor);
+                        if (resultSet.size() > NN_) { // TODO check somewhere that NN > 0
+                            resultSet.pop();
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    void IndexComponentCoarseNSW::add(Index::MSWNode *newElement, int nextNodeIdUpperBound){
+        newElement->removeAllFriends();
+
+        bool isEmpty = false;
+
+        {
+            std::unique_lock<std::mutex> lock(index_->ElListGuard_);
+            isEmpty = index_->ElList_.empty();
+        }
+
+//        if(isEmpty){
+//            // Before add() is called, the first node should be created!
+//            LOG(LIB_INFO) << "Bug: the list of nodes shouldn't be empty!";
+//            throw runtime_error("Bug: the list of nodes shouldn't be empty!");
+//        }
+
+        {
+            std::priority_queue<Index::EvaluatedMSWNodeDirect> resultSet;
+
+            searchForIndexing(newElement->getData(), resultSet, nextNodeIdUpperBound);
+
+            // TODO actually we might need to add elements in the reverse order in the future.
+            // For the current implementation, however, the order doesn't seem to matter
+            while (!resultSet.empty()) {
+                Index::MSWNode::link(resultSet.top().getMSWNode(), newElement);
+                resultSet.pop();
+            }
+        }
+
+        addCriticalSection(newElement);
+    }
+
+
 }
