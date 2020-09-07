@@ -12,12 +12,202 @@
 //#include <cstring>
 #include <set>
 #include <omp.h>
+#include <mutex>
 //#include "util.h"
 #include "distance.h"
 #include "neighbor.h"
 #include "parameters.h"
 
 namespace weavess {
+
+    class IndexNSW {
+    public:
+        class MSWNode{
+        public:
+            // int -> IntType
+            MSWNode(const float *data, size_t id) {
+                nodeObj_ = data;
+                id_ = id;
+            }
+            ~MSWNode(){};
+            void removeAllFriends(){
+                friends_.clear();
+            }
+
+            static void link(MSWNode* first, MSWNode* second){
+                // addFriend checks for duplicates if the second argument is true
+                first->addFriend(second, true);
+                second->addFriend(first, true);
+            }
+
+            // Removes only friends from a given set
+            void removeGivenFriends(const std::vector<bool>& delNodes) {
+                size_t newQty = 0;
+                /*
+                 * This in-place one-iteration deletion of elements in delNodes
+                 * Invariant in the beginning of each loop iteration:
+                 * i >= newQty
+                 * Furthermore:
+                 * i - newQty == the number of entries deleted in previous iterations
+                 */
+                for (size_t i = 0; i < friends_.size(); ++i) {
+                    int id = friends_[i]->getId();
+                    if (!delNodes.at(id)) {
+                        friends_[newQty] = friends_[i];
+                        ++newQty;
+                    }
+                }
+                friends_.resize(newQty);
+            }
+
+            // Removes friends from a given set and attempts to replace them with friends' closest neighbors
+            // cacheDelNode should be thread-specific (or else calling this function isn't thread-safe)
+//            template <class dist_t>
+//            void removeGivenFriendsPatchWithClosestNeighbor(const Space<dist_t>& space, bool use_proxy_dist,
+//                                                            const std::vector<bool>& delNodes, std::vector<MSWNode*>& cacheDelNode) {
+//                /*
+//                 * This in-place one-iteration deletion of elements in delNodes
+//                 * Loop invariants:
+//                 * 1) i >= newQty
+//                 * 2) i - newQty = delQty
+//                 * Hence, when the loop terminates delQty + newQty == friends_.size()
+//                 */
+//                size_t newQty = 0, delQty = 0;
+//
+//                for (size_t i = 0; i < friends_.size(); ++i) {
+//                    MSWNode* oneFriend = friends_[i];
+//                    int id = oneFriend->getId();
+//                    if (!delNodes.at(id)) {
+//                        friends_[newQty] = friends_[i];
+//                        ++newQty;
+//                    } else {
+//                        if (cacheDelNode.size() <= delQty) cacheDelNode.resize(2*delQty + 1);
+//                        cacheDelNode[delQty] = oneFriend;
+//                        ++delQty;
+//                    }
+//                }
+////                CHECK_MSG((delQty + newQty) == friends_.size(),
+////                          "Seems like a bug, delQty:" + ConvertToString(delQty) +
+////                          " newQty: " + ConvertToString(newQty) +
+////                          " friends_.size()=" + ConvertToString(friends_.size()));
+//                friends_.resize(newQty);
+//                // When patching use the function link()
+//                for (size_t i = 0; i < delQty; ++i) {
+//                    MSWNode *toDelFriend = cacheDelNode[i];
+//                    MSWNode *friendReplacement = nullptr;
+//                    dist_t  dmin = numeric_limits<dist_t>::max();
+//                    const Object* queryObj = this->getData();
+//                    for (MSWNode* neighb : toDelFriend->getAllFriends()) {
+//                        int neighbId = neighb->getId();
+//                        if (!delNodes.at(neighbId)) {
+//                            const MSWNode* provider = neighb;
+//                            dist_t d = use_proxy_dist ?  space.ProxyDistance(provider->getData(), queryObj) :
+//                                       space.IndexTimeDistance(provider->getData(), queryObj);
+//                            if (d < dmin) {
+//                                dmin = d;
+//                                friendReplacement = neighb;
+//                            }
+//                        }
+//                    }
+//                    if (friendReplacement != nullptr) {
+//                        link(this, friendReplacement);
+//                    }
+//                }
+//            }
+            /*
+             * 1. The list of friend pointers is sorted.
+             * 2. If bCheckForDup == true addFriend checks for
+             *    duplicates using binary searching (via pointer comparison).
+             */
+            void addFriend(MSWNode* element, bool bCheckForDup) {
+                std::unique_lock<std::mutex> lock(accessGuard_);
+
+                if (bCheckForDup) {
+                    auto it = lower_bound(friends_.begin(), friends_.end(), element);
+                    if (it == friends_.end() || (*it) != element) {
+                        friends_.insert(it, element);
+                    }
+                } else {
+                    friends_.push_back(element);
+                }
+            }
+            const float * getData() const {
+                return nodeObj_;
+            }
+            size_t getId() const { return id_; }
+            void setId(int id) { id_ = id; }
+            /*
+             * THIS NOTE APPLIES ONLY TO THE INDEXING PHASE:
+             *
+             * Before getting access to the friends,
+             * one needs to lock the mutex accessGuard_
+             * The mutex can be released ONLY when
+             * we exit the scope that has access to
+             * the reference returned by getAllFriends()
+             */
+            const std::vector<MSWNode*>& getAllFriends() const {
+                return friends_;
+            }
+
+            std::mutex accessGuard_;
+
+        private:
+            const float*       nodeObj_;
+            size_t              id_;
+            std::vector<MSWNode*>    friends_;
+        };
+//----------------------------------
+
+        class EvaluatedMSWNodeReverse{
+        public:
+            EvaluatedMSWNodeReverse() {
+                distance = 0;
+                element = NULL;
+            }
+            EvaluatedMSWNodeReverse(float di, MSWNode* node) {
+                distance = di;
+                element = node;
+            }
+            ~EvaluatedMSWNodeReverse(){}
+            float getDistance() const {return distance;}
+            MSWNode* getMSWNode() const {return element;}
+            bool operator< (const EvaluatedMSWNodeReverse &obj1) const {
+                return (distance > obj1.getDistance());
+            }
+
+        private:
+            float distance;
+            MSWNode* element;
+        };
+
+        class EvaluatedMSWNodeDirect{
+        public:
+            EvaluatedMSWNodeDirect() {
+                distance = 0;
+                element = NULL;
+            }
+            EvaluatedMSWNodeDirect(float di, MSWNode* node) {
+                distance = di;
+                element = node;
+            }
+            ~EvaluatedMSWNodeDirect(){}
+            float getDistance() const {return distance;}
+            MSWNode* getMSWNode() const {return element;}
+            bool operator< (const EvaluatedMSWNodeDirect &obj1) const {
+                return (distance < obj1.getDistance());
+            }
+
+        private:
+            float distance;
+            MSWNode* element;
+        };
+
+        mutable std::mutex   ElListGuard_;
+        std::unordered_map<int, MSWNode*>      ElList_;
+        int          NextNodeId_ = 0; // This is internal node id
+        bool            changedAfterCreateIndex_ = false;
+        MSWNode*        pEntryPoint_ = nullptr;
+    };
 
     class IndexMST {
     public:
@@ -190,12 +380,12 @@ namespace weavess {
 
     class IndexNSG {
     public:
-        unsigned width;
+        unsigned width; // 待删除
         unsigned ep_;
         std::vector<std::mutex> locks;
-        char* opt_graph_;
+        char* opt_graph_;   // 删除
         size_t node_size;
-        size_t data_len;
+        size_t data_len;    // 删除
         size_t neighbor_len;
         std::vector<nhood> nnd_graph;
     };
@@ -205,7 +395,7 @@ namespace weavess {
         std::vector<unsigned> eps_;
     };
 
-    class Index : public IndexNSG, public IndexNSSG, public IndexKDTree, public IndexHash, public IndexMST {
+    class Index : public IndexNSG, public IndexNSSG, public IndexKDTree, public IndexHash, public IndexMST, public IndexNSW {
     public:
         float *data_ = nullptr;
         float *query_data_ = nullptr;

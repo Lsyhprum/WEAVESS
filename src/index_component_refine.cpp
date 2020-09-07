@@ -513,6 +513,26 @@ namespace weavess {
         }
     }
 
+    void IndexComponentPruneNSSG::get_neighbors(const unsigned q, const Parameters &parameter,
+                                 std::vector<Neighbor> &pool) {
+        boost::dynamic_bitset<> flags{index_->n_, 0};
+        unsigned L = index_->param_.get<unsigned>("L");
+        flags[q] = true;
+        for (unsigned i = 0; i < index_->final_graph_[q].size(); i++) {
+            unsigned nid = index_->final_graph_[q][i];
+            for (unsigned nn = 0; nn < index_->final_graph_[nid].size(); nn++) {
+                unsigned nnid = index_->final_graph_[nid][nn];
+                if (flags[nnid]) continue;
+                flags[nnid] = true;
+                float dist = index_->distance_->compare(index_->data_ + index_->dim_ * q,
+                                                index_->data_ + index_->dim_ * nnid, index_->dim_);
+                pool.push_back(Neighbor(nnid, dist, true));
+                if (pool.size() >= L) break;
+            }
+            if (pool.size() >= L) break;
+        }
+    }
+
 
     // DPG
     void IndexComponentPruneDPG::PruneInner() {

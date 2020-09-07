@@ -109,6 +109,25 @@ namespace weavess {
         void create_clusters(int *idx_points, int left, int right, std::vector<std::vector< Index::Edge > > &graph, int minsize_cl, std::vector<omp_lock_t> &locks, int max_mst_degree);
     };
 
+    // coarse NSW
+    class IndexComponentCoarseNSW : public IndexComponentCoarse {
+    public:
+        explicit IndexComponentCoarseNSW(Index *index) : IndexComponentCoarse(index) {}
+
+        void CoarseInner() override;
+
+    private:
+        void AddBatch();
+
+        void addCriticalSection(Index::MSWNode *newElement);
+
+        void add(Index::MSWNode *newElement, int nextNodeIdUpperBound);
+
+        void UpdateNextNodeId(size_t newNextNodeId);
+
+        void searchForIndexing(const float *queryObj, std::priority_queue<Index::EvaluatedMSWNodeDirect> &resultSet, int nextNodeIdUpperBound) const;
+    };
+
 
     // refine
     class IndexComponentPrune : public IndexComponent {
@@ -321,11 +340,11 @@ namespace weavess {
         }
 
         enum TYPE {
-            COARSE_NN_DESCENT, COARSE_KDT, COARSE_HASH, COARSE_MST,
+            COARSE_NN_DESCENT, COARSE_KDT, COARSE_HASH, COARSE_MST, COARSE_NSW, COARSE_HNSW,
             PRUNE_NSG, PRUNE_NSSG, PRUNE_HNSW, PRUNE_DPG, REFINE_NN_DESCENT, REFINE_VAMANA, PRUNE_MST,
             CONN_DFS, CONN_DFS_EXPAND,
-            ENTRY_RAND, ENTRY_KDT, ENTRY_CEN,
-            ROUTER_GREEDY, ROUTER_GUIDED
+            ENTRY_RAND, ENTRY_KDT, ENTRY_CEN, ENTRY_NONE,
+            ROUTER_GREEDY, ROUTER_GUIDED, ROUTER_NSW
         };
 
         IndexBuilder *load(char *data_file, char *query_file, char *ground_file, Parameters &parameters) {
@@ -351,7 +370,10 @@ namespace weavess {
             }else if(type == COARSE_MST){
                 std::cout << "__COARSE KNN : MST__" << std::endl;
                 a = new IndexComponentCoarseMST(index);
-            }else{
+            }else if(type == COARSE_NSW) {
+                std::cout << "__COARSE KNN : NSW__" << std::endl;
+                a = new IndexComponentCoarseNSW(index);
+            } else{
                 std::cerr << "coarse KNN wrong type" << std::endl;
             }
 

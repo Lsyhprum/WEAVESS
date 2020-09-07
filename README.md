@@ -31,19 +31,30 @@ WEAVESS is a frame for testing the major graph-based approximate nearest neighbo
 | HCNNG  |  **Hierarchical clustering** |                |              | Random      |  **Guided Search**  |
 
 
+## Evaluation criteria
+
+* Speedup : Collection size / Number of distance calculations
 
 ## ANNS Performance
+
+## KGraph
+
+This is a modified version of KGraph from the EFANNA NNDescent source code, which is a simple version of KGraph.
+
+Main differences :
+
 
 
 ## Building Parameters
 
-### KGraph
+[KGraph: A Library for Approximate Nearest Neighbor Search](https://github.com/aaalgo/kgraph)
 
 * **K** : 'K' of K-NNG
 * **L** : candidate pool size, larger is more accurate but slower, no smaller than K.
 * **iter** : NN-Descent iteration times, iter usually < 30.
 * **S** : number of neighbors in local join, larger is more accurate but slower.
 * **R** : number of reverse neighbors, larger is more accurate but slower.
+
 
 |  Dataset  |  K  |  L  | iter |  S |  R  |
 |:---------:|:---:|:---:|:----:|:--:|:---:|
@@ -107,6 +118,12 @@ WEAVESS is a frame for testing the major graph-based approximate nearest neighbo
 the larger the better but slower. The `SEARCH_L` cannot be samller than the `SEARCH_K`
 
 
+## Contributing to the repository
+
+Contributions are highly welcome!
+
+Please make pull requests against the `dev` branch.
+
 ## TODO
 
 -[ ] KGraph
@@ -135,9 +152,29 @@ the larger the better but slower. The `SEARCH_L` cannot be samller than the `SEA
 
 -[ ] HCNNG
 
-* route 缺失 flag
-* NSW 
+
+* Log 
+* 数据类型 抽象 
 * HNSW
+* 整体评价
+    * 搜索性能
+        * 评价指标：召回率、Speed-up、(QPS _ 需修改代码支持 SIMD)
+        * 数据库内查询和数据库外查询比较
+        * 可扩展性：不同数据集
+        * 达到相同召回率时候选集的尺寸、相同尺寸候选集下不同算法的召回率
+        * 查询时入口点到终止点的平均路径长度
+    * 构建性能
+        * 索引构建时间，索引尺寸
+        * 最优搜索性能下，近邻图质量（k个邻居中是k个最近邻的百分比）和对应的召回率；
+        * 最大出度、平均出度
+        * 不同邻居数对不同构图方法构建性能和索引性能的影响（可以邻居数k取几个特定的值，比如10，50，100，然后再通过Queries Per Second vs Recall评估）。
+        * 连通分量数
+
+* 评价指标 ： 
+    * 召回率、 Speed-up
+* 
+* 
+* route 缺失 flag
 * 根据 SPTAG 分层算法确定分治构图如何进行
 * 重写 Coarse 部分逻辑，分为 Increment Coarse 、 Iteration Coarse、 DivideAngConquer Coarse
 * IEH 实现
@@ -151,4 +188,6 @@ the larger the better but slower. The `SEARCH_L` cannot be samller than the `SEA
 * PruneInner，Link 公共代码合并
 * coarse / eva 重构 —— search
 * 检查数据结构是否清空
-
+* 检查参数是否合法 （nmslib Check）
+* 增加debug标识，用于关闭开启debug 功能
+* id 数据类型 （nmslib idtype）
