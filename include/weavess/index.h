@@ -1,215 +1,377 @@
 //
-// Created by Murph on 2020/8/14.
+// Created by MurphySL on 2020/9/14.
 //
 
 #ifndef WEAVESS_INDEX_H
 #define WEAVESS_INDEX_H
 
-#define _CONTROL_NUM 100
-
-//#include <utility>
-#include <vector>
-//#include <cstring>
-#include <set>
 #include <omp.h>
 #include <mutex>
-//#include "util.h"
+#include <queue>
+#include <thread>
+#include <vector>
+#include <chrono>
+#include <fstream>
+#include <cassert>
+#include <iostream>
+#include <unordered_set>
+#include <boost/dynamic_bitset.hpp>
+#include "util.h"
+#include "policy.h"
 #include "distance.h"
-#include "neighbor.h"
 #include "parameters.h"
 
 namespace weavess {
-
-    class IndexNSW {
+    class NNDescent {
     public:
-        class MSWNode{
-        public:
-            // int -> IntType
-            MSWNode(const float *data, size_t id) {
-                nodeObj_ = data;
-                id_ = id;
+        unsigned S;
+        unsigned R;
+        unsigned L;
+        unsigned ITER;
+        unsigned K;
+
+        struct Neighbor {
+            unsigned id;
+            float distance;
+            bool flag;
+
+            Neighbor() = default;
+
+            Neighbor(unsigned id, float distance, bool f) : id{id}, distance{distance}, flag(f) {}
+
+            inline bool operator<(const Neighbor &other) const {
+                return distance < other.distance;
             }
-            ~MSWNode(){};
-            void removeAllFriends(){
-                friends_.clear();
+        };
+
+        struct SimpleNeighbor{
+            unsigned id;
+            float distance;
+
+            SimpleNeighbor() = default;
+            SimpleNeighbor(unsigned id, float distance) : id{id}, distance{distance}{}
+
+            inline bool operator<(const SimpleNeighbor &other) const {
+                return distance < other.distance;
+            }
+        };
+
+        typedef std::lock_guard<std::mutex> LockGuard;
+
+        struct nhood {
+            std::mutex lock;
+            std::vector<Neighbor> pool;
+            unsigned M;
+
+            std::vector<unsigned> nn_old;
+            std::vector<unsigned> nn_new;
+            std::vector<unsigned> rnn_old;
+            std::vector<unsigned> rnn_new;
+
+            nhood() {}
+
+            nhood(unsigned l, unsigned s, std::mt19937 &rng, unsigned N) {
+                M = s;
+                nn_new.resize(s * 2);
+                GenRandom(rng, &nn_new[0], (unsigned) nn_new.size(), N);
+                nn_new.reserve(s * 2);
+                pool.reserve(l);
             }
 
-            static void link(MSWNode* first, MSWNode* second){
-                // addFriend checks for duplicates if the second argument is true
-                first->addFriend(second, true);
-                second->addFriend(first, true);
+            nhood(const nhood &other) {
+                M = other.M;
+                std::copy(other.nn_new.begin(), other.nn_new.end(), std::back_inserter(nn_new));
+                nn_new.reserve(other.nn_new.capacity());
+                pool.reserve(other.pool.capacity());
             }
 
-            // Removes only friends from a given set
-            void removeGivenFriends(const std::vector<bool>& delNodes) {
-                size_t newQty = 0;
-                /*
-                 * This in-place one-iteration deletion of elements in delNodes
-                 * Invariant in the beginning of each loop iteration:
-                 * i >= newQty
-                 * Furthermore:
-                 * i - newQty == the number of entries deleted in previous iterations
-                 */
-                for (size_t i = 0; i < friends_.size(); ++i) {
-                    int id = friends_[i]->getId();
-                    if (!delNodes.at(id)) {
-                        friends_[newQty] = friends_[i];
-                        ++newQty;
-                    }
+            void insert(unsigned id, float dist) {
+                LockGuard guard(lock);
+                if (dist > pool.front().distance) return;
+                for (unsigned i = 0; i < pool.size(); i++) {
+                    if (id == pool[i].id)return;
                 }
-                friends_.resize(newQty);
-            }
-
-            // Removes friends from a given set and attempts to replace them with friends' closest neighbors
-            // cacheDelNode should be thread-specific (or else calling this function isn't thread-safe)
-//            template <class dist_t>
-//            void removeGivenFriendsPatchWithClosestNeighbor(const Space<dist_t>& space, bool use_proxy_dist,
-//                                                            const std::vector<bool>& delNodes, std::vector<MSWNode*>& cacheDelNode) {
-//                /*
-//                 * This in-place one-iteration deletion of elements in delNodes
-//                 * Loop invariants:
-//                 * 1) i >= newQty
-//                 * 2) i - newQty = delQty
-//                 * Hence, when the loop terminates delQty + newQty == friends_.size()
-//                 */
-//                size_t newQty = 0, delQty = 0;
-//
-//                for (size_t i = 0; i < friends_.size(); ++i) {
-//                    MSWNode* oneFriend = friends_[i];
-//                    int id = oneFriend->getId();
-//                    if (!delNodes.at(id)) {
-//                        friends_[newQty] = friends_[i];
-//                        ++newQty;
-//                    } else {
-//                        if (cacheDelNode.size() <= delQty) cacheDelNode.resize(2*delQty + 1);
-//                        cacheDelNode[delQty] = oneFriend;
-//                        ++delQty;
-//                    }
-//                }
-////                CHECK_MSG((delQty + newQty) == friends_.size(),
-////                          "Seems like a bug, delQty:" + ConvertToString(delQty) +
-////                          " newQty: " + ConvertToString(newQty) +
-////                          " friends_.size()=" + ConvertToString(friends_.size()));
-//                friends_.resize(newQty);
-//                // When patching use the function link()
-//                for (size_t i = 0; i < delQty; ++i) {
-//                    MSWNode *toDelFriend = cacheDelNode[i];
-//                    MSWNode *friendReplacement = nullptr;
-//                    dist_t  dmin = numeric_limits<dist_t>::max();
-//                    const Object* queryObj = this->getData();
-//                    for (MSWNode* neighb : toDelFriend->getAllFriends()) {
-//                        int neighbId = neighb->getId();
-//                        if (!delNodes.at(neighbId)) {
-//                            const MSWNode* provider = neighb;
-//                            dist_t d = use_proxy_dist ?  space.ProxyDistance(provider->getData(), queryObj) :
-//                                       space.IndexTimeDistance(provider->getData(), queryObj);
-//                            if (d < dmin) {
-//                                dmin = d;
-//                                friendReplacement = neighb;
-//                            }
-//                        }
-//                    }
-//                    if (friendReplacement != nullptr) {
-//                        link(this, friendReplacement);
-//                    }
-//                }
-//            }
-            /*
-             * 1. The list of friend pointers is sorted.
-             * 2. If bCheckForDup == true addFriend checks for
-             *    duplicates using binary searching (via pointer comparison).
-             */
-            void addFriend(MSWNode* element, bool bCheckForDup) {
-                std::unique_lock<std::mutex> lock(accessGuard_);
-
-                if (bCheckForDup) {
-                    auto it = lower_bound(friends_.begin(), friends_.end(), element);
-                    if (it == friends_.end() || (*it) != element) {
-                        friends_.insert(it, element);
-                    }
+                if (pool.size() < pool.capacity()) {
+                    pool.push_back(Neighbor(id, dist, true));
+                    std::push_heap(pool.begin(), pool.end());
                 } else {
-                    friends_.push_back(element);
+                    std::pop_heap(pool.begin(), pool.end());
+                    pool[pool.size() - 1] = Neighbor(id, dist, true);
+                    std::push_heap(pool.begin(), pool.end());
+                }
+
+            }
+
+            template<typename C>
+            void join(C callback) const {
+                for (unsigned const i: nn_new) {
+                    for (unsigned const j: nn_new) {
+                        if (i < j) {
+                            callback(i, j);
+                        }
+                    }
+                    for (unsigned j: nn_old) {
+                        callback(i, j);
+                    }
                 }
             }
-            const float * getData() const {
-                return nodeObj_;
-            }
-            size_t getId() const { return id_; }
-            void setId(int id) { id_ = id; }
-            /*
-             * THIS NOTE APPLIES ONLY TO THE INDEXING PHASE:
-             *
-             * Before getting access to the friends,
-             * one needs to lock the mutex accessGuard_
-             * The mutex can be released ONLY when
-             * we exit the scope that has access to
-             * the reference returned by getAllFriends()
-             */
-            const std::vector<MSWNode*>& getAllFriends() const {
-                return friends_;
-            }
-
-            std::mutex accessGuard_;
-
-        private:
-            const float*       nodeObj_;
-            size_t              id_;
-            std::vector<MSWNode*>    friends_;
-        };
-//----------------------------------
-
-        class EvaluatedMSWNodeReverse{
-        public:
-            EvaluatedMSWNodeReverse() {
-                distance = 0;
-                element = NULL;
-            }
-            EvaluatedMSWNodeReverse(float di, MSWNode* node) {
-                distance = di;
-                element = node;
-            }
-            ~EvaluatedMSWNodeReverse(){}
-            float getDistance() const {return distance;}
-            MSWNode* getMSWNode() const {return element;}
-            bool operator< (const EvaluatedMSWNodeReverse &obj1) const {
-                return (distance > obj1.getDistance());
-            }
-
-        private:
-            float distance;
-            MSWNode* element;
         };
 
-        class EvaluatedMSWNodeDirect{
-        public:
-            EvaluatedMSWNodeDirect() {
-                distance = 0;
-                element = NULL;
-            }
-            EvaluatedMSWNodeDirect(float di, MSWNode* node) {
-                distance = di;
-                element = node;
-            }
-            ~EvaluatedMSWNodeDirect(){}
-            float getDistance() const {return distance;}
-            MSWNode* getMSWNode() const {return element;}
-            bool operator< (const EvaluatedMSWNodeDirect &obj1) const {
-                return (distance < obj1.getDistance());
-            }
-
-        private:
-            float distance;
-            MSWNode* element;
+        struct LockNeighbor {
+            std::mutex lock;
+            std::vector<Neighbor> pool;
         };
 
-        mutable std::mutex   ElListGuard_;
-        std::unordered_map<int, MSWNode*>      ElList_;
-        int          NextNodeId_ = 0; // This is internal node id
-        bool            changedAfterCreateIndex_ = false;
-        MSWNode*        pEntryPoint_ = nullptr;
+        static inline int InsertIntoPool(Neighbor *addr, unsigned K, Neighbor nn) {
+            // find the location to insert
+            int left = 0, right = K - 1;
+            if (addr[left].distance > nn.distance) {
+                memmove((char *) &addr[left + 1], &addr[left], K * sizeof(Neighbor));
+                addr[left] = nn;
+                return left;
+            }
+            if (addr[right].distance < nn.distance) {
+                addr[K] = nn;
+                return K;
+            }
+            while (left < right - 1) {
+                int mid = (left + right) / 2;
+                if (addr[mid].distance > nn.distance)right = mid;
+                else left = mid;
+            }
+            //check equal ID
+
+            while (left > 0) {
+                if (addr[left].distance < nn.distance) break;
+                if (addr[left].id == nn.id) return K + 1;
+                left--;
+            }
+            if (addr[left].id == nn.id || addr[right].id == nn.id)return K + 1;
+            memmove((char *) &addr[right + 1], &addr[right], (K - right) * sizeof(Neighbor));
+            addr[right] = nn;
+            return right;
+        }
+
+
+        typedef std::vector<nhood> KNNGraph;
+        KNNGraph graph_;
     };
 
-    class IndexMST {
+    class NSG {
+    public:
+        unsigned R_nsg;
+        unsigned L_nsg;
+        unsigned C_nsg;
+
+        unsigned ep_;
+    };
+
+    class NSSG {
+    public:
+        unsigned A;
+        unsigned n_try;
+    };
+
+    class DPG {
+    public:
+        unsigned L_dpg;
+    };
+
+    class EFANNA {
+    public:
+                // 节点不保存数据，只维护一个 LeafLists 中对应的数据编号
+        struct Node {
+            int DivDim;
+            float DivVal;
+            size_t StartIdx, EndIdx;
+            unsigned treeid;
+            EFANNA::Node *Lchild, *Rchild;
+            bool visit = false;
+
+            ~Node() {
+                if (Lchild != nullptr) Lchild->~Node();
+                if (Rchild != nullptr) Rchild->~Node();
+            }
+        };
+
+        struct Candidate {
+            size_t row_id;
+            float distance;
+
+            Candidate(const size_t row_id, const float distance) : row_id(row_id), distance(distance) {}
+
+            bool operator>(const Candidate &rhs) const {
+                if (this->distance == rhs.distance) {
+                    return this->row_id > rhs.row_id;
+                }
+                return this->distance > rhs.distance;
+            }
+
+            bool operator<(const Candidate &rhs) const {
+                if (this->distance == rhs.distance) {
+                    return this->row_id < rhs.row_id;
+                }
+                return this->distance < rhs.distance;
+            }
+        };
+
+        typedef std::set<Candidate, std::greater<Candidate> > CandidateHeap;
+        std::vector<CandidateHeap> knn_graph;
+        size_t TNS = 10; //tree node size
+
+        enum {
+            /**
+             * To improve efficiency, only SAMPLE_NUM random values are used to
+             * compute the mean and variance at each level when building a tree.
+             * A value of 100 seems to perform as well as using all values.
+             */
+            SAMPLE_NUM = 100,
+            /**
+             * Top random dimensions to consider
+             *
+             * When creating random trees, the dimension on which to subdivide is
+             * selected at random from among the top RAND_DIM dimensions with the
+             * highest variance.  A value of 5 works well.
+             */
+            RAND_DIM = 5
+        };
+
+        std::vector<Node *> tree_roots_;                    // 存储树根
+        std::vector<std::pair<Node *, size_t> > mlNodeList;  //  ml 层 节点 和对应树根编号
+        std::vector<std::vector<unsigned>> LeafLists;       // 存储每个随机截断树的对应节点
+        omp_lock_t rootlock;
+        bool error_flag = false;
+        int max_deepth = 0x0fffffff;
+
+        unsigned mLevel;
+        unsigned nTrees;
+    };
+
+    class HNSW {
+    public:
+        unsigned m_ = 12;
+        unsigned max_m_ = 12;
+        unsigned max_m0_ = 24;
+        unsigned ef_construction_ = 150;
+        unsigned n_threads_ = 1;
+        unsigned mult;
+        float level_mult_ = 1 / log(1.0*m_);
+
+        class HnswNode {
+        public:
+            explicit HnswNode(int id, int level, size_t max_m, size_t max_m0);
+            void CopyHigherLevelLinksToOptIndex(char* mem_offset, uint64_t memory_per_node_higher_level) const;
+            void CopyDataAndLevel0LinksToOptIndex(char* mem_offset, int higher_level_offset) const;
+
+            inline int GetId() const { return id_; }
+            inline int GetLevel() const { return level_; }
+            inline size_t GetMaxM() const { return max_m_; }
+            inline size_t GetMaxM0() const { return max_m0_; }
+
+            inline std::vector<HnswNode*>& GetFriends(int level) { return friends_at_layer_[level]; }
+            inline void SetFriends(int level, std::vector<HnswNode*>& new_friends) {
+                friends_at_layer_[level].swap(new_friends);
+            }
+            inline std::mutex& GetAccessGuard() { return access_guard_; }
+
+        private:
+            void CopyLinksToOptIndex(char* mem_offset, int level) const;
+
+        private:
+            int id_;
+            int level_;
+            size_t max_m_;
+            size_t max_m0_;
+
+            std::vector<std::vector<HnswNode*>> friends_at_layer_;
+            std::mutex access_guard_;
+        };
+
+        class FurtherFirst {
+        public:
+            FurtherFirst(HnswNode* node, float distance) : node_(node), distance_(distance) {}
+            inline float GetDistance() const { return distance_; }
+            inline HnswNode* GetNode() const { return node_; }
+            bool operator< (const FurtherFirst& n) const {
+                return (distance_ < n.GetDistance());
+            }
+        private:
+            HnswNode* node_;
+            float distance_;
+        };
+
+        class CloserFirst {
+        public:
+            CloserFirst(HnswNode* node, float distance) : node_(node), distance_(distance) {}
+            inline float GetDistance() const { return distance_; }
+            inline HnswNode* GetNode() const { return node_; }
+            bool operator< (const CloserFirst& n) const {
+                return (distance_ > n.GetDistance());
+            }
+        private:
+            HnswNode* node_;
+            float distance_;
+        };
+
+        template <typename KeyType, typename DataType>
+        class MinHeap {
+        public:
+            class Item {
+            public:
+                KeyType key;
+                DataType data;
+                Item() {}
+                Item(const KeyType& key) :key(key) {}
+                Item(const KeyType& key, const DataType& data) :key(key), data(data) {}
+                bool operator<(const Item& i2) const {
+                    return key > i2.key;
+                }
+            };
+
+            MinHeap() {
+            }
+
+            const KeyType top_key() {
+                if (v_.size() <= 0) return 0.0;
+                return v_[0].key;
+            }
+
+            Item top() {
+                if (v_.size() <= 0) throw std::runtime_error("[Error] Called top() operation with empty heap");
+                return v_[0];
+            }
+
+            void pop() {
+                std::pop_heap(v_.begin(), v_.end());
+                v_.pop_back();
+            }
+
+            void push(const KeyType& key, const DataType& data) {
+                v_.emplace_back(Item(key, data));
+                std::push_heap(v_.begin(), v_.end());
+            }
+
+            size_t size() {
+                return v_.size();
+            }
+
+        private:
+            std::vector<Item> v_;
+        };
+
+        int max_level_ = 0;
+        HnswNode* enterpoint_ = nullptr;
+        std::vector<HnswNode*> nodes_;
+
+        mutable std::mutex max_level_guard_;
+    };
+
+    class VAMANA {
+    public:
+        float alpha;
+    };
+
+    class HCNNG {
     public:
         struct Edge{
             int v1, v2;
@@ -278,164 +440,280 @@ namespace weavess {
         int xxx = 0;
     };
 
-    class IndexKDTree {
+    class Index : public NNDescent, public NSG, public NSSG, public DPG, public EFANNA, public HNSW, public VAMANA, public HCNNG {
     public:
-        // 节点不保存数据，只维护一个 LeafLists 中对应的数据编号
-        struct Node {
-            int DivDim;
-            float DivVal;
-            size_t StartIdx, EndIdx;
-            unsigned treeid;
-            Node *Lchild, *Rchild;
-            bool visit = false;
-
-            ~Node() {
-                if (Lchild != nullptr) Lchild->~Node();
-                if (Rchild != nullptr) Rchild->~Node();
-            }
-        };
-
-        struct Candidate {
-            size_t row_id;
-            float distance;
-
-            Candidate(const size_t row_id, const float distance) : row_id(row_id), distance(distance) {}
-
-            bool operator>(const Candidate &rhs) const {
-                if (this->distance == rhs.distance) {
-                    return this->row_id > rhs.row_id;
-                }
-                return this->distance > rhs.distance;
-            }
-
-            bool operator<(const Candidate &rhs) const {
-                if (this->distance == rhs.distance) {
-                    return this->row_id < rhs.row_id;
-                }
-                return this->distance < rhs.distance;
-            }
-        };
-
-        typedef std::set<Candidate, std::greater<Candidate> > CandidateHeap;
-        std::vector<CandidateHeap> knn_graph;
-        size_t TNS = 10; //tree node size
-
-        enum {
-            /**
-             * To improve efficiency, only SAMPLE_NUM random values are used to
-             * compute the mean and variance at each level when building a tree.
-             * A value of 100 seems to perform as well as using all values.
-             */
-            SAMPLE_NUM = 100,
-            /**
-             * Top random dimensions to consider
-             *
-             * When creating random trees, the dimension on which to subdivide is
-             * selected at random from among the top RAND_DIM dimensions with the
-             * highest variance.  A value of 5 works well.
-             */
-            RAND_DIM = 5
-        };
-
-        std::vector<Node *> tree_roots_;                    // 存储树根
-        std::vector<std::pair<Node *, size_t> > mlNodeList;  //  ml 层 节点 和对应树根编号
-        std::vector<std::vector<unsigned>> LeafLists;       // 存储每个随机截断树的对应节点
-        omp_lock_t rootlock;
-        bool error_flag = false;
-        int max_deepth = 0x0fffffff;
-    };
-
-    class IndexHash {
-    public:
-        int tablenum = 0;
-        int upbits = 0;
-        int codelength = 0;
-        int codelengthshift = 0;
-        int radius = 0;
-
-        typedef std::vector<unsigned int> Codes;
-        typedef std::unordered_map<unsigned int, std::vector<unsigned int> > HashBucket;
-        typedef std::vector<HashBucket> HashTable;
-
-        typedef std::vector<unsigned long> Codes64;
-        typedef std::unordered_map<unsigned long, std::vector<unsigned int> > HashBucket64;
-        typedef std::vector<HashBucket64> HashTable64;
-
-        std::vector<HashTable> htb;
-        std::vector<Codes> BaseCode;
-        std::vector<Codes> QueryCode;
-        std::vector<unsigned int> HammingBallMask;
-
-        std::vector<HashTable64> htb64;
-        std::vector<Codes64> BaseCode64;
-        std::vector<Codes64> QueryCode64;
-        std::vector<unsigned long> HammingBallMask64;
-
-        std::vector<unsigned int> HammingRadius;
-
-        // for statistic info
-        std::vector<unsigned int> VisitBucketNum;
-
-    };
-
-    class IndexNSG {
-    public:
-        unsigned width; // 待删除
-        unsigned ep_;
-        std::vector<std::mutex> locks;
-        char* opt_graph_;   // 删除
-        size_t node_size;
-        size_t data_len;    // 删除
-        size_t neighbor_len;
-        std::vector<nhood> nnd_graph;
-    };
-
-    class IndexNSSG {
-    public:
-        std::vector<unsigned> eps_;
-    };
-
-    class Index : public IndexNSG, public IndexNSSG, public IndexKDTree, public IndexHash, public IndexMST, public IndexNSW {
-    public:
-        float *data_ = nullptr;
-        float *query_data_ = nullptr;
-        unsigned *ground_data_ = nullptr;
-        unsigned n_{};
-        unsigned dim_{};
-        unsigned query_num_{};
-        unsigned query_dim_{};
-        unsigned ground_num_{};
-        unsigned ground_dim_{};
-
-        Parameters param_;
-        Distance *distance_ = nullptr;
-
-        // init
-        std::vector<nhood> graph_;
-        // coarse
-        std::vector<std::vector<unsigned> > final_graph_;
-
-        // search_init
-        //std::vector<std::vector<Neighbor> > entry_graph_;
-        //std::vector<nhood> entry_graph_;
-        std::vector<Neighbor> retset;
-
 
         explicit Index() {
-            distance_ = new Distance();
-        }
-
-        explicit Index(Parameters &param, float *data, unsigned n, unsigned dim) : param_(param), data_(data), n_(n), dim_(dim) {
-            std::cout << param_.ToString() << std::endl;
-            std::cout << "data num : " << n_ << std::endl;
-            std::cout << "data dim : " << dim_ << std::endl;
+            dist_ = new Distance();
         }
 
         ~Index() {
-            delete distance_;
+            delete dist_;
         }
-    };
 
+
+//        class Node {
+//        public:
+//
+//            explicit Node(unsigned id, unsigned level) : id_(id), level_(level) {
+//                for (int i = 0; i <= level; i++) {
+//                    std::vector<Node *> container;
+//                    friends_at_layer_.push_back(container);
+//                }
+//            }
+//
+//            explicit Node(unsigned id, unsigned level, float dist, unsigned flag) : id_(id), level_(level), dist_(dist),
+//                                                                                    flag_(flag) {
+//                for (int i = 0; i <= level; i++) {
+//                    std::vector<Node *> container;
+//                    friends_at_layer_.push_back(container);
+//                }
+//            }
+//
+//            unsigned int getId() const {
+//                return id_;
+//            }
+//
+//            void setId(unsigned int id) {
+//                id_ = id;
+//            }
+//
+//            unsigned int getLevel() const {
+//                return level_;
+//            }
+//
+//            std::vector<std::vector<Node *>> &getFriends() {
+//                return friends_at_layer_;
+//            }
+//
+//            std::vector<Node *> &getFriendsAtLayer(int level) {
+//                return friends_at_layer_[level];
+//            }
+//
+//            const std::mutex &getAccessGuard() const {
+//                return access_guard_;
+//            }
+//
+//            const bool getFlag() const { return flag_; }
+//
+//            void setFlag(bool flag) { flag_ = flag; }
+//
+//            float getDist() const {
+//                return dist_;
+//            }
+//
+//            void setDist(float dist) {
+//                dist_ = dist;
+//            }
+//
+//        private:
+//            unsigned id_;
+//            float dist_;
+//            unsigned level_;
+//            bool flag_;
+//
+//            std::vector<std::vector<Node *>> friends_at_layer_;
+//
+//            std::mutex access_guard_;
+//        };
+
+        class VisitedList {
+        public:
+            VisitedList(unsigned size) : size_(size), mark_(1) {
+                visited_ = new unsigned int[size_];
+                memset(visited_, 0, sizeof(unsigned int) * size_);
+            }
+
+            ~VisitedList() { delete[] visited_; }
+
+            inline bool Visited(unsigned int index) const { return visited_[index] == mark_; }
+
+            inline bool NotVisited(unsigned int index) const { return visited_[index] != mark_; }
+
+            inline void MarkAsVisited(unsigned int index) { visited_[index] = mark_; }
+
+            inline void Reset() {
+                if (++mark_ == 0) {
+                    mark_ = 1;
+                    memset(visited_, 0, sizeof(unsigned int) * size_);
+                }
+            }
+
+            inline unsigned int *GetVisited() { return visited_; }
+
+            inline unsigned int GetVisitMark() { return mark_; }
+
+        private:
+            unsigned int *visited_;
+            unsigned int size_;
+            unsigned int mark_;
+        };
+
+        static inline int InsertIntoPool(Neighbor *addr, unsigned K, Neighbor nn) {
+            // find the location to insert
+            int left = 0, right = K - 1;
+            if (addr[left].distance > nn.distance) {
+                memmove((char *) &addr[left + 1], &addr[left], K * sizeof(Neighbor));
+                addr[left] = nn;
+                return left;
+            }
+            if (addr[right].distance < nn.distance) {
+                addr[K] = nn;
+                return K;
+            }
+            while (left < right - 1) {
+                int mid = (left + right) / 2;
+                if (addr[mid].distance > nn.distance)right = mid;
+                else left = mid;
+            }
+            //check equal ID
+
+            while (left > 0) {
+                if (addr[left].distance < nn.distance) break;
+                if (addr[left].id == nn.id) return K + 1;
+                left--;
+            }
+            if (addr[left].id == nn.id || addr[right].id == nn.id)return K + 1;
+            memmove((char *) &addr[right + 1], &addr[right], (K - right) * sizeof(Neighbor));
+            addr[right] = nn;
+            return right;
+        }
+
+
+        float *getBaseData() const {
+            return base_data_;
+        }
+
+        void setBaseData(float *baseData) {
+            base_data_ = baseData;
+        }
+
+        float *getQueryData() const {
+            return query_data_;
+        }
+
+        void setQueryData(float *queryData) {
+            query_data_ = queryData;
+        }
+
+        unsigned int *getGroundData() const {
+            return ground_data_;
+        }
+
+        void setGroundData(unsigned int *groundData) {
+            ground_data_ = groundData;
+        }
+
+        unsigned int getBaseLen() const {
+            return base_len_;
+        }
+
+        void setBaseLen(unsigned int baseLen) {
+            base_len_ = baseLen;
+        }
+
+        unsigned int getQueryLen() const {
+            return query_len_;
+        }
+
+        void setQueryLen(unsigned int queryLen) {
+            query_len_ = queryLen;
+        }
+
+        unsigned int getGroundLen() const {
+            return ground_len_;
+        }
+
+        void setGroundLen(unsigned int groundLen) {
+            ground_len_ = groundLen;
+        }
+
+        unsigned int getBaseDim() const {
+            return base_dim_;
+        }
+
+        void setBaseDim(unsigned int baseDim) {
+            base_dim_ = baseDim;
+        }
+
+        unsigned int getQueryDim() const {
+            return query_dim_;
+        }
+
+        void setQueryDim(unsigned int queryDim) {
+            query_dim_ = queryDim;
+        }
+
+        unsigned int getGroundDim() const {
+            return ground_dim_;
+        }
+
+        void setGroundDim(unsigned int groundDim) {
+            ground_dim_ = groundDim;
+        }
+
+        const Parameters &getParam() const {
+            return param_;
+        }
+
+        void setParam(const Parameters &param) {
+            param_ = param;
+        }
+
+        Distance *getDist() const {
+            return dist_;
+        }
+
+        void setDist(Distance *dist) {
+            dist_ = dist;
+        }
+
+        typedef std::vector<std::vector<std::vector<unsigned>>> CompactGraph;
+
+        CompactGraph &getFinalGraph() {
+            return final_graph_;
+        }
+
+        TYPE getCandidateType() const {
+            return candidate_type;
+        }
+
+        void setCandidateType(TYPE candidateType) {
+            candidate_type = candidateType;
+        }
+
+        TYPE getPruneType() const {
+            return prune_type;
+        }
+
+        void setPruneType(TYPE pruneType) {
+            prune_type = pruneType;
+        }
+
+        TYPE getEntryType() const {
+            return entry_type;
+        }
+
+        void setEntryType(TYPE entryType) {
+            entry_type = entryType;
+        }
+
+    private:
+        float *base_data_, *query_data_;
+        unsigned *ground_data_;
+        unsigned base_len_, query_len_, ground_len_;
+        unsigned base_dim_, query_dim_, ground_dim_;
+
+        Parameters param_;
+
+        Distance *dist_;
+
+        CompactGraph final_graph_;
+
+        TYPE entry_type;
+        TYPE candidate_type;
+        TYPE prune_type;
+    };
 }
 
 #endif //WEAVESS_INDEX_H

@@ -1,37 +1,14 @@
 //
-// Created by Murph on 2020/8/12.
+// Created by MurphySL on 2020/9/14.
 //
 
 #ifndef WEAVESS_UTIL_H
 #define WEAVESS_UTIL_H
 
-#include <fstream>
-#include <iostream>
-#include <algorithm>
 #include <random>
+#include <algorithm>
 
 namespace weavess {
-    template<typename T>
-    inline void load_data(char *filename, T *&data, unsigned &num, unsigned &dim) {
-        std::ifstream in(filename, std::ios::binary);
-        if (!in.is_open()) {
-            std::cerr << "open file error" << std::endl;
-            exit(-1);
-        }
-        in.read((char *) &dim, 4);
-        in.seekg(0, std::ios::end);
-        std::ios::pos_type ss = in.tellg();
-        auto f_size = (size_t) ss;
-        num = (unsigned) (f_size / (dim + 1) / 4);
-        data = new T[num * dim];
-
-        in.seekg(0, std::ios::beg);
-        for (size_t i = 0; i < num; i++) {
-            in.seekg(4, std::ios::cur);
-            in.read((char *) (data + i * dim), dim * sizeof(T));
-        }
-        in.close();
-    }
 
     static void GenRandom(std::mt19937 &rng, unsigned *addr, unsigned size, unsigned N) {
         for (unsigned i = 0; i < size; ++i) {

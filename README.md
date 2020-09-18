@@ -17,7 +17,7 @@ WEAVESS is a frame for testing the major graph-based approximate nearest neighbo
 |  Algo  |  Init Framework              |     Refine     | Connection   |Entry Access | Routing             |
 |:------:| :---------------------------:| :------------: | :----------: | :----------:| :------------------:|
 | KGraph |  NN-Descent                  |                |              | Random      |  Greedy             |
-| IEH    |  **Hash**                    |                |              | Random      |  Greedy             |
+| IEH    |                              |                |              |             |                     |
 | EFANNA |  **KDTree**                  |  NN-Descent    |              | **KDTree**  |  Greedy             |
 | NSG    |  NN-Descent                  |  **MRNG**      |**DFS**       | **Centroid**|  Greedy             |
 | NSSG   |  NN-Descent                  |  **SSG**       |**DFS_expand**| Random      |  Greedy             |
@@ -27,7 +27,7 @@ WEAVESS is a frame for testing the major graph-based approximate nearest neighbo
 | NGT    |                              |                |              |             |                     |
 | SPTAG  |                              |                |              |             |                     |
 | FANNG  |                              |                |              |             |                     |
-|Vamana  |  NN-Descent                  |  **Vamana**    |              |             |                     |
+|Vamana  |  **Random**                  |  **Vamana**    |              |             |                     |
 | HCNNG  |  **Hierarchical clustering** |                |              | Random      |  **Guided Search**  |
 
 
@@ -176,10 +176,8 @@ Please make pull requests against the `dev` branch.
 * 
 * route 缺失 flag
 * 根据 SPTAG 分层算法确定分治构图如何进行
-* 重写 Coarse 部分逻辑，分为 Increment Coarse 、 Iteration Coarse、 DivideAngConquer Coarse
 * IEH 实现
 * 重写 HCNNG MST 算法， 去掉原数据结构
-* EFANNA 随机截断树和 HCNNG 的 KDT 数据结构进行统一
 * KGraph 修改
 * EFANNA knn_graph 修改  参数缺失 内存不够
 * 分离算法接口与 IndexBuilder 接口

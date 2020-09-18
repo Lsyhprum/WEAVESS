@@ -1,2 +1,2 @@
-F:\MinGW-W64\mingw64\bin\ar.exe qc libweavess.a  CMakeFiles/weavess.dir/index_component_coarse.cpp.obj CMakeFiles/weavess.dir/index_component_conn.cpp.obj CMakeFiles/weavess.dir/index_component_entry.cpp.obj CMakeFiles/weavess.dir/index_component_load.cpp.obj CMakeFiles/weavess.dir/index_component_refine.cpp.obj CMakeFiles/weavess.dir/index_component_route.cpp.obj
-F:\MinGW-W64\mingw64\bin\ranlib.exe libweavess.a
+F:\MinGW-W64\mingw64\bin\ar.exe qc libWEAVESS.a  CMakeFiles/WEAVESS.dir/builder.cpp.obj CMakeFiles/WEAVESS.dir/component_candidate.cpp.obj CMakeFiles/WEAVESS.dir/component_entry.cpp.obj CMakeFiles/WEAVESS.dir/component_init.cpp.obj CMakeFiles/WEAVESS.dir/component_load.cpp.obj CMakeFiles/WEAVESS.dir/component_prune.cpp.obj CMakeFiles/WEAVESS.dir/component_refine.cpp.obj CMakeFiles/WEAVESS.dir/component_serialization.cpp.obj
+F:\MinGW-W64\mingw64\bin\ranlib.exe libWEAVESS.a

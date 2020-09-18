@@ -1,17 +1,19 @@
 file(REMOVE_RECURSE
-  "CMakeFiles/weavess_s.dir/index_component_coarse.cpp.obj"
-  "CMakeFiles/weavess_s.dir/index_component_conn.cpp.obj"
-  "CMakeFiles/weavess_s.dir/index_component_entry.cpp.obj"
-  "CMakeFiles/weavess_s.dir/index_component_load.cpp.obj"
-  "CMakeFiles/weavess_s.dir/index_component_refine.cpp.obj"
-  "CMakeFiles/weavess_s.dir/index_component_route.cpp.obj"
-  "libweavess_s.dll"
-  "libweavess_s.dll.a"
-  "libweavess_s.dll.manifest"
-  "libweavess_s.pdb"
+  "CMakeFiles/WEAVESS_s.dir/builder.cpp.obj"
+  "CMakeFiles/WEAVESS_s.dir/component_candidate.cpp.obj"
+  "CMakeFiles/WEAVESS_s.dir/component_entry.cpp.obj"
+  "CMakeFiles/WEAVESS_s.dir/component_init.cpp.obj"
+  "CMakeFiles/WEAVESS_s.dir/component_load.cpp.obj"
+  "CMakeFiles/WEAVESS_s.dir/component_prune.cpp.obj"
+  "CMakeFiles/WEAVESS_s.dir/component_refine.cpp.obj"
+  "CMakeFiles/WEAVESS_s.dir/component_serialization.cpp.obj"
+  "libWEAVESS_s.dll"
+  "libWEAVESS_s.dll.a"
+  "libWEAVESS_s.dll.manifest"
+  "libWEAVESS_s.pdb"
 )
 
 # Per-language clean rules from dependency scanning.
 foreach(lang CXX)
-  include(CMakeFiles/weavess_s.dir/cmake_clean_${lang}.cmake OPTIONAL)
+  include(CMakeFiles/WEAVESS_s.dir/cmake_clean_${lang}.cmake OPTIONAL)
 endforeach()

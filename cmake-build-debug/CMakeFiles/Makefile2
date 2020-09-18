@@ -54,19 +54,19 @@ cmake_force:
 SHELL = cmd.exe
 
 # The CMake executable.
-CMAKE_COMMAND = C:\Users\Murph\AppData\Local\JetBrains\Toolbox\apps\CLion\ch-0\202.6948.80\bin\cmake\win\bin\cmake.exe
+CMAKE_COMMAND = C:\Users\Murph\AppData\Local\JetBrains\Toolbox\apps\CLion\ch-0\202.7319.62\bin\cmake\win\bin\cmake.exe
 
 # The command to remove a file.
-RM = C:\Users\Murph\AppData\Local\JetBrains\Toolbox\apps\CLion\ch-0\202.6948.80\bin\cmake\win\bin\cmake.exe -E rm -f
+RM = C:\Users\Murph\AppData\Local\JetBrains\Toolbox\apps\CLion\ch-0\202.7319.62\bin\cmake\win\bin\cmake.exe -E rm -f
 
 # Escaping for special characters.
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = F:\ANNS\WEAVESS
+CMAKE_SOURCE_DIR = F:\ANNS\WEAVESS_dev
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = F:\ANNS\WEAVESS\cmake-build-debug
+CMAKE_BINARY_DIR = F:\ANNS\WEAVESS_dev\cmake-build-debug
 
 #=============================================================================
 # Directory level rules for the build root directory
@@ -93,8 +93,8 @@ clean: test/clean
 # Directory level rules for directory src
 
 # Recursive "all" directory target.
-src/all: src/CMakeFiles/weavess.dir/all
-src/all: src/CMakeFiles/weavess_s.dir/all
+src/all: src/CMakeFiles/WEAVESS.dir/all
+src/all: src/CMakeFiles/WEAVESS_s.dir/all
 
 .PHONY : src/all
 
@@ -104,8 +104,8 @@ src/preinstall:
 .PHONY : src/preinstall
 
 # Recursive "clean" directory target.
-src/clean: src/CMakeFiles/weavess.dir/clean
-src/clean: src/CMakeFiles/weavess_s.dir/clean
+src/clean: src/CMakeFiles/WEAVESS.dir/clean
+src/clean: src/CMakeFiles/WEAVESS_s.dir/clean
 
 .PHONY : src/clean
 
@@ -113,7 +113,7 @@ src/clean: src/CMakeFiles/weavess_s.dir/clean
 # Directory level rules for directory test
 
 # Recursive "all" directory target.
-test/all: test/CMakeFiles/index_test.dir/all
+test/all: test/CMakeFiles/main.dir/all
 
 .PHONY : test/all
 
@@ -123,90 +123,90 @@ test/preinstall:
 .PHONY : test/preinstall
 
 # Recursive "clean" directory target.
-test/clean: test/CMakeFiles/index_test.dir/clean
+test/clean: test/CMakeFiles/main.dir/clean
 
 .PHONY : test/clean
 
 #=============================================================================
-# Target rules for target src/CMakeFiles/weavess.dir
+# Target rules for target src/CMakeFiles/WEAVESS.dir
 
 # All Build rule for target.
-src/CMakeFiles/weavess.dir/all:
-	$(MAKE) $(MAKESILENT) -f src\CMakeFiles\weavess.dir\build.make src/CMakeFiles/weavess.dir/depend
-	$(MAKE) $(MAKESILENT) -f src\CMakeFiles\weavess.dir\build.make src/CMakeFiles/weavess.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=F:\ANNS\WEAVESS\cmake-build-debug\CMakeFiles --progress-num=3,4,5,6,7,8,9 "Built target weavess"
-.PHONY : src/CMakeFiles/weavess.dir/all
+src/CMakeFiles/WEAVESS.dir/all:
+	$(MAKE) $(MAKESILENT) -f src\CMakeFiles\WEAVESS.dir\build.make src/CMakeFiles/WEAVESS.dir/depend
+	$(MAKE) $(MAKESILENT) -f src\CMakeFiles\WEAVESS.dir\build.make src/CMakeFiles/WEAVESS.dir/build
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=F:\ANNS\WEAVESS_dev\cmake-build-debug\CMakeFiles --progress-num=1,2,3,4,5,6,7,8,9 "Built target WEAVESS"
+.PHONY : src/CMakeFiles/WEAVESS.dir/all
 
 # Build rule for subdir invocation for target.
-src/CMakeFiles/weavess.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start F:\ANNS\WEAVESS\cmake-build-debug\CMakeFiles 7
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\Makefile2 src/CMakeFiles/weavess.dir/all
-	$(CMAKE_COMMAND) -E cmake_progress_start F:\ANNS\WEAVESS\cmake-build-debug\CMakeFiles 0
-.PHONY : src/CMakeFiles/weavess.dir/rule
+src/CMakeFiles/WEAVESS.dir/rule: cmake_check_build_system
+	$(CMAKE_COMMAND) -E cmake_progress_start F:\ANNS\WEAVESS_dev\cmake-build-debug\CMakeFiles 9
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\Makefile2 src/CMakeFiles/WEAVESS.dir/all
+	$(CMAKE_COMMAND) -E cmake_progress_start F:\ANNS\WEAVESS_dev\cmake-build-debug\CMakeFiles 0
+.PHONY : src/CMakeFiles/WEAVESS.dir/rule
 
 # Convenience name for target.
-weavess: src/CMakeFiles/weavess.dir/rule
+WEAVESS: src/CMakeFiles/WEAVESS.dir/rule
 
-.PHONY : weavess
+.PHONY : WEAVESS
 
 # clean rule for target.
-src/CMakeFiles/weavess.dir/clean:
-	$(MAKE) $(MAKESILENT) -f src\CMakeFiles\weavess.dir\build.make src/CMakeFiles/weavess.dir/clean
-.PHONY : src/CMakeFiles/weavess.dir/clean
+src/CMakeFiles/WEAVESS.dir/clean:
+	$(MAKE) $(MAKESILENT) -f src\CMakeFiles\WEAVESS.dir\build.make src/CMakeFiles/WEAVESS.dir/clean
+.PHONY : src/CMakeFiles/WEAVESS.dir/clean
 
 #=============================================================================
-# Target rules for target src/CMakeFiles/weavess_s.dir
+# Target rules for target src/CMakeFiles/WEAVESS_s.dir
 
 # All Build rule for target.
-src/CMakeFiles/weavess_s.dir/all:
-	$(MAKE) $(MAKESILENT) -f src\CMakeFiles\weavess_s.dir\build.make src/CMakeFiles/weavess_s.dir/depend
-	$(MAKE) $(MAKESILENT) -f src\CMakeFiles\weavess_s.dir\build.make src/CMakeFiles/weavess_s.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=F:\ANNS\WEAVESS\cmake-build-debug\CMakeFiles --progress-num=10,11,12,13,14,15,16 "Built target weavess_s"
-.PHONY : src/CMakeFiles/weavess_s.dir/all
+src/CMakeFiles/WEAVESS_s.dir/all:
+	$(MAKE) $(MAKESILENT) -f src\CMakeFiles\WEAVESS_s.dir\build.make src/CMakeFiles/WEAVESS_s.dir/depend
+	$(MAKE) $(MAKESILENT) -f src\CMakeFiles\WEAVESS_s.dir\build.make src/CMakeFiles/WEAVESS_s.dir/build
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=F:\ANNS\WEAVESS_dev\cmake-build-debug\CMakeFiles --progress-num=10,11,12,13,14,15,16,17,18 "Built target WEAVESS_s"
+.PHONY : src/CMakeFiles/WEAVESS_s.dir/all
 
 # Build rule for subdir invocation for target.
-src/CMakeFiles/weavess_s.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start F:\ANNS\WEAVESS\cmake-build-debug\CMakeFiles 7
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\Makefile2 src/CMakeFiles/weavess_s.dir/all
-	$(CMAKE_COMMAND) -E cmake_progress_start F:\ANNS\WEAVESS\cmake-build-debug\CMakeFiles 0
-.PHONY : src/CMakeFiles/weavess_s.dir/rule
+src/CMakeFiles/WEAVESS_s.dir/rule: cmake_check_build_system
+	$(CMAKE_COMMAND) -E cmake_progress_start F:\ANNS\WEAVESS_dev\cmake-build-debug\CMakeFiles 9
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\Makefile2 src/CMakeFiles/WEAVESS_s.dir/all
+	$(CMAKE_COMMAND) -E cmake_progress_start F:\ANNS\WEAVESS_dev\cmake-build-debug\CMakeFiles 0
+.PHONY : src/CMakeFiles/WEAVESS_s.dir/rule
 
 # Convenience name for target.
-weavess_s: src/CMakeFiles/weavess_s.dir/rule
+WEAVESS_s: src/CMakeFiles/WEAVESS_s.dir/rule
 
-.PHONY : weavess_s
+.PHONY : WEAVESS_s
 
 # clean rule for target.
-src/CMakeFiles/weavess_s.dir/clean:
-	$(MAKE) $(MAKESILENT) -f src\CMakeFiles\weavess_s.dir\build.make src/CMakeFiles/weavess_s.dir/clean
-.PHONY : src/CMakeFiles/weavess_s.dir/clean
+src/CMakeFiles/WEAVESS_s.dir/clean:
+	$(MAKE) $(MAKESILENT) -f src\CMakeFiles\WEAVESS_s.dir\build.make src/CMakeFiles/WEAVESS_s.dir/clean
+.PHONY : src/CMakeFiles/WEAVESS_s.dir/clean
 
 #=============================================================================
-# Target rules for target test/CMakeFiles/index_test.dir
+# Target rules for target test/CMakeFiles/main.dir
 
 # All Build rule for target.
-test/CMakeFiles/index_test.dir/all: src/CMakeFiles/weavess.dir/all
-	$(MAKE) $(MAKESILENT) -f test\CMakeFiles\index_test.dir\build.make test/CMakeFiles/index_test.dir/depend
-	$(MAKE) $(MAKESILENT) -f test\CMakeFiles\index_test.dir\build.make test/CMakeFiles/index_test.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=F:\ANNS\WEAVESS\cmake-build-debug\CMakeFiles --progress-num=1,2 "Built target index_test"
-.PHONY : test/CMakeFiles/index_test.dir/all
+test/CMakeFiles/main.dir/all: src/CMakeFiles/WEAVESS.dir/all
+	$(MAKE) $(MAKESILENT) -f test\CMakeFiles\main.dir\build.make test/CMakeFiles/main.dir/depend
+	$(MAKE) $(MAKESILENT) -f test\CMakeFiles\main.dir\build.make test/CMakeFiles/main.dir/build
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=F:\ANNS\WEAVESS_dev\cmake-build-debug\CMakeFiles --progress-num=19,20 "Built target main"
+.PHONY : test/CMakeFiles/main.dir/all
 
 # Build rule for subdir invocation for target.
-test/CMakeFiles/index_test.dir/rule: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start F:\ANNS\WEAVESS\cmake-build-debug\CMakeFiles 9
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\Makefile2 test/CMakeFiles/index_test.dir/all
-	$(CMAKE_COMMAND) -E cmake_progress_start F:\ANNS\WEAVESS\cmake-build-debug\CMakeFiles 0
-.PHONY : test/CMakeFiles/index_test.dir/rule
+test/CMakeFiles/main.dir/rule: cmake_check_build_system
+	$(CMAKE_COMMAND) -E cmake_progress_start F:\ANNS\WEAVESS_dev\cmake-build-debug\CMakeFiles 11
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\Makefile2 test/CMakeFiles/main.dir/all
+	$(CMAKE_COMMAND) -E cmake_progress_start F:\ANNS\WEAVESS_dev\cmake-build-debug\CMakeFiles 0
+.PHONY : test/CMakeFiles/main.dir/rule
 
 # Convenience name for target.
-index_test: test/CMakeFiles/index_test.dir/rule
+main: test/CMakeFiles/main.dir/rule
 
-.PHONY : index_test
+.PHONY : main
 
 # clean rule for target.
-test/CMakeFiles/index_test.dir/clean:
-	$(MAKE) $(MAKESILENT) -f test\CMakeFiles\index_test.dir\build.make test/CMakeFiles/index_test.dir/clean
-.PHONY : test/CMakeFiles/index_test.dir/clean
+test/CMakeFiles/main.dir/clean:
+	$(MAKE) $(MAKESILENT) -f test\CMakeFiles\main.dir\build.make test/CMakeFiles/main.dir/clean
+.PHONY : test/CMakeFiles/main.dir/clean
 
 #=============================================================================
 # Special targets to cleanup operation of make.
