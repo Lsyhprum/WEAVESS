@@ -14,21 +14,21 @@ WEAVESS is a frame for testing the major graph-based approximate nearest neighbo
 
 ## Algorithms
 
-|  Algo  |  Init Framework              |     Refine     | Connection   |Entry Access | Routing             |
-|:------:| :---------------------------:| :------------: | :----------: | :----------:| :------------------:|
-| KGraph |  NN-Descent                  |                |              | Random      |  Greedy             |
-| IEH    |                              |                |              |             |                     |
-| EFANNA |  **KDTree**                  |  NN-Descent    |              | **KDTree**  |  Greedy             |
-| NSG    |  NN-Descent                  |  **MRNG**      |**DFS**       | **Centroid**|  Greedy             |
-| NSSG   |  NN-Descent                  |  **SSG**       |**DFS_expand**| Random      |  Greedy             |
-| DPG    |  NN-Descent                  |  **DPG**       |**Reverse**   | Random      |  Greedy             |
-| NSW    |                              |                |              |             |                     |
-| HNSW   |                              |                |              |             |                     |
-| NGT    |                              |                |              |             |                     |
-| SPTAG  |                              |                |              |             |                     |
-| FANNG  |                              |                |              |             |                     |
-|Vamana  |  **Random**                  |  **Vamana**    |              |             |                     |
-| HCNNG  |  **Hierarchical clustering** |                |              | Random      |  **Guided Search**  |
+|  Algo  |  Init Framework                   |     Refine     | Connection   |Entry Access | Routing             |
+|:------:| :--------------------------------:| :------------: | :----------: | :----------:| :------------------:|
+| KGraph |  NN-Descent                       |                |              | Random      |  Greedy             |
+| IEH    |                                   |                |              |             |                     |
+| EFANNA |  **KDTree**                       |  NN-Descent    |              | **KDTree**  |  Greedy             |
+| NSG    |  NN-Descent                       |  **MRNG**      |**DFS**       | **Centroid**|  Greedy             |
+| NSSG   |  NN-Descent                       |  **SSG**       |**DFS_expand**| Random      |  Greedy             |
+| DPG    |  NN-Descent                       |  **DPG**       |**Reverse**   | Random      |  Greedy             |
+| NSW    |                                   |                |              |             |                     |
+| HNSW   |                                   |                |              |             |                     |
+| NGT    |                                   |                |              |             |                     |
+| SPTAG  |  Trinary-Projection Trees(TP tree)|                |              | Random      |  Greedy
+| FANNG  |                                   |                |              |             |                     |
+|Vamana  |  **Random**                       |  **Vamana**    |              |             |                     |
+| HCNNG  |  **Hierarchical clustering**      |                |              | Random      |  **Guided Search**  |
 
 
 ## Evaluation criteria
@@ -111,6 +111,10 @@ Main differences :
 * **S** ： min size cluster
 * **N** : number of clusters
 
+### SPTAG
+
+to be continue
+
 ## Search Parameters
 
 + `SEARCH_K` controls the number of result neighbors we want to query.
@@ -143,8 +147,6 @@ Please make pull requests against the `dev` branch.
 -[ ] HNSW
 
 -[ ] NGT
-
--[ ] SPTAG
 
 -[ ] FANNG
 
