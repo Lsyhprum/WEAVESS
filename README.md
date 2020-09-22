@@ -174,10 +174,7 @@ Please make pull requests against the `dev` branch.
 
 * 评价指标 ： 
     * 召回率、 Speed-up
-* 
-* 
 * route 缺失 flag
-* 根据 SPTAG 分层算法确定分治构图如何进行
 * IEH 实现
 * 重写 HCNNG MST 算法， 去掉原数据结构
 * KGraph 修改
