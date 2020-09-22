@@ -4,7 +4,7 @@ set(CMAKE_DEPENDS_LANGUAGES
   )
 # The set of files for implicit dependencies of each language:
 set(CMAKE_DEPENDS_CHECK_CXX
-  "F:/ANNS/WEAVESS/test/IndexTest.cpp" "F:/ANNS/WEAVESS/cmake-build-debug/test/CMakeFiles/index_test.dir/IndexTest.cpp.obj"
+  "F:/ANNS/WEAVESS_dev/test/IndexTest.cpp" "F:/ANNS/WEAVESS_dev/cmake-build-debug/test/CMakeFiles/index_test.dir/IndexTest.cpp.obj"
   )
 set(CMAKE_CXX_COMPILER_ID "GNU")
 
@@ -21,7 +21,7 @@ set(CMAKE_CXX_TARGET_INCLUDE_PATH
 
 # Targets to which this target links.
 set(CMAKE_TARGET_LINKED_INFO_FILES
-  "F:/ANNS/WEAVESS/cmake-build-debug/src/CMakeFiles/weavess.dir/DependInfo.cmake"
+  "F:/ANNS/WEAVESS_dev/cmake-build-debug/src/CMakeFiles/weavess.dir/DependInfo.cmake"
   )
 
 # Fortran module output directory.

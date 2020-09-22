@@ -14,21 +14,21 @@ WEAVESS is a frame for testing the major graph-based approximate nearest neighbo
 
 ## Algorithms
 
-|  Algo  |  Init Framework              |     Refine     | Connection   |Entry Access | Routing             |
-|:------:| :---------------------------:| :------------: | :----------: | :----------:| :------------------:|
-| KGraph |  NN-Descent                  |                |              | Random      |  Greedy             |
-| IEH    |  **Hash**                    |                |              | Random      |  Greedy             |
-| EFANNA |  **KDTree**                  |  NN-Descent    |              | **KDTree**  |  Greedy             |
-| NSG    |  NN-Descent                  |  **MRNG**      |**DFS**       | **Centroid**|  Greedy             |
-| NSSG   |  NN-Descent                  |  **SSG**       |**DFS_expand**| Random      |  Greedy             |
-| DPG    |  NN-Descent                  |  **DPG**       |**Reverse**   | Random      |  Greedy             |
-| NSW    |                              |                |              |             |                     |
-| HNSW   |                              |                |              |             |                     |
-| NGT    |                              |                |              |             |                     |
-| SPTAG  |                              |                |              |             |                     |
-| FANNG  |                              |                |              |             |                     |
-|Vamana  |  NN-Descent                  |  **Vamana**    |              |             |                     |
-| HCNNG  |  **Hierarchical clustering** |                |              | Random      |  **Guided Search**  |
+|  Algo  |  Init Framework                   |     Refine     | Connection   |Entry Access | Routing             |
+|:------:| :--------------------------------:| :------------: | :----------: | :----------:| :------------------:|
+| KGraph |  NN-Descent                       |                |              | Random      |  Greedy             |
+| IEH    |                                   |                |              |             |                     |
+| EFANNA |  **KDTree**                       |  NN-Descent    |              | **KDTree**  |  Greedy             |
+| NSG    |  NN-Descent                       |  **MRNG**      |**DFS**       | **Centroid**|  Greedy             |
+| NSSG   |  NN-Descent                       |  **SSG**       |**DFS_expand**| Random      |  Greedy             |
+| DPG    |  NN-Descent                       |  **DPG**       |**Reverse**   | Random      |  Greedy             |
+| NSW    |                                   |                |              |             |                     |
+| HNSW   |                                   |                |              |             |                     |
+| NGT    |                                   |                |              |             |                     |
+| SPTAG  |  Trinary-Projection Trees(TP tree)|                |              | Random      |  Greedy
+| FANNG  |                                   |                |              |             |                     |
+|Vamana  |  **Random**                       |  **Vamana**    |              |             |                     |
+| HCNNG  |  **Hierarchical clustering**      |                |              | Random      |  **Guided Search**  |
 
 
 ## Evaluation criteria
@@ -111,6 +111,10 @@ Main differences :
 * **S** ： min size cluster
 * **N** : number of clusters
 
+### SPTAG
+
+to be continue
+
 ## Search Parameters
 
 + `SEARCH_K` controls the number of result neighbors we want to query.
@@ -144,8 +148,6 @@ Please make pull requests against the `dev` branch.
 
 -[ ] NGT
 
--[ ] SPTAG
-
 -[ ] FANNG
 
 -[ ] Vamana
@@ -172,14 +174,9 @@ Please make pull requests against the `dev` branch.
 
 * 评价指标 ： 
     * 召回率、 Speed-up
-* 
-* 
 * route 缺失 flag
-* 根据 SPTAG 分层算法确定分治构图如何进行
-* 重写 Coarse 部分逻辑，分为 Increment Coarse 、 Iteration Coarse、 DivideAngConquer Coarse
 * IEH 实现
 * 重写 HCNNG MST 算法， 去掉原数据结构
-* EFANNA 随机截断树和 HCNNG 的 KDT 数据结构进行统一
 * KGraph 修改
 * EFANNA knn_graph 修改  参数缺失 内存不够
 * 分离算法接口与 IndexBuilder 接口

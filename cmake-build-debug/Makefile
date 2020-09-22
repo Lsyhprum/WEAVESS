@@ -58,19 +58,19 @@ cmake_force:
 SHELL = cmd.exe
 
 # The CMake executable.
-CMAKE_COMMAND = C:\Users\Murph\AppData\Local\JetBrains\Toolbox\apps\CLion\ch-0\202.6948.80\bin\cmake\win\bin\cmake.exe
+CMAKE_COMMAND = C:\Users\Murph\AppData\Local\JetBrains\Toolbox\apps\CLion\ch-0\202.7319.62\bin\cmake\win\bin\cmake.exe
 
 # The command to remove a file.
-RM = C:\Users\Murph\AppData\Local\JetBrains\Toolbox\apps\CLion\ch-0\202.6948.80\bin\cmake\win\bin\cmake.exe -E rm -f
+RM = C:\Users\Murph\AppData\Local\JetBrains\Toolbox\apps\CLion\ch-0\202.7319.62\bin\cmake\win\bin\cmake.exe -E rm -f
 
 # Escaping for special characters.
 EQUALS = =
 
 # The top-level source directory on which CMake was run.
-CMAKE_SOURCE_DIR = F:\ANNS\WEAVESS
+CMAKE_SOURCE_DIR = F:\ANNS\WEAVESS_dev
 
 # The top-level build directory on which CMake was run.
-CMAKE_BINARY_DIR = F:\ANNS\WEAVESS\cmake-build-debug
+CMAKE_BINARY_DIR = F:\ANNS\WEAVESS_dev\cmake-build-debug
 
 #=============================================================================
 # Targets provided globally by CMake.
@@ -78,7 +78,7 @@ CMAKE_BINARY_DIR = F:\ANNS\WEAVESS\cmake-build-debug
 # Special rule for the target edit_cache
 edit_cache:
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "No interactive CMake dialog available..."
-	C:\Users\Murph\AppData\Local\JetBrains\Toolbox\apps\CLion\ch-0\202.6948.80\bin\cmake\win\bin\cmake.exe -E echo "No interactive CMake dialog available."
+	C:\Users\Murph\AppData\Local\JetBrains\Toolbox\apps\CLion\ch-0\202.7319.62\bin\cmake\win\bin\cmake.exe -E echo "No interactive CMake dialog available."
 .PHONY : edit_cache
 
 # Special rule for the target edit_cache
@@ -89,7 +89,7 @@ edit_cache/fast: edit_cache
 # Special rule for the target rebuild_cache
 rebuild_cache:
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --cyan "Running CMake to regenerate build system..."
-	C:\Users\Murph\AppData\Local\JetBrains\Toolbox\apps\CLion\ch-0\202.6948.80\bin\cmake\win\bin\cmake.exe --regenerate-during-build -S$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR)
+	C:\Users\Murph\AppData\Local\JetBrains\Toolbox\apps\CLion\ch-0\202.7319.62\bin\cmake\win\bin\cmake.exe --regenerate-during-build -S$(CMAKE_SOURCE_DIR) -B$(CMAKE_BINARY_DIR)
 .PHONY : rebuild_cache
 
 # Special rule for the target rebuild_cache
@@ -99,9 +99,9 @@ rebuild_cache/fast: rebuild_cache
 
 # The main all target
 all: cmake_check_build_system
-	$(CMAKE_COMMAND) -E cmake_progress_start F:\ANNS\WEAVESS\cmake-build-debug\CMakeFiles F:\ANNS\WEAVESS\cmake-build-debug\CMakeFiles\progress.marks
+	$(CMAKE_COMMAND) -E cmake_progress_start F:\ANNS\WEAVESS_dev\cmake-build-debug\CMakeFiles F:\ANNS\WEAVESS_dev\cmake-build-debug\CMakeFiles\progress.marks
 	$(MAKE) $(MAKESILENT) -f CMakeFiles\Makefile2 all
-	$(CMAKE_COMMAND) -E cmake_progress_start F:\ANNS\WEAVESS\cmake-build-debug\CMakeFiles 0
+	$(CMAKE_COMMAND) -E cmake_progress_start F:\ANNS\WEAVESS_dev\cmake-build-debug\CMakeFiles 0
 .PHONY : all
 
 # The main clean target
@@ -130,43 +130,43 @@ depend:
 .PHONY : depend
 
 #=============================================================================
-# Target rules for targets named weavess
+# Target rules for targets named WEAVESS
 
 # Build rule for target.
-weavess: cmake_check_build_system
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\Makefile2 weavess
-.PHONY : weavess
+WEAVESS: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\Makefile2 WEAVESS
+.PHONY : WEAVESS
 
 # fast build rule for target.
-weavess/fast:
-	$(MAKE) $(MAKESILENT) -f src\CMakeFiles\weavess.dir\build.make src/CMakeFiles/weavess.dir/build
-.PHONY : weavess/fast
+WEAVESS/fast:
+	$(MAKE) $(MAKESILENT) -f src\CMakeFiles\WEAVESS.dir\build.make src/CMakeFiles/WEAVESS.dir/build
+.PHONY : WEAVESS/fast
 
 #=============================================================================
-# Target rules for targets named weavess_s
+# Target rules for targets named WEAVESS_s
 
 # Build rule for target.
-weavess_s: cmake_check_build_system
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\Makefile2 weavess_s
-.PHONY : weavess_s
+WEAVESS_s: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\Makefile2 WEAVESS_s
+.PHONY : WEAVESS_s
 
 # fast build rule for target.
-weavess_s/fast:
-	$(MAKE) $(MAKESILENT) -f src\CMakeFiles\weavess_s.dir\build.make src/CMakeFiles/weavess_s.dir/build
-.PHONY : weavess_s/fast
+WEAVESS_s/fast:
+	$(MAKE) $(MAKESILENT) -f src\CMakeFiles\WEAVESS_s.dir\build.make src/CMakeFiles/WEAVESS_s.dir/build
+.PHONY : WEAVESS_s/fast
 
 #=============================================================================
-# Target rules for targets named index_test
+# Target rules for targets named main
 
 # Build rule for target.
-index_test: cmake_check_build_system
-	$(MAKE) $(MAKESILENT) -f CMakeFiles\Makefile2 index_test
-.PHONY : index_test
+main: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles\Makefile2 main
+.PHONY : main
 
 # fast build rule for target.
-index_test/fast:
-	$(MAKE) $(MAKESILENT) -f test\CMakeFiles\index_test.dir\build.make test/CMakeFiles/index_test.dir/build
-.PHONY : index_test/fast
+main/fast:
+	$(MAKE) $(MAKESILENT) -f test\CMakeFiles\main.dir\build.make test/CMakeFiles/main.dir/build
+.PHONY : main/fast
 
 # Help Target
 help:
@@ -176,9 +176,9 @@ help:
 	@echo ... depend
 	@echo ... edit_cache
 	@echo ... rebuild_cache
-	@echo ... index_test
-	@echo ... weavess
-	@echo ... weavess_s
+	@echo ... WEAVESS
+	@echo ... WEAVESS_s
+	@echo ... main
 .PHONY : help
 
 

@@ -1,3 +1,3 @@
 file(REMOVE_RECURSE
-  "libweavess.a"
+  "libWEAVESS.a"
 )

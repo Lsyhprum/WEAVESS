@@ -28,7 +28,7 @@ namespace weavess {
             }
         }
 
-        inline std::string ToString() const {
+        inline std::string toString() const {
             std::string res;
             for (auto &param : params) {
                 res += param.first;

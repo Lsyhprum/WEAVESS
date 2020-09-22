@@ -4,19 +4,20 @@ set(CMAKE_DEPENDS_LANGUAGES
   )
 # The set of files for implicit dependencies of each language:
 set(CMAKE_DEPENDS_CHECK_CXX
-  "F:/ANNS/WEAVESS/src/index_component_coarse.cpp" "F:/ANNS/WEAVESS/cmake-build-debug/src/CMakeFiles/weavess_s.dir/index_component_coarse.cpp.obj"
-  "F:/ANNS/WEAVESS/src/index_component_conn.cpp" "F:/ANNS/WEAVESS/cmake-build-debug/src/CMakeFiles/weavess_s.dir/index_component_conn.cpp.obj"
-  "F:/ANNS/WEAVESS/src/index_component_entry.cpp" "F:/ANNS/WEAVESS/cmake-build-debug/src/CMakeFiles/weavess_s.dir/index_component_entry.cpp.obj"
-  "F:/ANNS/WEAVESS/src/index_component_load.cpp" "F:/ANNS/WEAVESS/cmake-build-debug/src/CMakeFiles/weavess_s.dir/index_component_load.cpp.obj"
-  "F:/ANNS/WEAVESS/src/index_component_refine.cpp" "F:/ANNS/WEAVESS/cmake-build-debug/src/CMakeFiles/weavess_s.dir/index_component_refine.cpp.obj"
-  "F:/ANNS/WEAVESS/src/index_component_route.cpp" "F:/ANNS/WEAVESS/cmake-build-debug/src/CMakeFiles/weavess_s.dir/index_component_route.cpp.obj"
+  "F:/ANNS/WEAVESS_dev/src/builder.cpp" "F:/ANNS/WEAVESS_dev/cmake-build-debug/src/CMakeFiles/weavess_s.dir/builder.cpp.obj"
+  "F:/ANNS/WEAVESS_dev/src/component_candidate.cpp" "F:/ANNS/WEAVESS_dev/cmake-build-debug/src/CMakeFiles/weavess_s.dir/component_candidate.cpp.obj"
+  "F:/ANNS/WEAVESS_dev/src/component_entry.cpp" "F:/ANNS/WEAVESS_dev/cmake-build-debug/src/CMakeFiles/weavess_s.dir/component_entry.cpp.obj"
+  "F:/ANNS/WEAVESS_dev/src/component_init.cpp" "F:/ANNS/WEAVESS_dev/cmake-build-debug/src/CMakeFiles/weavess_s.dir/component_init.cpp.obj"
+  "F:/ANNS/WEAVESS_dev/src/component_load.cpp" "F:/ANNS/WEAVESS_dev/cmake-build-debug/src/CMakeFiles/weavess_s.dir/component_load.cpp.obj"
+  "F:/ANNS/WEAVESS_dev/src/component_prune.cpp" "F:/ANNS/WEAVESS_dev/cmake-build-debug/src/CMakeFiles/weavess_s.dir/component_prune.cpp.obj"
+  "F:/ANNS/WEAVESS_dev/src/component_refine.cpp" "F:/ANNS/WEAVESS_dev/cmake-build-debug/src/CMakeFiles/weavess_s.dir/component_refine.cpp.obj"
+  "F:/ANNS/WEAVESS_dev/src/component_serialization.cpp" "F:/ANNS/WEAVESS_dev/cmake-build-debug/src/CMakeFiles/weavess_s.dir/component_serialization.cpp.obj"
   )
 set(CMAKE_CXX_COMPILER_ID "GNU")
 
 # Preprocessor definitions for this target.
 set(CMAKE_TARGET_DEFINITIONS_CXX
-  "INFO"
-  "weavess_s_EXPORTS"
+  "WEAVESS_s_EXPORTS"
   )
 
 # The include file search paths:

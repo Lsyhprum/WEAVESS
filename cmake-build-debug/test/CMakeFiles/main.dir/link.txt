@@ -1,0 +1,3 @@
+C:\Users\Murph\AppData\Local\JetBrains\Toolbox\apps\CLion\ch-0\202.7319.62\bin\cmake\win\bin\cmake.exe -E rm -f CMakeFiles\main.dir/objects.a
+F:\MinGW-W64\mingw64\bin\ar.exe cr CMakeFiles\main.dir/objects.a @CMakeFiles\main.dir\objects1.rsp
+F:\MinGW-W64\mingw64\bin\g++.exe  -fopenmp -g   -Wl,--whole-archive CMakeFiles\main.dir/objects.a -Wl,--no-whole-archive  -o main.exe -Wl,--out-implib,libmain.dll.a -Wl,--major-image-version,0,--minor-image-version,0 @CMakeFiles\main.dir\linklibs.rsp
