@@ -8,6 +8,7 @@
 #include <omp.h>
 #include <mutex>
 #include <queue>
+#include <stack>
 #include <thread>
 #include <vector>
 #include <chrono>
@@ -29,6 +30,7 @@ namespace weavess {
         unsigned L;
         unsigned ITER;
         unsigned K;
+        unsigned delta;
 
         struct Neighbor {
             unsigned id;
@@ -117,11 +119,6 @@ namespace weavess {
             }
         };
 
-        struct LockNeighbor {
-            std::mutex lock;
-            std::vector<Neighbor> pool;
-        };
-
         static inline int InsertIntoPool(Neighbor *addr, unsigned K, Neighbor nn) {
             // find the location to insert
             int left = 0, right = K - 1;
@@ -152,14 +149,13 @@ namespace weavess {
             return right;
         }
 
-
         typedef std::vector<nhood> KNNGraph;
         KNNGraph graph_;
     };
 
     class NSG {
     public:
-        unsigned R_nsg;
+        unsigned R_nsg;     // nsg 中可变
         unsigned L_nsg;
         unsigned C_nsg;
 
@@ -168,8 +164,14 @@ namespace weavess {
 
     class NSSG {
     public:
-        unsigned A;
+        float A;
         unsigned n_try;
+        unsigned width;
+
+        std::vector<unsigned> eps_;
+        unsigned test_min = INT_MAX;
+        unsigned test_max = 0;
+        long long test_sum = 0;
     };
 
     class DPG {
@@ -259,9 +261,13 @@ namespace weavess {
 
         class HnswNode {
         public:
-            explicit HnswNode(int id, int level, size_t max_m, size_t max_m0);
-            void CopyHigherLevelLinksToOptIndex(char* mem_offset, uint64_t memory_per_node_higher_level) const;
-            void CopyDataAndLevel0LinksToOptIndex(char* mem_offset, int higher_level_offset) const;
+            explicit HnswNode(int id, int level, size_t max_m, size_t max_m0)
+                : id_(id), level_(level), max_m_(max_m), max_m0_(max_m0), friends_at_layer_(level+1) {
+                for (int i = 1; i <= level; ++i) {
+                    friends_at_layer_[i].reserve(max_m_ + 1);
+                }
+                friends_at_layer_[0].reserve(max_m0_ + 1);
+            }
 
             inline int GetId() const { return id_; }
             inline int GetLevel() const { return level_; }
@@ -359,6 +365,38 @@ namespace weavess {
             std::vector<Item> v_;
         };
 
+        class VisitedList {
+        public:
+            VisitedList(unsigned size) : size_(size), mark_(1) {
+                visited_ = new unsigned int[size_];
+                memset(visited_, 0, sizeof(unsigned int) * size_);
+            }
+
+            ~VisitedList() { delete[] visited_; }
+
+            inline bool Visited(unsigned int index) const { return visited_[index] == mark_; }
+
+            inline bool NotVisited(unsigned int index) const { return visited_[index] != mark_; }
+
+            inline void MarkAsVisited(unsigned int index) { visited_[index] = mark_; }
+
+            inline void Reset() {
+                if (++mark_ == 0) {
+                    mark_ = 1;
+                    memset(visited_, 0, sizeof(unsigned int) * size_);
+                }
+            }
+
+            inline unsigned int *GetVisited() { return visited_; }
+
+            inline unsigned int GetVisitMark() { return mark_; }
+
+        private:
+            unsigned int *visited_;
+            unsigned int size_;
+            unsigned int mark_;
+        };
+
         int max_level_ = 0;
         HnswNode* enterpoint_ = nullptr;
         std::vector<HnswNode*> nodes_;
@@ -451,104 +489,6 @@ namespace weavess {
             delete dist_;
         }
 
-
-//        class Node {
-//        public:
-//
-//            explicit Node(unsigned id, unsigned level) : id_(id), level_(level) {
-//                for (int i = 0; i <= level; i++) {
-//                    std::vector<Node *> container;
-//                    friends_at_layer_.push_back(container);
-//                }
-//            }
-//
-//            explicit Node(unsigned id, unsigned level, float dist, unsigned flag) : id_(id), level_(level), dist_(dist),
-//                                                                                    flag_(flag) {
-//                for (int i = 0; i <= level; i++) {
-//                    std::vector<Node *> container;
-//                    friends_at_layer_.push_back(container);
-//                }
-//            }
-//
-//            unsigned int getId() const {
-//                return id_;
-//            }
-//
-//            void setId(unsigned int id) {
-//                id_ = id;
-//            }
-//
-//            unsigned int getLevel() const {
-//                return level_;
-//            }
-//
-//            std::vector<std::vector<Node *>> &getFriends() {
-//                return friends_at_layer_;
-//            }
-//
-//            std::vector<Node *> &getFriendsAtLayer(int level) {
-//                return friends_at_layer_[level];
-//            }
-//
-//            const std::mutex &getAccessGuard() const {
-//                return access_guard_;
-//            }
-//
-//            const bool getFlag() const { return flag_; }
-//
-//            void setFlag(bool flag) { flag_ = flag; }
-//
-//            float getDist() const {
-//                return dist_;
-//            }
-//
-//            void setDist(float dist) {
-//                dist_ = dist;
-//            }
-//
-//        private:
-//            unsigned id_;
-//            float dist_;
-//            unsigned level_;
-//            bool flag_;
-//
-//            std::vector<std::vector<Node *>> friends_at_layer_;
-//
-//            std::mutex access_guard_;
-//        };
-
-        class VisitedList {
-        public:
-            VisitedList(unsigned size) : size_(size), mark_(1) {
-                visited_ = new unsigned int[size_];
-                memset(visited_, 0, sizeof(unsigned int) * size_);
-            }
-
-            ~VisitedList() { delete[] visited_; }
-
-            inline bool Visited(unsigned int index) const { return visited_[index] == mark_; }
-
-            inline bool NotVisited(unsigned int index) const { return visited_[index] != mark_; }
-
-            inline void MarkAsVisited(unsigned int index) { visited_[index] = mark_; }
-
-            inline void Reset() {
-                if (++mark_ == 0) {
-                    mark_ = 1;
-                    memset(visited_, 0, sizeof(unsigned int) * size_);
-                }
-            }
-
-            inline unsigned int *GetVisited() { return visited_; }
-
-            inline unsigned int GetVisitMark() { return mark_; }
-
-        private:
-            unsigned int *visited_;
-            unsigned int size_;
-            unsigned int mark_;
-        };
-
         static inline int InsertIntoPool(Neighbor *addr, unsigned K, Neighbor nn) {
             // find the location to insert
             int left = 0, right = K - 1;
@@ -578,7 +518,6 @@ namespace weavess {
             addr[right] = nn;
             return right;
         }
-
 
         float *getBaseData() const {
             return base_data_;
@@ -652,7 +591,7 @@ namespace weavess {
             ground_dim_ = groundDim;
         }
 
-        const Parameters &getParam() const {
+        Parameters &getParam() {
             return param_;
         }
 
@@ -698,6 +637,16 @@ namespace weavess {
             entry_type = entryType;
         }
 
+        unsigned int getDistCount() const {
+            return dist_count;
+        }
+
+        void addDistCount() {
+            dist_count += 1;
+        }
+
+        int i = 0;
+
     private:
         float *base_data_, *query_data_;
         unsigned *ground_data_;
@@ -713,6 +662,9 @@ namespace weavess {
         TYPE entry_type;
         TYPE candidate_type;
         TYPE prune_type;
+
+        unsigned dist_count = 0;
+
     };
 }
 

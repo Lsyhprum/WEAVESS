@@ -37,11 +37,13 @@ namespace weavess {
         virtual void SaveGraphInner(const char *filename) = 0;
     };
 
-    class ComponentSerializationNNDescent : public Component {
+    class ComponentSerializationCompactGraph : public ComponentSerialization {
     public:
-        explicit ComponentSerializationNNDescent(Index *index) : Component(index) {}
+
+        explicit ComponentSerializationCompactGraph(Index *index) : ComponentSerialization(index) {}
 
         void SaveGraphInner(const char *filename);
+
         void LoadGraphInner(const char *filename);
     };
 
@@ -74,6 +76,8 @@ namespace weavess {
         void generate_control_set(std::vector<unsigned> &c, std::vector<std::vector<unsigned> > &v, unsigned N);
 
         void eval_recall(std::vector<unsigned> &ctrl_points, std::vector<std::vector<unsigned> > &acc_eval_set);
+
+        float eval_delta (std::vector<Index::Neighbor> const &pool);
     };
 
     class ComponentInitRandom : public ComponentInit {
@@ -81,6 +85,9 @@ namespace weavess {
         explicit ComponentInitRandom(Index *index) : ComponentInit(index) {}
 
         void InitInner() override;
+
+    private:
+        void SetConfigs() ;
     };
 
     class ComponentInitKDT : public ComponentInit {
@@ -177,6 +184,8 @@ namespace weavess {
         void SetConfigs();
 
         void Link(Index::SimpleNeighbor *cut_graph_);
+
+        void InterInsert(unsigned n, unsigned range, std::vector<std::mutex> &locks, Index::SimpleNeighbor *cut_graph_);
     };
 
     class ComponentRefineEFANNA : public ComponentRefine {
@@ -208,7 +217,7 @@ namespace weavess {
         void RefineInner() override;
 
     private:
-        int SetConfigs();
+        void SetConfigs();
 
         void Build(bool reverse);
 
@@ -235,6 +244,22 @@ namespace weavess {
 
         void Link(Index::SimpleNeighbor *cut_graph_);
     };
+
+    class ComponentRefineTest : public ComponentRefine {
+    public:
+        explicit ComponentRefineTest(Index *index) : ComponentRefine(index) {}
+
+        void RefineInner() override;
+
+    private:
+        void SetConfigs();
+
+        void Link(Index::SimpleNeighbor *cut_graph_);
+
+        void InterInsert(unsigned n, unsigned range, float threshold, std::vector<std::mutex> &locks,
+                                              Index::SimpleNeighbor *cut_graph_);
+    };
+
 
     // entry
     class ComponentEntry : public Component {
@@ -264,21 +289,21 @@ namespace weavess {
         void get_neighbors(const float *query, std::vector<Index::Neighbor> &retset, std::vector<Index::Neighbor> &fullset);
     };
 
+
     // select candidate
     class ComponentCandidate : public Component {
     public:
         explicit ComponentCandidate(Index *index) : Component(index) {}
 
-        virtual void CandidateInner(const unsigned query, const unsigned enter, Index::VisitedList *visited_list,
+        virtual void CandidateInner(const unsigned query, const unsigned enter, boost::dynamic_bitset<> flags,
                                     std::vector<Index::Neighbor> &result, int level) = 0;
     };
-
     // L
     class ComponentCandidateNSG : public ComponentCandidate {
     public:
         explicit ComponentCandidateNSG(Index *index) : ComponentCandidate(index) {}
 
-        void CandidateInner(const unsigned query, const unsigned enter, Index::VisitedList *visited_list,
+        void CandidateInner(const unsigned query, const unsigned enter, boost::dynamic_bitset<> flags,
                                     std::vector<Index::Neighbor> &result, int level) override;
     };
 
@@ -286,7 +311,7 @@ namespace weavess {
     public:
         explicit ComponentCandidateNSSG(Index *index) : ComponentCandidate(index) {}
 
-        void CandidateInner(const unsigned query, const unsigned enter, Index::VisitedList *visited_list,
+        void CandidateInner(const unsigned query, const unsigned enter, boost::dynamic_bitset<> flags,
                        std::vector<Index::Neighbor> &result, int level) override;
     };
 
@@ -294,7 +319,15 @@ namespace weavess {
     public:
         explicit ComponentCandidateNone(Index *index) : ComponentCandidate(index) {}
 
-        void CandidateInner(const unsigned query, const unsigned enter, Index::VisitedList *visited_list,
+        void CandidateInner(const unsigned query, const unsigned enter, boost::dynamic_bitset<> flags,
+                            std::vector<Index::Neighbor> &result, int level) override;
+    };
+
+    class ComponentCandidateGreedy : public ComponentCandidate {
+    public:
+        explicit ComponentCandidateGreedy(Index *index) : ComponentCandidate(index) {}
+
+        void CandidateInner(const unsigned query, const unsigned enter, boost::dynamic_bitset<> flags,
                             std::vector<Index::Neighbor> &result, int level) override;
     };
 
@@ -304,7 +337,7 @@ namespace weavess {
     public:
         explicit ComponentPrune(Index *index) : Component(index) {}
 
-        virtual void PruneInner(unsigned q, unsigned range, Index::VisitedList *visited_list,
+        virtual void PruneInner(unsigned q, unsigned range, boost::dynamic_bitset<> flags,
                                 std::vector<Index::Neighbor> &pool, Index::SimpleNeighbor *cut_graph_, unsigned level) = 0;
 
         void Hnsw2Neighbor(unsigned range, std::priority_queue<Index::FurtherFirst> result) {
@@ -318,20 +351,18 @@ namespace weavess {
                 result.pop();
             }
 
-            PruneInner(0, range, nullptr, pool, nullptr, 0);
+            boost::dynamic_bitset<> flags;
 
-            int start = pool.size() - 1;
-            for(int i = 0; i < tmp.size(); i ++){
-                for(int j = start; j >= 0; j --){
-                    if(pool[j].id == tmp[i].GetNode()->GetId()){
+            auto *cut_graph_ = new Index::SimpleNeighbor[index->getBaseLen() * (size_t) index->R_nsg];
+
+            PruneInner(0, range, flags, pool, cut_graph_, 0);
+
+            Index::SimpleNeighbor *pool2 = cut_graph_;
+            for(unsigned j = 0; j < index->R_nsg; j ++) {
+                if(pool2[j].distance == -1) break;
+                for(int i = 0; i < tmp.size(); i ++) {
+                    if(tmp[i].GetNode()->GetId() == pool2->id)
                         result.push(tmp[i]);
-                        start -= 1;
-                        break;
-                    }else{
-                        if(pool[j].distance < tmp[i].GetDistance()){
-                            break;
-                        }
-                    }
                 }
             }
 
@@ -344,7 +375,7 @@ namespace weavess {
     public:
         explicit ComponentPruneNSG(Index *index) : ComponentPrune(index) {}
 
-        void PruneInner(unsigned q, unsigned range, Index::VisitedList *visited_list,
+        void PruneInner(unsigned q, unsigned range, boost::dynamic_bitset<> flags,
                         std::vector<Index::Neighbor> &pool, Index::SimpleNeighbor *cut_graph_, unsigned level) override;
     };
 
@@ -352,7 +383,7 @@ namespace weavess {
     public:
         explicit ComponentPruneNSSG(Index *index) : ComponentPrune(index) {}
 
-        void PruneInner(unsigned q, unsigned range, Index::VisitedList *visited_list,
+        void PruneInner(unsigned q, unsigned range, boost::dynamic_bitset<> flags,
                         std::vector<Index::Neighbor> &pool, Index::SimpleNeighbor *cut_graph_, unsigned level) override;
     };
 
@@ -360,7 +391,7 @@ namespace weavess {
     public:
         explicit ComponentPruneDPG(Index *index) : ComponentPrune(index) {}
 
-        void PruneInner(unsigned q, unsigned range, Index::VisitedList *visited_list,
+        void PruneInner(unsigned q, unsigned range, boost::dynamic_bitset<> flags,
                         std::vector<Index::Neighbor> &pool, Index::SimpleNeighbor *cut_graph_, unsigned level) override;
     };
 
@@ -368,7 +399,7 @@ namespace weavess {
     public:
         explicit ComponentPruneNaive(Index *index) : ComponentPrune(index) {}
 
-        void PruneInner(unsigned q, unsigned range, Index::VisitedList *visited_list,
+        void PruneInner(unsigned q, unsigned range, boost::dynamic_bitset<> flags,
                         std::vector<Index::Neighbor> &pool, Index::SimpleNeighbor *cut_graph_, unsigned level) override;
     };
 
@@ -376,7 +407,7 @@ namespace weavess {
     public:
         explicit ComponentPruneVAMANA(Index *index) : ComponentPrune(index) {}
 
-        void PruneInner(unsigned q, unsigned range, Index::VisitedList *visited_list,
+        void PruneInner(unsigned q, unsigned range, boost::dynamic_bitset<> flags,
                         std::vector<Index::Neighbor> &pool, Index::SimpleNeighbor *cut_graph_, unsigned level) override;
     };
 
@@ -384,7 +415,7 @@ namespace weavess {
     public:
         explicit ComponentPruneHeuristic(Index *index) : ComponentPrune(index) {}
 
-        void PruneInner(unsigned q, unsigned range, Index::VisitedList *visited_list,
+        void PruneInner(unsigned q, unsigned range, boost::dynamic_bitset<> flags,
                         std::vector<Index::Neighbor> &pool, Index::SimpleNeighbor *cut_graph_, unsigned level) override;
     };
 
@@ -397,13 +428,73 @@ namespace weavess {
         virtual void ConnInner() = 0;
     };
 
-    class ComponentConnDFS : ComponentConn {
+    class ComponentConnNSGDFS : ComponentConn {
     public:
-        explicit ComponentConnDFS(Index *index) : ComponentConn(index) {}
+        explicit ComponentConnNSGDFS(Index *index) : ComponentConn(index) {}
+
+        void ConnInner();
+
+    private:
+        void tree_grow();
+
+        void DFS(boost::dynamic_bitset<> &flag, unsigned root, unsigned &cnt);
+
+        void findroot(boost::dynamic_bitset<> &flag, unsigned &root);
+
+        void get_neighbors(const float *query, std::vector<Index::Neighbor> &retset, std::vector<Index::Neighbor> &fullset);
+    };
+
+    class ComponentConnSSGDFS : ComponentConn {
+    public:
+        explicit ComponentConnSSGDFS(Index *index) : ComponentConn(index) {}
 
         void ConnInner();
     };
 
+    class ComponentConnReverse : ComponentConn {
+    public:
+        explicit ComponentConnReverse(Index *index) : ComponentConn(index) {}
+
+        void ConnInner();
+    };
+
+
+    // search entry
+    class ComponentSearchEntry : public Component {
+    public:
+        explicit ComponentSearchEntry(Index *index) : Component(index) {}
+
+        virtual void SearchEntryInner(unsigned query, std::vector<Index::Neighbor> &pool) = 0;
+    };
+
+    class ComponentSearchEntryRand : public ComponentSearchEntry {
+    public:
+        explicit ComponentSearchEntryRand(Index *index) : ComponentSearchEntry(index) {}
+
+        void SearchEntryInner(unsigned query, std::vector<Index::Neighbor> &pool) override;
+    };
+
+    class ComponentSearchEntryCentroid : public ComponentSearchEntry {
+    public:
+        explicit ComponentSearchEntryCentroid(Index *index) : ComponentSearchEntry(index) {}
+
+        void SearchEntryInner(unsigned query, std::vector<Index::Neighbor> &pool) override;
+    };
+
+    // search route
+    class ComponentSearchRoute : public Component {
+    public:
+        explicit ComponentSearchRoute(Index *index) : Component(index) {}
+
+        virtual void RouteInner(unsigned query, std::vector<Index::Neighbor> &pool, std::vector<unsigned> &res) = 0;
+    };
+
+    class ComponentSearchRouteGreedy : public ComponentSearchRoute {
+    public:
+        explicit ComponentSearchRouteGreedy(Index *index) : ComponentSearchRoute(index) {}
+
+        void RouteInner(unsigned query, std::vector<Index::Neighbor> &pool, std::vector<unsigned> &res) override;
+    };
 
 }
 

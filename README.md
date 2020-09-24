@@ -14,6 +14,18 @@ WEAVESS is a frame for testing the major graph-based approximate nearest neighbo
 
 ## Algorithms
 
+### Build
+
+|  Algo  |       Init      |     Entry      |   Candidate   |    Prune    |     Conn     |
+|:------:| :--------------:| :------------: | :-----------: | :----------:| :-----------:|
+| KGraph |    NN-Descent   |                |               |             |              |
+| NSG    |    NN-Descent   |    Centroid    |    Greedy     |    MRNG     |      DFS     |
+| SSG    |    NN-Descent   |                | PROPAGATION 2 |    SSG      |  DFS_Expand  |
+| DPG    |    NN-Descent   |                | PROPAGATION 1 |    DPG      |    Reverse   |
+| EFANNA |    KDT          |                |               |             |              |
+
+### Search
+
 |  Algo  |  Init Framework                   |     Refine     | Connection   |Entry Access | Routing             |
 |:------:| :--------------------------------:| :------------: | :----------: | :----------:| :------------------:|
 | KGraph |  NN-Descent                       |                |              | Random      |  Greedy             |
