@@ -1,8 +1,8 @@
-# Install script for directory: F:/ANNS/WEAVESS_dev
+# Install script for directory: G:/ANNS/WEAVESS_dev
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)
-  set(CMAKE_INSTALL_PREFIX "C:/Program Files (x86)/weavess")
+  set(CMAKE_INSTALL_PREFIX "C:/Program Files (x86)/WEAVESS")
 endif()
 string(REGEX REPLACE "/$" "" CMAKE_INSTALL_PREFIX "${CMAKE_INSTALL_PREFIX}")
 
@@ -34,8 +34,8 @@ endif()
 
 if(NOT CMAKE_INSTALL_LOCAL_ONLY)
   # Include the install script for each subdirectory.
-  include("F:/ANNS/WEAVESS_dev/cmake-build-debug/src/cmake_install.cmake")
-  include("F:/ANNS/WEAVESS_dev/cmake-build-debug/test/cmake_install.cmake")
+  include("G:/ANNS/WEAVESS_dev/cmake-build-debug/src/cmake_install.cmake")
+  include("G:/ANNS/WEAVESS_dev/cmake-build-debug/test/cmake_install.cmake")
 
 endif()
 
@@ -47,5 +47,5 @@ endif()
 
 string(REPLACE ";" "\n" CMAKE_INSTALL_MANIFEST_CONTENT
        "${CMAKE_INSTALL_MANIFEST_FILES}")
-file(WRITE "F:/ANNS/WEAVESS_dev/cmake-build-debug/${CMAKE_INSTALL_MANIFEST}"
+file(WRITE "G:/ANNS/WEAVESS_dev/cmake-build-debug/${CMAKE_INSTALL_MANIFEST}"
      "${CMAKE_INSTALL_MANIFEST_CONTENT}")

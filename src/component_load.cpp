@@ -63,6 +63,18 @@ namespace weavess {
 
         assert(index->getGroundData() != nullptr && index->getGroundLen() != 0 && index->getGroundDim() != 0);
 
+//        if(parameters.get<unsigned>("K") > index->getBaseLen()){
+//            std::cerr << "K larger than dataset size" << std::endl;
+//            exit(-1);
+//        }
+//        if(parameters.get<unsigned>("L") > index->getBaseLen()){
+//            std::cerr << "L larger than dataset size" << std::endl;
+//            exit(-1);
+//        }
+//        if(parameters.get<unsigned>("S") > index->getBaseLen()){
+//            std::cerr << "S larger than dataset size" << std::endl;
+//            exit(-1);
+//        }
         index->setParam(parameters);
     }
 }

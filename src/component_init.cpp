@@ -13,21 +13,26 @@ namespace weavess {
     void ComponentInitNNDescent::InitInner() {
         SetConfigs();
 
+        // 添加随机点作为近邻
         init();
 
         NNDescent();
 
         index->getFinalGraph().resize(index->getBaseLen());
+
         for (unsigned i = 0; i < index->getBaseLen(); i++) {
             std::vector<std::vector<unsigned>> level_tmp;
             std::vector<unsigned> tmp;
+
             std::sort(index->graph_[i].pool.begin(), index->graph_[i].pool.end());
-            for (unsigned j = 0; j < index->K; j++) {
+
+            for (unsigned j = 0; j < index->graph_[i].pool.size(); j++) {
                 tmp.push_back(index->graph_[i].pool[j].id);
             }
+
             tmp.reserve(index->K);
             level_tmp.push_back(tmp);
-            level_tmp.reserve(1);
+            level_tmp.resize(1);
             index->getFinalGraph()[i] = level_tmp;
             // 内存释放
             std::vector<Index::Neighbor>().swap(index->graph_[i].pool);
@@ -37,10 +42,6 @@ namespace weavess {
             std::vector<unsigned>().swap(index->graph_[i].rnn_new);
         }
         std::vector<Index::nhood>().swap(index->graph_);
-
-        std::cout << "final graph node num : " << index->getFinalGraph().size() << std::endl;
-
-        std::cout << "INIT Finish" << std::endl;
     }
 
     void ComponentInitNNDescent::SetConfigs() {
@@ -55,7 +56,7 @@ namespace weavess {
         index->graph_.reserve(index->getBaseLen());
         std::mt19937 rng(rand());
         for (unsigned i = 0; i < index->getBaseLen(); i++) {
-            index->graph_.emplace_back(index->L, index->S, rng, (unsigned) index->getBaseLen());
+            index->graph_.emplace_back(Index::nhood(index->L, index->S, rng, (unsigned) index->getBaseLen()));
         }
 
 #pragma omp parallel for
@@ -72,7 +73,7 @@ namespace weavess {
                                                        index->getBaseData() + id * index->getBaseDim(),
                                                        (unsigned) index->getBaseDim());
 
-                index->graph_[i].pool.emplace_back(id, dist, true);
+                index->graph_[i].pool.emplace_back(Index::Neighbor(id, dist, true));
             }
             std::make_heap(index->graph_[i].pool.begin(), index->graph_[i].pool.end());
             index->graph_[i].pool.reserve(index->L);
@@ -90,11 +91,24 @@ namespace weavess {
         generate_control_set(control_points, acc_eval_set, index->getBaseLen());
 
         for (unsigned it = 0; it < index->ITER; it++) {
+            std::cout << "NN-Descent iter: " << it << std::endl;
+
             join();
+
+            float total = 0;
+            unsigned num = 0;
+            for(auto const &nhood : index->graph_) {
+                total += eval_delta(nhood.pool);
+            }
+
             update();
-            //checkDup();
+
             eval_recall(control_points, acc_eval_set);
-            std::cout << "iter: " << it << std::endl;
+
+            if(num != 0 && total / num  <= index->delta) {
+                std::cout << "stop condition : delta" << std::endl;
+                break;
+            }
         }
     }
 
@@ -115,7 +129,6 @@ namespace weavess {
     }
 
     void ComponentInitNNDescent::update() {
-        // 清空内存
 #pragma omp parallel for
         for (unsigned i = 0; i < index->getBaseLen(); i++) {
             std::vector<unsigned>().swap(index->graph_[i].nn_new);
@@ -127,12 +140,11 @@ namespace weavess {
             //graph_[i].rnn_new.clear();
             //graph_[i].rnn_old.clear();
         }
-        // 确定候选个数
 #pragma omp parallel for
         for (unsigned n = 0; n < index->getBaseLen(); ++n) {
             auto &nn = index->graph_[n];
             std::sort(nn.pool.begin(), nn.pool.end());
-            if (nn.pool.size() > index->L)nn.pool.resize(index->L);
+            if(nn.pool.size()>index->L)nn.pool.resize(index->L);
             nn.pool.reserve(index->L);
             unsigned maxl = std::min(nn.M + index->S, (unsigned) nn.pool.size());
             unsigned c = 0;
@@ -158,8 +170,8 @@ namespace weavess {
                     nn_new.push_back(nn.id);
                     if (nn.distance > nhood_o.pool.back().distance) {
                         Index::LockGuard guard(nhood_o.lock);
-                        if (nhood_o.rnn_new.size() < index->R)nhood_o.rnn_new.push_back(n);
-                        else {
+                        if(nhood_o.rnn_new.size() < index->R)nhood_o.rnn_new.push_back(n);
+                        else{
                             unsigned int pos = rand() % index->R;
                             nhood_o.rnn_new[pos] = n;
                         }
@@ -169,8 +181,8 @@ namespace weavess {
                     nn_old.push_back(nn.id);
                     if (nn.distance > nhood_o.pool.back().distance) {
                         Index::LockGuard guard(nhood_o.lock);
-                        if (nhood_o.rnn_old.size() < index->R)nhood_o.rnn_old.push_back(n);
-                        else {
+                        if(nhood_o.rnn_old.size() < index->R)nhood_o.rnn_old.push_back(n);
+                        else{
                             unsigned int pos = rand() % index->R;
                             nhood_o.rnn_old[pos] = n;
                         }
@@ -195,10 +207,7 @@ namespace weavess {
                 rnn_old.resize(index->R);
             }
             nn_old.insert(nn_old.end(), rnn_old.begin(), rnn_old.end());
-            if (nn_old.size() > index->R * 2) {
-                nn_old.resize(index->R * 2);
-                nn_old.reserve(index->R * 2);
-            }
+            if(nn_old.size() > index->R * 2){nn_old.resize(index->R * 2);nn_old.reserve(index->R*2);}
             std::vector<unsigned>().swap(index->graph_[i].rnn_new);
             std::vector<unsigned>().swap(index->graph_[i].rnn_old);
         }
@@ -242,9 +251,23 @@ namespace weavess {
         std::cout << "recall : " << mean_acc / ctrl_points.size() << std::endl;
     }
 
+    float ComponentInitNNDescent::eval_delta (std::vector<Index::Neighbor> const &pool) {
+        unsigned c = 0;
+        unsigned N = index->K;
+
+        if (pool.size() < N) N = pool.size();
+        for (unsigned i = 0; i < N; ++i) {
+            if (pool[i].flag) ++c;
+        }
+        return float(c) / index->K;
+    }
+
+
     // RAND
     void ComponentInitRandom::InitInner() {
-        index->getFinalGraph().resize(index->getBaseLen());
+        SetConfigs();
+
+        index->graph_.resize(index->getBaseLen());
         std::mt19937 rng(rand());
 
 #pragma omp parallel for
@@ -266,7 +289,38 @@ namespace weavess {
             std::make_heap(index->graph_[i].pool.begin(), index->graph_[i].pool.end());
             index->graph_[i].pool.reserve(index->L);
         }
+
+        index->getFinalGraph().resize(index->getBaseLen());
+
+        for (unsigned i = 0; i < index->getBaseLen(); i++) {
+            std::vector<std::vector<unsigned>> level_tmp;
+            std::vector<unsigned> tmp;
+
+            std::sort(index->graph_[i].pool.begin(), index->graph_[i].pool.end());
+
+            for (unsigned j = 0; j < index->graph_[i].pool.size(); j++) {
+                tmp.push_back(index->graph_[i].pool[j].id);
+            }
+
+            tmp.reserve(index->L);
+            level_tmp.push_back(tmp);
+            level_tmp.resize(1);
+            index->getFinalGraph()[i] = level_tmp;
+            // 内存释放
+            std::vector<Index::Neighbor>().swap(index->graph_[i].pool);
+            std::vector<unsigned>().swap(index->graph_[i].nn_new);
+            std::vector<unsigned>().swap(index->graph_[i].nn_old);
+            std::vector<unsigned>().swap(index->graph_[i].rnn_new);
+            std::vector<unsigned>().swap(index->graph_[i].rnn_new);
+        }
+
+        std::vector<Index::nhood>().swap(index->graph_);
     }
+
+    void ComponentInitRandom::SetConfigs() {
+        index->L = index->getParam().get<unsigned>("L");
+    }
+
 
     // KDT
     void ComponentInitKDT::InitInner() {
@@ -376,10 +430,11 @@ namespace weavess {
 
         std::cout << "merge tree completed" << std::endl;
 
-        index->getFinalGraph().reserve(index->getBaseLen());
+        index->getFinalGraph().resize(index->getBaseLen());
         std::mt19937 rng(seed ^ omp_get_thread_num());
         std::set<unsigned> result;
         for (unsigned i = 0; i < index->getBaseLen(); i++) {
+            std::vector<std::vector<unsigned>> level_tmp;
             std::vector<unsigned> tmp;
             typename Index::CandidateHeap::reverse_iterator it = index->knn_graph[i].rbegin();
             for (; it != index->knn_graph[i].rend(); it++) {
@@ -404,10 +459,9 @@ namespace weavess {
                 //std::copy(result.begin(),result.end(),tmp.begin());
             }
             tmp.reserve(K);
-            std::vector<std::vector<unsigned>> level_tmp;
-            level_tmp.resize(1);
             level_tmp.push_back(tmp);
-            index->getFinalGraph().push_back(level_tmp);
+            level_tmp.resize(1);
+            index->getFinalGraph()[i] = level_tmp;
         }
         std::vector<Index::nhood>().swap(index->graph_);
     }
