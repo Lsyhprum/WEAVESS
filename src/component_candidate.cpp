@@ -189,9 +189,9 @@ namespace weavess {
     }
 
     // PROPAGATION 1
-    void ComponentCandidateNone::CandidateInner(const unsigned int query, const unsigned int enter,
-                                                boost::dynamic_bitset<> flags, std::vector<Index::Neighbor> &result,
-                                                int level) {
+    void ComponentCandidatePropagation1::CandidateInner(const unsigned int query, const unsigned int enter,
+                                                        boost::dynamic_bitset<> flags, std::vector<Index::Neighbor> &result,
+                                                        int level) {
         for (unsigned i = 0; i < index->getFinalGraph()[query][0].size(); i++) {
             unsigned nid = index->getFinalGraph()[query][0][i];
 
@@ -199,5 +199,7 @@ namespace weavess {
                                                    index->getBaseData() + index->getBaseDim() * nid, index->getBaseDim());
             result.emplace_back(nid, dist, true);
         }
+
+        std::sort(result.begin(), result.begin() + index->getFinalGraph()[query][0].size());
     }
 }

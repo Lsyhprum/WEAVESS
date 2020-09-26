@@ -41,6 +41,8 @@ namespace weavess {
 
         IndexBuilder *search(TYPE entry_type, TYPE route_type);
 
+        IndexBuilder *draw();
+
         std::chrono::duration<double> GetBuildTime() { return e - s; }
 
         void degree_info();

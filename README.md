@@ -1,74 +1,38 @@
 # WEAVESS
 
-WEAVESS is a frame for testing the major graph-based approximate nearest neighbor search (ANNS) algorithms.
-
-## How to use
-
-### Windows
-
-* Prerequisites : C++11、CLion、MinGW-w64、boost 1.73.0
-
-### Linux
-
-* Prerequisites : 
+**WEAVESS** is a frame for testing graph-based approximate nearest neighbor search (ANNS) algorithms' components.
 
 ## Algorithms
 
-### Build
+### Algorithms' Components
 
-|  Algo  |       Init      |     Entry      |   Candidate   |    Prune    |     Conn     |
-|:------:| :--------------:| :------------: | :-----------: | :----------:| :-----------:|
-| KGraph |    NN-Descent   |                |               |             |              |
-| NSG    |    NN-Descent   |    Centroid    |    Greedy     |    MRNG     |      DFS     |
-| SSG    |    NN-Descent   |                | PROPAGATION 2 |    SSG      |  DFS_Expand  |
-| DPG    |    NN-Descent   |                | PROPAGATION 1 |    DPG      |    Reverse   |
-| EFANNA |    KDT          |                |               |             |              |
+|  Algo  |      TYPE      |          Init         |     Entry      |   Candidate   |    Prune    |     Conn     |    Search Entry    |    Search Route    |
+|:------:|:--------------:| :--------------------:| :------------: | :-----------: | :----------:| :-----------:| :-----------------:|:------------------:|
+| KGraph |                |     NN-Descent        |                |               |             |              |                    |                    |
+| NSG    |   Refinement   |     NN-Descent        |    Centroid    |     Greedy    |    MRNG     |     DFS      |    MRNG            |           DFS      |
+| SSG    |   Refinement   |     NN-Descent        |                | PROPAGATION 2 |    SSG      |  DFS_Expand  |    SSG             |        DFS_Expand  |
+| DPG    |   Refinement   |     NN-Descent        |                | PROPAGATION 1 |    DPG      |    Reverse   |    DPG             |          Reverse   |
+| VAMANA |   Refinement   |       Random          |    Centroid    |     Greedy    |    VAMANA   |    Reverse   |    VAMANA          |          Reverse   |
+| EFANNA |   Refinement   |       KD-tree         |                |               |             |              |                    |                    |
+| IEH    |   Refinement   |                       |                |               |             |              |                    |                    |
+| HNSW   |   Increment    |                       |                |      Naive    |  HEURISTIC  |              |  HEURISTIC C  C    |                    |
+| NSW    |   Increment    |                       |     Random     |      Naive    |             |              |                    |                    |
+| HCNGG  |Divide & Conquer|Hierarchical Clustering|                |               |             |              |                    |                    |
+| SPTAG  |Divide & Conquer|      TP-tree          |                |               |             |              |                    |                    |
+| FANNG  |                |                       |                |               |             |              |                    |                    |
+| NGT    |                |                       |                |               |             |              |                    |                    |
 
-### Search
+### Performance
 
-|  Algo  |  Init Framework                   |     Refine     | Connection   |Entry Access | Routing             |
-|:------:| :--------------------------------:| :------------: | :----------: | :----------:| :------------------:|
-| KGraph |  NN-Descent                       |                |              | Random      |  Greedy             |
-| IEH    |                                   |                |              |             |                     |
-| EFANNA |  **KDTree**                       |  NN-Descent    |              | **KDTree**  |  Greedy             |
-| NSG    |  NN-Descent                       |  **MRNG**      |**DFS**       | **Centroid**|  Greedy             |
-| NSSG   |  NN-Descent                       |  **SSG**       |**DFS_expand**| Random      |  Greedy             |
-| DPG    |  NN-Descent                       |  **DPG**       |**Reverse**   | Random      |  Greedy             |
-| NSW    |                                   |                |              |             |                     |
-| HNSW   |                                   |                |              |             |                     |
-| NGT    |                                   |                |              |             |                     |
-| SPTAG  |  Trinary-Projection Trees(TP tree)|                |              | Random      |  Greedy
-| FANNG  |                                   |                |              |             |                     |
-|Vamana  |  **Random**                       |  **Vamana**    |              |             |                     |
-| HCNNG  |  **Hierarchical clustering**      |                |              | Random      |  **Guided Search**  |
-
-
-## Evaluation criteria
-
-* Speedup : Collection size / Number of distance calculations
-
-## ANNS Performance
-
-## KGraph
-
-This is a modified version of KGraph from the EFANNA NNDescent source code, which is a simple version of KGraph.
-
-Main differences :
-
-
-
-## Building Parameters
-
-[KGraph: A Library for Approximate Nearest Neighbor Search](https://github.com/aaalgo/kgraph)
+#### [KGraph](https://github.com/aaalgo/kgraph)
 
 * **K** : 'K' of K-NNG
 * **L** : candidate pool size, larger is more accurate but slower, no smaller than K.
-* **iter** : NN-Descent iteration times, iter usually < 30.
+* **ITER** : NN-Descent iteration times, iter usually < 30.
 * **S** : number of neighbors in local join, larger is more accurate but slower.
 * **R** : number of reverse neighbors, larger is more accurate but slower.
 
-
-|  Dataset  |  K  |  L  | iter |  S |  R  |
+|  Dataset  |  K  |  L  | ITER |  S |  R  |
 |:---------:|:---:|:---:|:----:|:--:|:---:|
 | SIFT1M    | 200 | 200 |  12  | 10 | 100 |
 | GIST1M    | 400 | 400 |  12  | 15 | 100 |
@@ -134,6 +98,33 @@ to be continue
 the larger the better but slower. The `SEARCH_L` cannot be samller than the `SEARCH_K`
 
 
+
+
+
+
+## Components
+
+### Init
+
+#### Random
+
+<div align="center"> <img src="./pic/Random.png" width="300"/> </div><br>
+
+#### NN-Descent
+
+<div align="center"> <img src="./pic/NN-Descent.png" width="300"/> </div><br>
+
+#### KD-Tree
+
+<div align="center"> <img src="./pic/KDT.png" width="300"/> </div><br>
+
+## Evaluation criteria
+
+* Speedup : Collection size / Number of distance calculations
+
+
+
+
 ## Contributing to the repository
 
 Contributions are highly welcome!
@@ -167,9 +158,6 @@ Please make pull requests against the `dev` branch.
 -[ ] HCNNG
 
 
-* Log 
-* 数据类型 抽象 
-* HNSW
 * 整体评价
     * 搜索性能
         * 评价指标：召回率、Speed-up、(QPS _ 需修改代码支持 SIMD)
@@ -189,14 +177,15 @@ Please make pull requests against the `dev` branch.
 * route 缺失 flag
 * IEH 实现
 * 重写 HCNNG MST 算法， 去掉原数据结构
-* KGraph 修改
-* EFANNA knn_graph 修改  参数缺失 内存不够
 * 分离算法接口与 IndexBuilder 接口
-* 与原算法实现进行比较
 * SIMD 优化
-* PruneInner，Link 公共代码合并
-* coarse / eva 重构 —— search
 * 检查数据结构是否清空
 * 检查参数是否合法 （nmslib Check）
-* 增加debug标识，用于关闭开启debug 功能
 * id 数据类型 （nmslib idtype）
+
+
+* KGraph 、 NSG 、 NSSG 、DPG 、EFANNA 搜索测试
+* DPG 、 EFANNA 整体构建测试
+* HNSW final_graph 
+* VAMANA 实现区别 ：论文构建中添加反向边， 本项目实现论文后添加反向边
+* InterInsert

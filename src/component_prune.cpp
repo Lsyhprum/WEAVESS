@@ -7,8 +7,33 @@
 namespace weavess {
     void ComponentPruneNaive::PruneInner(unsigned int q, unsigned int range, boost::dynamic_bitset<> flags,
                                          std::vector<Index::Neighbor> &result, Index::SimpleNeighbor *cut_graph_, unsigned int level) {
+//        if(q == 20) {
+//            std::cout << q << " before prune : " << result.size() << std::endl;
+//            for(int i = 0; i < result.size(); i ++) {
+//                std::cout << result[i].distance << " ";
+//            }
+//            std::cout << std::endl;
+//        }
+
         while(result.size() > range)
             result.pop_back();
+
+//        if(q == 20) {
+//            std::cout << q << " after prune : " << result.size() << std::endl;
+//            for (int i = 0; i < result.size(); i++) {
+//                std::cout << result[i].distance << " ";
+//            }
+//            std::cout << std::endl;
+//        }
+
+        Index::SimpleNeighbor *des_pool = cut_graph_ + (size_t)q * (size_t)range;
+        for (size_t t = 0; t < result.size(); t++) {
+            des_pool[t].id = result[t].id;
+            des_pool[t].distance = result[t].distance;
+        }
+        if (result.size() < range) {
+            des_pool[result.size()].distance = -1;
+        }
     }
 
     void ComponentPruneNSG::PruneInner(unsigned q, unsigned range, boost::dynamic_bitset<> flags,
@@ -230,7 +255,6 @@ namespace weavess {
         if (picked.size() < range) {
             des_pool[picked.size()].distance = -1;
         }
-        //std::cout << "pool " << pool.size() << std::endl;
     }
 
     void ComponentPruneVAMANA::PruneInner(unsigned int q, unsigned int range, boost::dynamic_bitset<> flags,

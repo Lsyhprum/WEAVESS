@@ -4,19 +4,20 @@ set(CMAKE_DEPENDS_LANGUAGES
   )
 # The set of files for implicit dependencies of each language:
 set(CMAKE_DEPENDS_CHECK_CXX
-  "G:/ANNS/WEAVESS_dev/test/main.cpp" "G:/ANNS/WEAVESS_dev/cmake-build-debug/test/CMakeFiles/main.dir/main.cpp.obj"
+  "F:/ANNS/WEAVESS_dev/test/main.cpp" "F:/ANNS/WEAVESS_dev/cmake-build-debug/test/CMakeFiles/main.dir/main.cpp.obj"
   )
 set(CMAKE_CXX_COMPILER_ID "GNU")
 
 # The include file search paths:
 set(CMAKE_CXX_TARGET_INCLUDE_PATH
   "../include"
-  "G:/MinGW-w64/boost_1_73_0"
+  "F:/MinGW-W64/boost_1_73_0"
+  "F:/Python/include"
   )
 
 # Targets to which this target links.
 set(CMAKE_TARGET_LINKED_INFO_FILES
-  "G:/ANNS/WEAVESS_dev/cmake-build-debug/src/CMakeFiles/WEAVESS.dir/DependInfo.cmake"
+  "F:/ANNS/WEAVESS_dev/cmake-build-debug/src/CMakeFiles/WEAVESS.dir/DependInfo.cmake"
   )
 
 # Fortran module output directory.

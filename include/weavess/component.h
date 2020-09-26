@@ -233,6 +233,29 @@ namespace weavess {
         void Link(Index::HnswNode* source, Index::HnswNode* target, int level);
     };
 
+    class ComponentRefineNSW : public ComponentRefine {
+    public:
+        explicit ComponentRefineNSW(Index *index) : ComponentRefine(index) {}
+
+        void RefineInner() override;
+
+    private:
+        void SetConfigs();
+
+        void Build(bool reverse);
+
+        int GetRandomSeedPerThread();
+
+        int GetRandomNodeLevel();
+
+        void InsertNode(Index::HnswNode* qnode, Index::VisitedList* visited_list);
+
+        void SearchAtLayer(Index::HnswNode* qnode, Index::HnswNode* enterpoint, int level,
+                           Index::VisitedList* visited_list, std::priority_queue<Index::FurtherFirst>& result);
+
+        void Link(Index::HnswNode* source, Index::HnswNode* target, int level);
+    };
+
     class ComponentRefineVAMANA : public ComponentRefine {
     public:
         explicit ComponentRefineVAMANA(Index *index) : ComponentRefine(index) {}
@@ -267,6 +290,13 @@ namespace weavess {
         explicit ComponentEntry(Index *index) : Component(index) {}
 
         virtual void EntryInner() = 0;
+    };
+
+    class ComponentEntryNone : public ComponentEntry {
+    public:
+        explicit ComponentEntryNone(Index *index) : ComponentEntry(index) {}
+
+        void EntryInner() override {}
     };
 
     class ComponentEntryCentroidNSG : public ComponentEntry {
@@ -315,9 +345,9 @@ namespace weavess {
                        std::vector<Index::Neighbor> &result, int level) override;
     };
 
-    class ComponentCandidateNone : public ComponentCandidate {
+    class ComponentCandidatePropagation1 : public ComponentCandidate {
     public:
-        explicit ComponentCandidateNone(Index *index) : ComponentCandidate(index) {}
+        explicit ComponentCandidatePropagation1(Index *index) : ComponentCandidate(index) {}
 
         void CandidateInner(const unsigned query, const unsigned enter, boost::dynamic_bitset<> flags,
                             std::vector<Index::Neighbor> &result, int level) override;
@@ -353,15 +383,19 @@ namespace weavess {
 
             boost::dynamic_bitset<> flags;
 
-            auto *cut_graph_ = new Index::SimpleNeighbor[index->getBaseLen() * (size_t) index->R_nsg];
+            auto *cut_graph_ = new Index::SimpleNeighbor[range];
+            //std::cout << "prune : " << std::endl;
 
             PruneInner(0, range, flags, pool, cut_graph_, 0);
-
+            //std::cout << "wtf" << std::endl;
+            //std::cout << "prune : " << std::endl;
+            //std::cout << cut_graph_ << std::endl;
             Index::SimpleNeighbor *pool2 = cut_graph_;
-            for(unsigned j = 0; j < index->R_nsg; j ++) {
+            //std::cout << "www" << std::endl;
+            for(unsigned j = 0; j < range; j ++) {
                 if(pool2[j].distance == -1) break;
                 for(int i = 0; i < tmp.size(); i ++) {
-                    if(tmp[i].GetNode()->GetId() == pool2->id)
+                    if(tmp[i].GetNode()->GetId() == pool2[j].id)
                         result.push(tmp[i]);
                 }
             }
@@ -454,6 +488,13 @@ namespace weavess {
     class ComponentConnReverse : ComponentConn {
     public:
         explicit ComponentConnReverse(Index *index) : ComponentConn(index) {}
+
+        void ConnInner();
+    };
+
+    class ComponentConnReverseVAMANA : ComponentConn {
+    public:
+        explicit ComponentConnReverseVAMANA(Index *index) : ComponentConn(index) {}
 
         void ConnInner();
     };

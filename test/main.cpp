@@ -113,8 +113,8 @@ void HNSW(std::string base_path, std::string query_path, std::string ground_path
     weavess::Parameters parameters;
     parameters.set<unsigned>("max_m", 1);
     parameters.set<unsigned>("max_m0", 11);
-    parameters.set<unsigned>("ef_construction", 50);
-    parameters.set<unsigned>("n_threads", 1);
+    parameters.set<unsigned>("ef_construction", 10);
+    parameters.set<unsigned>("n_threads", 10);
     parameters.set<unsigned>("mult", 1);
 
     auto *builder = new weavess::IndexBuilder();
@@ -122,23 +122,28 @@ void HNSW(std::string base_path, std::string query_path, std::string ground_path
             -> refine(weavess::REFINE_HNSW, true);
 }
 
+void NSW(std::string base_path, std::string query_path, std::string ground_path) {
+    weavess::Parameters parameters;
+    parameters.set<unsigned>("NN", 1);
+    parameters.set<unsigned>("ef_construction", 10);
+    parameters.set<unsigned>("n_threads", 1);
 
-
-void NSW(std::string base_path, std::string query_path, std::string ground_path) {}
+    auto *builder = new weavess::IndexBuilder();
+    builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
+            -> refine(weavess::REFINE_NSW, true);
+}
 
 void VAMANA(std::string base_path, std::string query_path, std::string ground_path) {
     weavess::Parameters parameters;
     parameters.set<unsigned>("L", 200);
     parameters.set<unsigned>("L_nsg", 100);
-    parameters.set<unsigned>("R_nsg", 50);
+    parameters.set<unsigned>("R_nsg", 10);
     parameters.set<float>("alpha", 1.0);
 
     auto *builder = new weavess::IndexBuilder();
     builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
             -> init(weavess::INIT_RANDOM)
             -> refine(weavess::REFINE_VAMANA, true);
-//            ->init(weavess::IndexBuilder::COARSE_NN_DESCENT)
-//            ->init(weavess::IndexBuilder::REFINE_VAMANA);
     //-> eva(weavess::IndexBuilder::ENTRY_RAND, weavess::IndexBuilder::ROUTER_GREEDY);
 
     std::cout << "Time cost: " << builder->GetBuildTime().count() << std::endl;
@@ -146,14 +151,12 @@ void VAMANA(std::string base_path, std::string query_path, std::string ground_pa
 
 void HCNNG(std::string base_path, std::string query_path, std::string ground_path) {
     weavess::Parameters parameters;
-    parameters.set<unsigned>("S", 1.0);
+    parameters.set<unsigned>("S", 1000);
     parameters.set<unsigned>("N", 10);
 
     auto *builder = new weavess::IndexBuilder();
     builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
             -> init(weavess::INIT_HCNNG);
-//            ->init(weavess::IndexBuilder::COARSE_NN_DESCENT)
-//            ->init(weavess::IndexBuilder::REFINE_VAMANA);
     //-> eva(weavess::IndexBuilder::ENTRY_RAND, weavess::IndexBuilder::ROUTER_GREEDY);
 
     std::cout << "Time cost: " << builder->GetBuildTime().count() << std::endl;
@@ -165,38 +168,64 @@ void NGT(std::string base_path, std::string query_path, std::string ground_path)
 
 void SPTAG(std::string base_path, std::string query_path, std::string ground_path) {}
 
+void InitTest(std::string base_path, std::string query_path, std::string ground_path) {
+    weavess::Parameters parameters;
 
-//void CandidateTest(std::string base_path, std::string query_path, std::string ground_path) {
-//    weavess::Parameters parameters;
-//    parameters.set<unsigned>("R_nsg", 20);
-//
-//    auto builder = new weavess::IndexBuilder();
-//    builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
-//            -> refine();
-//}
+    // init
+    parameters.set<unsigned>("K", 15);           // 初始阶段后 近邻最大个数
+
+    parameters.set<unsigned>("L", 20);          // 初始阶段中 候选最大个数 (NN-Descent)
+    parameters.set<unsigned>("ITER", 12);       // 初始阶段中 迭代次数 （NN-Descent)
+    parameters.set<unsigned>("S", 10);          // 初始阶段中 局部连接近邻数 (NN-Descent)
+    parameters.set<unsigned>("R", 20);          // 初始阶段中 反向集个数 （NN-Descent)
+    parameters.set<float>("delta", 0.002);      // 初始阶段中 提前终止 （NN-Descent)
+
+    parameters.set<unsigned>("nTrees", 3);      // 初始阶段中
+    parameters.set<unsigned>("mLevel", 3);
+
+    parameters.set<unsigned>("R_nsg", 5);      // 增强阶段后 近邻个数
+
+    parameters.set<unsigned>("L_nsg", 40);      //
+    parameters.set<unsigned>("C_nsg", 500);
+
+    auto builder = new weavess::IndexBuilder();
+    builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
+            -> init(weavess::INIT_RANDOM)
+            //-> init(weavess::INIT_NN_DESCENT)
+            //-> init(weavess::INIT_KDT)
+            -> refine(weavess::REFINE_TEST, true)
+            //-> refine(weavess::REFINE_NSG, false)
+            //-> refine(weavess::REFINE_DPG, false)
+            //-> draw()
+            -> search(weavess::ENTRY_RANDOM, weavess::ROUTER_GREEDY);
+
+    std::cout << "Time cost: " << builder->GetBuildTime().count() << std::endl;
+}
 
 
 int main() {
-    std::string base_path = R"(G:\ANNS\dataset\siftsmall\siftsmall_base.fvecs)";
-    std::string query_path = R"(G:\ANNS\dataset\siftsmall\siftsmall_query.fvecs)";
-    std::string ground_path = R"(G:\ANNS\dataset\siftsmall\siftsmall_groundtruth.ivecs)";
+    std::string test_path = R"(F:\ANNS\DATASET\test.txt)";
 
-    /* COMPILE SUCCESS*/
+    std::string base_path = R"(F:\ANNS\DATASET\siftsmall\siftsmall_base.fvecs)";
+    std::string query_path = R"(F:\ANNS\DATASET\siftsmall\siftsmall_query.fvecs)";
+    std::string ground_path = R"(F:\ANNS\DATASET\siftsmall\siftsmall_groundtruth.ivecs)";
+
     //KGraph(base_path, query_path, ground_path);
     //NSG(base_path, query_path, ground_path);
     //NSSG(base_path, query_path, ground_path);
     //DPG(base_path, query_path, ground_path);
     //EFANNA(base_path, query_path, ground_path);
-    HNSW(base_path, query_path, ground_path);
 
-    //VAMANA(base_path, query_path, ground_path);
+    //HNSW(base_path, query_path, ground_path);
     //NSW(base_path, query_path, ground_path);
-
+    //VAMANA(base_path, query_path, ground_path);
     //HCNNG(base_path, query_path, ground_path);
-    //IEH(base_path, query_path, ground_path);
 
+    //IEH(base_path, query_path, ground_path);
     //NGT(base_path, query_path, ground_path);
     //SPTAG(base_path, query_path, ground_path);
+
+    InitTest(test_path, query_path, ground_path);
 
     return 0;
 }

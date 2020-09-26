@@ -27,54 +27,109 @@ namespace weavess {
         in.close();
     }
 
+    inline void load_data_txt(char *filename, float *&data) {
+        std::ifstream in(filename, std::ios::in);
+        if (!in.is_open()) {
+            std::cerr << "open file error" << std::endl;
+            exit(-1);
+        }
+        int n = 0;
+        data = new float[150 * 2];
+
+        char buffer[256];
+        while(!in.eof()) {
+            in.getline(buffer, 50);
+
+            int i = 0;
+            while(buffer[i] < '0' || buffer[i] > '9') i ++;
+
+            std::string s = "";
+            while(buffer[i] >= '0' && buffer[i] <= '9') {
+                s += buffer[i];
+                i ++;
+            }
+            float num = std::stof(s);
+            data[n] = num; n ++;
+
+            while(buffer[i] < '0' || buffer[i] > '9') i ++;
+
+            s = "";
+            while(buffer[i] >= '0' && buffer[i] <= '9') {
+                s += buffer[i];
+                i ++;
+            }
+            float num2 = std::stof(s);
+            data[n] = num2; n ++;
+        }
+        in.close();
+    }
+
     void ComponentLoad::LoadInner(char *data_file, char *query_file, char *ground_file,
                                   Parameters &parameters) {
         // base_data
         float *data = nullptr;
-        unsigned n{};
-        unsigned dim{};
-        load_data(data_file, data, n, dim);
+        load_data_txt(data_file, data);
         index->setBaseData(data);
-        index->setBaseLen(n);
-        index->setBaseDim(dim);
+        index->setBaseLen(150);
+        index->setBaseDim(2);
+
+//        for(int id = 0; id < 150; id ++)
+//            std::cout << (index->getBaseData() + index->getBaseDim() * id)[0] << "|" << (index->getBaseData() + index->getBaseDim() * id)[1] << " ";
+//        std::cout << std::endl;
 
         assert(index->getBaseData() != nullptr && index->getBaseLen() != 0 && index->getBaseDim() != 0);
 
-        // query_data
-        float *query_data = nullptr;
-        unsigned query_num{};
-        unsigned query_dim{};
-        load_data<float>(query_file, query_data, query_num, query_dim);
-        index->setQueryData(query_data);
-        index->setQueryLen(query_num);
-        index->setQueryDim(query_dim);
-
-        assert(index->getQueryData() != nullptr && index->getQueryLen() != 0 && index->getQueryDim() != 0);
-        assert(index->getBaseDim() == index->getQueryDim());
-
-        // ground_data
-        unsigned *ground_data = nullptr;
-        unsigned ground_num{};
-        unsigned ground_dim{};
-        load_data<unsigned>(ground_file, ground_data, ground_num, ground_dim);
-        index->setGroundData(ground_data);
-        index->setGroundLen(ground_num);
-        index->setGroundDim(ground_dim);
-
-        assert(index->getGroundData() != nullptr && index->getGroundLen() != 0 && index->getGroundDim() != 0);
-
-//        if(parameters.get<unsigned>("K") > index->getBaseLen()){
-//            std::cerr << "K larger than dataset size" << std::endl;
-//            exit(-1);
-//        }
-//        if(parameters.get<unsigned>("L") > index->getBaseLen()){
-//            std::cerr << "L larger than dataset size" << std::endl;
-//            exit(-1);
-//        }
-//        if(parameters.get<unsigned>("S") > index->getBaseLen()){
-//            std::cerr << "S larger than dataset size" << std::endl;
-//            exit(-1);
-//        }
         index->setParam(parameters);
     }
+
+//    void ComponentLoad::LoadInner(char *data_file, char *query_file, char *ground_file,
+//                                  Parameters &parameters) {
+//        // base_data
+//        float *data = nullptr;
+//        unsigned n{};
+//        unsigned dim{};
+//        load_data(data_file, data, n, dim);
+//        index->setBaseData(data);
+//        index->setBaseLen(n);
+//        index->setBaseDim(dim);
+//
+//        assert(index->getBaseData() != nullptr && index->getBaseLen() != 0 && index->getBaseDim() != 0);
+//
+//        // query_data
+//        float *query_data = nullptr;
+//        unsigned query_num{};
+//        unsigned query_dim{};
+//        load_data<float>(query_file, query_data, query_num, query_dim);
+//        index->setQueryData(query_data);
+//        index->setQueryLen(query_num);
+//        index->setQueryDim(query_dim);
+//
+//        assert(index->getQueryData() != nullptr && index->getQueryLen() != 0 && index->getQueryDim() != 0);
+//        assert(index->getBaseDim() == index->getQueryDim());
+//
+//        // ground_data
+//        unsigned *ground_data = nullptr;
+//        unsigned ground_num{};
+//        unsigned ground_dim{};
+//        load_data<unsigned>(ground_file, ground_data, ground_num, ground_dim);
+//        index->setGroundData(ground_data);
+//        index->setGroundLen(ground_num);
+//        index->setGroundDim(ground_dim);
+//
+//        assert(index->getGroundData() != nullptr && index->getGroundLen() != 0 && index->getGroundDim() != 0);
+//
+////        if(parameters.get<unsigned>("K") > index->getBaseLen()){
+////            std::cerr << "K larger than dataset size" << std::endl;
+////            exit(-1);
+////        }
+////        if(parameters.get<unsigned>("L") > index->getBaseLen()){
+////            std::cerr << "L larger than dataset size" << std::endl;
+////            exit(-1);
+////        }
+////        if(parameters.get<unsigned>("S") > index->getBaseLen()){
+////            std::cerr << "S larger than dataset size" << std::endl;
+////            exit(-1);
+////        }
+//        index->setParam(parameters);
+//    }
 }

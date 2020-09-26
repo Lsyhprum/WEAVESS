@@ -15,7 +15,7 @@ else()
 endif()
 
 #Boost
-set(BOOST_ROOT G:/MinGW-w64/boost_1_73_0)
+set(BOOST_ROOT F:/MinGW-W64/boost_1_73_0)
 find_package(BOOST)
 if(Boost_FOUND)
     message(Boost_INCLUDE_DIRS "${Boost_INCLUDE_DIRS}")
@@ -23,6 +23,12 @@ if(Boost_FOUND)
     include_directories(${Boost_INCLUDE_DIRS})
     link_directories(${Boost_LIBRARY_DIRS})
 endif()
+
+#Python
+# 添加python.h头文件路径
+include_directories(F:/Python/include)
+# 添加python动态链接库文件
+link_libraries(F:/Python/libs/python38.lib)
 
 #add_definitions (-std=c++11 -O3 -lboost -march=native -Wall -DINFO)
 
