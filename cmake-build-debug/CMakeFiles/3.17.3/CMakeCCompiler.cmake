@@ -1,4 +1,4 @@
-set(CMAKE_C_COMPILER "G:/MinGW-w64/mingw64/bin/gcc.exe")
+set(CMAKE_C_COMPILER "F:/MinGW-W64/mingw64/bin/gcc.exe")
 set(CMAKE_C_COMPILER_ARG1 "")
 set(CMAKE_C_COMPILER_ID "GNU")
 set(CMAKE_C_COMPILER_VERSION "8.1.0")
@@ -17,11 +17,11 @@ set(CMAKE_C_SIMULATE_VERSION "")
 
 
 
-set(CMAKE_AR "G:/MinGW-w64/mingw64/bin/ar.exe")
-set(CMAKE_C_COMPILER_AR "G:/MinGW-w64/mingw64/bin/gcc-ar.exe")
-set(CMAKE_RANLIB "G:/MinGW-w64/mingw64/bin/ranlib.exe")
-set(CMAKE_C_COMPILER_RANLIB "G:/MinGW-w64/mingw64/bin/gcc-ranlib.exe")
-set(CMAKE_LINKER "G:/MinGW-w64/mingw64/bin/ld.exe")
+set(CMAKE_AR "F:/MinGW-W64/mingw64/bin/ar.exe")
+set(CMAKE_C_COMPILER_AR "F:/MinGW-W64/mingw64/bin/gcc-ar.exe")
+set(CMAKE_RANLIB "F:/MinGW-W64/mingw64/bin/ranlib.exe")
+set(CMAKE_C_COMPILER_RANLIB "F:/MinGW-W64/mingw64/bin/gcc-ranlib.exe")
+set(CMAKE_LINKER "F:/MinGW-W64/mingw64/bin/ld.exe")
 set(CMAKE_MT "")
 set(CMAKE_COMPILER_IS_GNUCC 1)
 set(CMAKE_C_COMPILER_LOADED 1)
@@ -70,7 +70,7 @@ endif()
 
 
 
-set(CMAKE_C_IMPLICIT_INCLUDE_DIRECTORIES "G:/MinGW-w64/mingw64/lib/gcc/x86_64-w64-mingw32/8.1.0/include;G:/MinGW-w64/mingw64/lib/gcc/x86_64-w64-mingw32/8.1.0/include-fixed;G:/MinGW-w64/mingw64/x86_64-w64-mingw32/include")
+set(CMAKE_C_IMPLICIT_INCLUDE_DIRECTORIES "F:/MinGW-W64/mingw64/lib/gcc/x86_64-w64-mingw32/8.1.0/include;F:/MinGW-W64/mingw64/lib/gcc/x86_64-w64-mingw32/8.1.0/include-fixed;F:/MinGW-W64/mingw64/x86_64-w64-mingw32/include")
 set(CMAKE_C_IMPLICIT_LINK_LIBRARIES "mingw32;gcc;moldname;mingwex;pthread;advapi32;shell32;user32;kernel32;iconv;mingw32;gcc;moldname;mingwex")
-set(CMAKE_C_IMPLICIT_LINK_DIRECTORIES "G:/MinGW-w64/mingw64/lib/gcc/x86_64-w64-mingw32/8.1.0;G:/MinGW-w64/mingw64/lib/gcc;G:/MinGW-w64/mingw64/x86_64-w64-mingw32/lib;G:/MinGW-w64/mingw64/lib")
+set(CMAKE_C_IMPLICIT_LINK_DIRECTORIES "F:/MinGW-W64/mingw64/lib/gcc/x86_64-w64-mingw32/8.1.0;F:/MinGW-W64/mingw64/lib/gcc;F:/MinGW-W64/mingw64/x86_64-w64-mingw32/lib;F:/MinGW-W64/mingw64/lib")
 set(CMAKE_C_IMPLICIT_LINK_FRAMEWORK_DIRECTORIES "")

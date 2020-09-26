@@ -263,4 +263,48 @@ namespace weavess {
         }
         fprintf(stderr, "inverse edges: %d\n", count);
     }
+
+    // REVERSE - VAMANA
+    void ComponentConnReverseVAMANA::ConnInner() {
+        std::vector<std::vector<unsigned>> rknn_graph;
+        rknn_graph.resize(index->getBaseLen());
+
+        int count = 0;
+
+        for (unsigned i = 0; i < index->getBaseLen(); ++i)
+        {
+            auto const &knn = index->getFinalGraph()[i][0];
+            uint32_t K = index->getFinalGraph()[i][0].size(); //knn.size();
+            for (unsigned j = 0; j < K; j++)
+            {
+                rknn_graph[knn[j]].push_back(i);
+            }
+        }
+
+        for (unsigned i = 0; i < index->getBaseLen(); ++i)
+        {
+            std::vector<unsigned> rknn_list = rknn_graph[i];
+            count += rknn_list.size();
+
+            for (unsigned j = 0; j < rknn_list.size(); ++j)
+            {
+                index->getFinalGraph()[i][0].push_back(rknn_list[j]);
+                //sum += exp(-1 * sqrt(rknn_list[j].dist) * beta); // a function with dist
+            }
+
+            sort(index->getFinalGraph()[i][0].begin(), index->getFinalGraph()[i][0].end());
+            int len = index->getFinalGraph()[i][0].size();
+            for (unsigned j = 1; j < index->getFinalGraph()[i][0].size(); ++j)
+            {
+                if (index->getFinalGraph()[i][0][j] == index->getFinalGraph()[i][0][j - 1])
+                {
+                    index->getFinalGraph()[i][0].erase(index->getFinalGraph()[i][0].begin() + j);
+                    j--;
+                    len --;
+                }
+            }
+            index->getFinalGraph()[i][0].resize(len);
+        }
+        fprintf(stderr, "inverse edges: %d\n", count);
+    }
 }

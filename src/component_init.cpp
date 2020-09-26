@@ -9,6 +9,7 @@
 
 namespace weavess {
 
+
     // NN-Descent
     void ComponentInitNNDescent::InitInner() {
         SetConfigs();
@@ -30,7 +31,7 @@ namespace weavess {
                 tmp.push_back(index->graph_[i].pool[j].id);
             }
 
-            tmp.reserve(index->K);
+            tmp.resize(index->K);
             level_tmp.push_back(tmp);
             level_tmp.resize(1);
             index->getFinalGraph()[i] = level_tmp;
@@ -272,11 +273,11 @@ namespace weavess {
 
 #pragma omp parallel for
         for (unsigned i = 0; i < index->getBaseLen(); i++) {
-            std::vector<unsigned> tmp(index->L + 1);
+            std::vector<unsigned> tmp(index->K);
 
-            weavess::GenRandom(rng, tmp.data(), index->L + 1, index->getBaseLen());
+            weavess::GenRandom(rng, tmp.data(), index->K, index->getBaseLen());
 
-            for (unsigned j = 0; j < index->L; j++) {
+            for (unsigned j = 0; j < index->K; j++) {
                 unsigned id = tmp[j];
 
                 if (id == i)continue;
@@ -287,7 +288,7 @@ namespace weavess {
                 index->graph_[i].pool.emplace_back(id, dist, true);
             }
             std::make_heap(index->graph_[i].pool.begin(), index->graph_[i].pool.end());
-            index->graph_[i].pool.reserve(index->L);
+            index->graph_[i].pool.reserve(index->K);
         }
 
         index->getFinalGraph().resize(index->getBaseLen());
@@ -302,7 +303,7 @@ namespace weavess {
                 tmp.push_back(index->graph_[i].pool[j].id);
             }
 
-            tmp.reserve(index->L);
+            //tmp.resize(index->K);
             level_tmp.push_back(tmp);
             level_tmp.resize(1);
             index->getFinalGraph()[i] = level_tmp;
@@ -318,7 +319,7 @@ namespace weavess {
     }
 
     void ComponentInitRandom::SetConfigs() {
-        index->L = index->getParam().get<unsigned>("L");
+        index->K = index->getParam().get<unsigned>("K");
     }
 
 
@@ -803,7 +804,8 @@ namespace weavess {
     }
 
     void ComponentInitHCNNG::SetConfigs() {
-
+        index->S_hcnng = index->getParam().get<float>("S");
+        index->N = index->getParam().get<unsigned>("N");
     }
 
     int ComponentInitHCNNG::rand_int(const int &min, const int &max) {
@@ -870,7 +872,7 @@ namespace weavess {
                                              std::vector<std::vector<Index::Edge> > &graph, int minsize_cl,
                                              std::vector<omp_lock_t> &locks, int max_mst_degree) {
         int num_points = right - left + 1;
-
+        std::cout << "points num : " << num_points << std::endl;
         if (num_points < minsize_cl) {
             std::vector<std::vector<Index::Edge> > mst = create_exact_mst(idx_points, left, right, max_mst_degree);
             for (int i = 0; i < num_points; i++) {

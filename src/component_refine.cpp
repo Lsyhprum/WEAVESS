@@ -69,7 +69,7 @@ namespace weavess {
             boost::dynamic_bitset<> flags{index->getBaseLen(), 0};
 
 #pragma omp for schedule(dynamic, 100)
-            for (unsigned n = 0; n < index->getBaseLen(); ++n){
+            for (unsigned n = 0; n < index->getBaseLen(); ++n) {
                 //std::cout << n << std::endl;
                 pool.clear();
                 flags.reset();
@@ -257,13 +257,13 @@ namespace weavess {
 
     void ComponentRefineNSSG::InterInsert(unsigned n, unsigned range, float threshold, std::vector<std::mutex> &locks,
                                           Index::SimpleNeighbor *cut_graph_) {
-        Index::SimpleNeighbor *src_pool = cut_graph_ + (size_t)n * (size_t)range;
+        Index::SimpleNeighbor *src_pool = cut_graph_ + (size_t) n * (size_t) range;
         for (size_t i = 0; i < range; i++) {
             if (src_pool[i].distance == -1) break;
 
             Index::SimpleNeighbor sn(n, src_pool[i].distance);
             size_t des = src_pool[i].id;
-            Index::SimpleNeighbor *des_pool = cut_graph_ + des * (size_t)range;
+            Index::SimpleNeighbor *des_pool = cut_graph_ + des * (size_t) range;
 
             std::vector<Index::SimpleNeighbor> temp_pool;
             int dup = 0;
@@ -294,8 +294,10 @@ namespace weavess {
                             occlude = true;
                             break;
                         }
-                        float djk = index->getDist()->compare(index->getBaseData() + index->getBaseDim() * (size_t)result[t].id,
-                                                              index->getBaseData() + index->getBaseDim() * (size_t)p.id, (unsigned)index->getBaseDim());
+                        float djk = index->getDist()->compare(
+                                index->getBaseData() + index->getBaseDim() * (size_t) result[t].id,
+                                index->getBaseData() + index->getBaseDim() * (size_t) p.id,
+                                (unsigned) index->getBaseDim());
                         float cos_ij = (p.distance + result[t].distance - djk) / 2 /
                                        sqrt(p.distance * result[t].distance);
                         if (cos_ij > threshold) {
@@ -371,7 +373,7 @@ namespace weavess {
         std::vector<std::mutex> locks(index->getBaseLen());
 
         // CANDIDATE
-        ComponentCandidateNone *a = new ComponentCandidateNone(index);
+        ComponentCandidatePropagation1 *a = new ComponentCandidatePropagation1(index);
 
         // PRUNE
         ComponentPrune *b = new ComponentPruneDPG(index);
@@ -635,6 +637,7 @@ namespace weavess {
         SetConfigs();
 
         Build(false);
+        std::cout << "build finish" << std::endl;
 
 //        if (post_graph_process_ == GraphPostProcessing::MERGE_LEVEL0) {
 //            std::cout << "graph post processing: merge_level0" << std::endl;
@@ -673,11 +676,11 @@ namespace weavess {
         index->nodes_[0] = first;
         index->max_level_ = level;
         index->enterpoint_ = first;
-//#pragma omp parallel num_threads(index->n_threads_)
-//        {
+#pragma omp parallel num_threads(index->n_threads_)
+        {
             Index::VisitedList *visited_list = new Index::VisitedList(index->getBaseLen());
             if (reverse) {
-//#pragma omp for schedule(dynamic, 128)
+#pragma omp for schedule(dynamic, 128)
                 for (size_t i = index->getBaseLen() - 1; i >= 1; --i) {
                     int level = GetRandomNodeLevel();
                     Index::HnswNode *qnode = new Index::HnswNode(i, level, index->max_m_, index->max_m0_);
@@ -685,8 +688,9 @@ namespace weavess {
                     InsertNode(qnode, visited_list);
                 }
             } else {
-//#pragma omp for schedule(dynamic, 128)
+#pragma omp for schedule(dynamic, 128)
                 for (size_t i = 1; i < index->getBaseLen(); ++i) {
+                    std::cout << "insert : " << i << std::endl;
                     int level = GetRandomNodeLevel();
                     auto *qnode = new Index::HnswNode(i, level, index->max_m_, index->max_m0_);
                     index->nodes_[i] = qnode;
@@ -694,7 +698,7 @@ namespace weavess {
                 }
             }
             delete visited_list;
-//        }
+        }
     }
 
     void ComponentRefineHNSW::InsertNode(Index::HnswNode *qnode, Index::VisitedList *visited_list) {
@@ -845,28 +849,27 @@ namespace weavess {
 //            for (const auto& neighbor : neighbors) {
 //                _mm_prefetch(neighbor->GetData(), _MM_HINT_T0);
 //            }
-        std::cout << neighbors.size() << std::endl;
+        //std::cout << neighbors.size() << std::endl;
         for (const auto &neighbor : neighbors) {
-            std::cout << "neighbors : " << neighbor->GetId() << std::endl;
+            //std::cout << "neighbors : " << neighbor->GetId() << std::endl;
             float tmp = index->getDist()->compare(index->getBaseData() + source->GetId() * index->getBaseDim(),
                                                   index->getBaseData() + neighbor->GetId() * index->getBaseDim(),
                                                   index->getBaseDim());
-            std::cout << tmp << std::endl;
-            std::cout << neighbor->GetId() << std::endl;
-            std::cout << tempres.size() << std::endl;
-            if(!tempres.empty())
-                std::cout << tempres.top().GetNode()->GetId() << std::endl;
+//            std::cout << tmp << std::endl;
+//            std::cout << neighbor->GetId() << std::endl;
+//            std::cout << tempres.size() << std::endl;
+//            if(!tempres.empty())
+//                std::cout << tempres.top().GetNode()->GetId() << std::endl;
             tempres.push(Index::FurtherFirst(neighbors[0], tmp));
-            std::cout << "mm" << std::endl;
+//            std::cout << "mm" << std::endl;
         }
-        std::cout << "tempres : " << tempres.size() << std::endl;
+//        std::cout << "tempres : " << tempres.size() << std::endl;
 
         // PRUNE
         ComponentPrune *a = new ComponentPruneHeuristic(index);
-        std::cout << "wtf" << std::endl;
-
         a->Hnsw2Neighbor(tempres.size() - 1, tempres);
-        std::cout << "ff" << tempres.size() << std::endl;
+
+        //std::cout << "ff" << tempres.size() << std::endl;
         neighbors.clear();
         while (tempres.size()) {
             neighbors.emplace_back(tempres.top().GetNode());
@@ -891,6 +894,117 @@ namespace weavess {
         if (r < std::numeric_limits<double>::epsilon())
             r = 1.0;
         return (int) (-log(r) * index->level_mult_);
+    }
+
+
+    // NSW
+    void ComponentRefineNSW::RefineInner() {
+        SetConfigs();
+
+        Build(false);
+
+        // nodes -> final_graph
+
+        for (size_t i = 0; i < index->nodes_.size(); ++i) {
+            delete index->nodes_[i];
+        }
+        index->nodes_.clear();
+    }
+
+    void ComponentRefineNSW::SetConfigs() {
+        index->NN_ = index->getParam().get<unsigned>("NN");
+        index->ef_construction_ = index->getParam().get<unsigned>("ef_construction");
+        index->n_threads_ = index->getParam().get<unsigned>("n_threads");
+    }
+
+    void ComponentRefineNSW::Build(bool reverse) {
+        index->nodes_.resize(index->getBaseLen());
+        Index::HnswNode *first = new Index::HnswNode(0, 0, index->NN_, index->NN_);
+        index->nodes_[0] = first;
+        index->enterpoint_ = first;
+#pragma omp parallel num_threads(index->n_threads_)
+        {
+            auto *visited_list = new Index::VisitedList(index->getBaseLen());
+            if (reverse) {
+#pragma omp for schedule(dynamic, 128)
+                for (size_t i = index->getBaseLen() - 1; i >= 1; --i) {
+                    auto *qnode = new Index::HnswNode(i, 0, index->NN_, index->NN_);
+                    index->nodes_[i] = qnode;
+                    InsertNode(qnode, visited_list);
+                }
+            } else {
+#pragma omp for schedule(dynamic, 128)
+                for (size_t i = 1; i < index->getBaseLen(); ++i) {
+                    std::cout << i << std::endl;
+                    auto *qnode = new Index::HnswNode(i, 0, index->NN_, index->NN_);
+                    index->nodes_[i] = qnode;
+                    InsertNode(qnode, visited_list);
+                }
+            }
+            delete visited_list;
+        }
+    }
+
+    void ComponentRefineNSW::InsertNode(Index::HnswNode *qnode, Index::VisitedList *visited_list) {
+        Index::HnswNode *enterpoint = index->enterpoint_;
+
+        std::priority_queue<Index::FurtherFirst> result;
+
+        // CANDIDATE
+        SearchAtLayer(qnode, enterpoint, 0, visited_list, result);
+
+        while (result.size() > 0) {
+            auto *top_node = result.top().GetNode();
+            result.pop();
+            Link(top_node, qnode, 0);
+        }
+    }
+
+    void ComponentRefineNSW::SearchAtLayer(Index::HnswNode *qnode, Index::HnswNode *enterpoint, int level,
+                                           Index::VisitedList *visited_list,
+                                           std::priority_queue<Index::FurtherFirst> &result) {
+        // TODO: check Node 12bytes => 8bytes
+        std::priority_queue<Index::CloserFirst> candidates;
+        float d = index->getDist()->compare(index->getBaseData() + qnode->GetId() * index->getBaseDim(),
+                                            index->getBaseData() + enterpoint->GetId() * index->getBaseDim(),
+                                            index->getBaseDim());
+        result.emplace(enterpoint, d);
+        candidates.emplace(enterpoint, d);
+
+        visited_list->Reset();
+        visited_list->MarkAsVisited(enterpoint->GetId());
+
+        while (!candidates.empty()) {
+            const Index::CloserFirst &candidate = candidates.top();
+            float lower_bound = result.top().GetDistance();
+            if (candidate.GetDistance() > lower_bound)
+                break;
+
+            Index::HnswNode *candidate_node = candidate.GetNode();
+            std::unique_lock<std::mutex> lock(candidate_node->GetAccessGuard());
+            const std::vector<Index::HnswNode *> &neighbors = candidate_node->GetFriends(level);
+            candidates.pop();
+            for (const auto &neighbor : neighbors) {
+                int id = neighbor->GetId();
+                if (visited_list->NotVisited(id)) {
+                    visited_list->MarkAsVisited(id);
+                    d = index->getDist()->compare(index->getBaseData() + qnode->GetId() * index->getBaseDim(),
+                                                  index->getBaseData() + neighbor->GetId() * index->getBaseDim(),
+                                                  index->getBaseDim());
+                    if (result.size() < index->ef_construction_ || result.top().GetDistance() > d) {
+                        result.emplace(neighbor, d);
+                        candidates.emplace(neighbor, d);
+                        if (result.size() > index->ef_construction_)
+                            result.pop();
+                    }
+                }
+            }
+        }
+    }
+
+    void ComponentRefineNSW::Link(Index::HnswNode *source, Index::HnswNode *target, int level) {
+        source->AddFriends(target, true);
+        target->AddFriends(source, true);
     }
 
 
@@ -924,7 +1038,7 @@ namespace weavess {
     }
 
     void ComponentRefineVAMANA::SetConfigs() {
-        index->alpha = index->getParam().get<float>("alpha");
+        index->R_nsg = index->getParam().get<unsigned>("R_nsg");
     }
 
     void ComponentRefineVAMANA::Link(Index::SimpleNeighbor *cut_graph_) {
@@ -939,59 +1053,67 @@ namespace weavess {
         ComponentPrune *b1 = new ComponentPruneHeuristic(index);
         ComponentPrune *b2 = new ComponentPruneVAMANA(index);
 
-        for(unsigned t = 0; t < 2; t ++) {
 #pragma omp parallel
-            {
-                std::vector<std::vector<Index::Neighbor>> pool;
-                pool.resize(index->getBaseLen());
-                std::vector<boost::dynamic_bitset<>> flags(index->getBaseLen(),
-                                                          boost::dynamic_bitset<>{index->getBaseLen(), 0});
-
-                std::vector<Index::Neighbor> tmp;
+        {
+            std::vector<Index::Neighbor> pool;
+            pool.resize(index->getBaseLen());
+            boost::dynamic_bitset<> flags(index->getBaseLen(), 0);
 
 #pragma omp for schedule(dynamic, 100)
-                for (unsigned n = 0; n < index->getBaseLen(); ++n) {
-                    a->CandidateInner(n, index->ep_, flags[n], pool[n], 0);
+            for (unsigned n = 0; n < index->getBaseLen(); ++n) {
+                std::cout << n << std::endl;
+                a->CandidateInner(n, index->ep_, flags, pool, 0);
 
-                    if(t == 0) {
-                        b1->PruneInner(n, index->R_nsg, flags[n], pool[n], cut_graph_, 0);
-                    }else {
-                        b2->PruneInner(n, index->R_nsg, flags[n], pool[n], cut_graph_, 0);
-                    }
-
-//                    for (int i = 0; i < pool.size(); i++) {
-//                        visited[n][i] = true;
-//                    }
+                if (index->alpha == 1) {
+                    b1->PruneInner(n, index->R_nsg, flags, pool, cut_graph_, 0);
+                } else {
+                    b2->PruneInner(n, index->R_nsg, flags, pool, cut_graph_, 0);
                 }
-
-                // 添加反向边
-//#pragma omp for schedule(dynamic, 100)
-//                for (unsigned n = 0; n < index->getBaseLen(); ++n) {
-//                    for (unsigned m = 0; m < temp_graph[n].size(); m++) {
-//                        if (visited[temp_graph[n][m].id][n] == false) {
-//                            temp_graph[n].push_back(Index::Neighbor(n, temp_graph[n][m].distance, true));
-//                            visited[temp_graph[n][m].id][n] = true;
-//                        }
-//                    }
-//                }
-//                std::vector<std::vector<bool>>().swap(visited);
-//
-//                // 裁边
-//#pragma omp for schedule(dynamic, 100)
-//                for (unsigned n = 0; n < index->getBaseLen(); ++n) {
-//                    visited_list->Reset();
-//                    if (t == 0) {
-//                        b1->PruneInner(n, index->R_nsg, visited_list, temp_graph[n], cut_graph_, 0);
-//                    } else {
-//                        b2->PruneInner(n, index->R_nsg, visited_list, temp_graph[n], cut_graph_, 0);
-//                    }
-//                }
             }
+
+            std::vector<Index::Neighbor>().swap(pool);
         }
 
+//        index->getFinalGraph().resize(index->getBaseLen());
+//
+//        for (size_t i = 0; i < index->getBaseLen(); i++) {
+//            Index::SimpleNeighbor *pool = cut_graph_ + i * (size_t) index->R_nsg;
+//            unsigned pool_size = 0;
+//            for (unsigned j = 0; j < index->R_nsg; j++) {
+//                if (pool[j].distance == -1) break;
+//                pool_size = j;
+//            }
+//            pool_size++;
+//            index->getFinalGraph()[i].resize(1);
+//            index->getFinalGraph()[i][0].resize(pool_size);
+//            for (unsigned j = 0; j < pool_size; j++) {
+//                index->getFinalGraph()[i][0][j] = pool[j].id;
+//            }
+//        }
+//
+//        // CONN
+//        auto *c = new ComponentConnReverse(index);
+//        c -> ConnInner();
+//
+//        // CANDIDATE
+//        auto *a2 = new ComponentCandidatePropagation1(index);
+//
+//#pragma omp parallel
+//        {
+//            std::vector<Index::Neighbor> pool;
+//            pool.resize(index->getBaseLen());
+//            boost::dynamic_bitset<> flags(index->getBaseLen(), 0);
+//
 //#pragma omp for schedule(dynamic, 100)
-//        for (unsigned n = 0; n < index->getBaseLen(); ++n) {
-//            InterInsert(n, index->R_nsg, locks, cut_graph_);
+//            for (unsigned n = 0; n < index->getBaseLen(); ++n) {
+//                a2->CandidateInner(n, index->ep_, flags, pool, 0);
+//
+//                if (index->alpha == 1) {
+//                    b1->PruneInner(n, index->R_nsg, flags, pool, cut_graph_, 0);
+//                } else {
+//                    b2->PruneInner(n, index->R_nsg, flags, pool, cut_graph_, 0);
+//                }
+//            }
 //        }
     }
 
@@ -1001,7 +1123,12 @@ namespace weavess {
         SetConfigs();
 
         // ENTRY
-        auto *a = new ComponentEntryCentroidNSG(index);
+        ComponentEntry *a = nullptr;
+        if (index->getEntryType() == ENTRY_NONE) {
+            a = new ComponentEntryNone(index);
+        } else if (index->getEntryType() == ENTRY_NSG_CENTROID) {
+            a = new ComponentEntryCentroidNSG(index);
+        }
         a->EntryInner();
 
         auto *cut_graph_ = new Index::SimpleNeighbor[index->getBaseLen() * (size_t) index->R_nsg];
@@ -1026,57 +1153,56 @@ namespace weavess {
     }
 
     void ComponentRefineTest::SetConfigs() {
+        index->R_nsg = index->getParam().get<unsigned>("R_nsg");
 
+        index->setEntryType(ENTRY_NONE);
+        index->setCandidateType(CANDIDATE_PROPAGATION1);
+        index->setPruneType(PRUNE_NAIVE);
+        index->setConnType(CONN_NONE);
     }
 
     void ComponentRefineTest::Link(Index::SimpleNeighbor *cut_graph_) {
-//        /*
-// std::cerr << "Graph Link" << std::endl;
-// unsigned progress = 0;
-// unsigned percent = 100;
-// unsigned step_size = nd_ / percent;
-// std::mutex progress_lock;
-// */
-//        std::vector<std::mutex> locks(index->getBaseLen());
-//
-//#pragma omp parallel
-//        {
-//            std::vector<Index::Neighbor> pool;
-//            auto *visited_list = new Index::VisitedList(index->getBaseLen());
-//
-//            ComponentCandidate *a = nullptr;
-//            if (index->getCandidateType() == CANDIDATE_NAIVE)
-//                a = new ComponentCandidateNSSG(index);
-//
-//            ComponentPrune *b = nullptr;
-//            if (index->getPruneType() == PRUNE_NAIVE)
-//                b = new ComponentPruneNaive(index);
-//
-//#pragma omp for schedule(dynamic, 100)
-//            for (unsigned n = 0; n < index->getBaseLen(); ++n) {
-//                std::cout << n << std::endl;
-//                pool.clear();
-//
-//                visited_list->Reset();
-//
-//                a->CandidateInner(n, 0, visited_list, pool, 0);
-//
-//                visited_list->Reset();
-//
-//                b->PruneInner(n, index->R_nsg, visited_list, pool, cut_graph_, 0);
-//
-//                //std::cout << pool.size() << std::endl;
-//                /*
-//                cnt++;
-//                if (cnt % step_size == 0) {
-//                  LockGuard g(progress_lock);
-//                  std::cout << progress++ << "/" << percent << " completed" << std::endl;
-//                }
-//                */
-//            }
-//            delete visited_list;
-//        }
-//
+        std::vector<std::mutex> locks(index->getBaseLen());
+
+        ComponentCandidate *a = nullptr;
+        if (index->getCandidateType() == CANDIDATE_PROPAGATION1) {
+            a = new ComponentCandidatePropagation1(index);
+        } else if (index->getCandidateType() == CANDIDATE_PROPAGATION2) {
+            a = new ComponentCandidateNSSG(index);
+        } else if (index->getCandidateType() == CANDIDATE_PROPAGATION3) {
+
+        } else if (index->getCandidateType() == CANDIDATE_GREEDY) {
+
+        } else {
+            std::cerr << "__CANDIDATE : WRONG TYPE__" << std::endl;
+            exit(-1);
+        }
+
+        ComponentPrune *b = nullptr;
+        if (index->getPruneType() == PRUNE_NAIVE){
+            b = new ComponentPruneNaive(index);
+        }
+
+
+#pragma omp parallel
+        {
+            std::vector<Index::Neighbor> pool;
+            boost::dynamic_bitset<> flags{index->getBaseLen(), 0};
+
+#pragma omp for schedule(dynamic, 100)
+            for (unsigned n = 0; n < index->getBaseLen(); ++n) {
+                pool.clear();
+
+                flags.clear();
+
+                a->CandidateInner(n, 0, flags, pool, 0);
+
+                flags.clear();
+
+                b->PruneInner(n, index->R_nsg, flags, pool, cut_graph_, 0);
+            }
+        }
+
 //#pragma omp for schedule(dynamic, 100)
 //        for (unsigned n = 0; n < index->getBaseLen(); ++n) {
 //            InterInsert(n, index->R_nsg, 0, locks, cut_graph_);
@@ -1156,8 +1282,6 @@ namespace weavess {
             }
         }
     }
-
-
 
 
 }

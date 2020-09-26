@@ -249,6 +249,11 @@ namespace weavess {
         unsigned nTrees;
     };
 
+    class NSW {
+    public:
+        unsigned NN_ ;
+    };
+
     class HNSW {
     public:
         unsigned m_ = 12;
@@ -279,6 +284,21 @@ namespace weavess {
                 friends_at_layer_[level].swap(new_friends);
             }
             inline std::mutex& GetAccessGuard() { return access_guard_; }
+
+            // 1. The list of friends is sorted
+            // 2. bCheckForDup == true addFriend checks for duplicates using binary searching
+            inline void AddFriends(HnswNode* element, bool bCheckForDup) {
+                std::unique_lock<std::mutex> lock(access_guard_);
+
+                if(bCheckForDup) {
+                    auto it = std::lower_bound(friends_at_layer_[0].begin(), friends_at_layer_[0].end(), element);
+                    if(it == friends_at_layer_[0].end() || (*it) != element) {
+                        friends_at_layer_[0].insert(it, element);
+                    }
+                }else{
+                    friends_at_layer_[0].push_back(element);
+                }
+            }
 
         private:
             void CopyLinksToOptIndex(char* mem_offset, int level) const;
@@ -476,9 +496,12 @@ namespace weavess {
         std::vector <Tnode> Tn;
 
         int xxx = 0;
+
+        float S_hcnng = 0.0;
+        unsigned N = 0;
     };
 
-    class Index : public NNDescent, public NSG, public NSSG, public DPG, public EFANNA, public HNSW, public VAMANA, public HCNNG {
+    class Index : public NNDescent, public NSG, public NSSG, public DPG, public EFANNA, public HNSW, public VAMANA, public HCNNG, public NSW {
     public:
 
         explicit Index() {
@@ -637,6 +660,14 @@ namespace weavess {
             entry_type = entryType;
         }
 
+        void setConnType(TYPE connType) {
+            conn_type = connType;
+        }
+
+        TYPE getConnType() const {
+            return conn_type;
+        }
+
         unsigned int getDistCount() const {
             return dist_count;
         }
@@ -662,6 +693,7 @@ namespace weavess {
         TYPE entry_type;
         TYPE candidate_type;
         TYPE prune_type;
+        TYPE conn_type;
 
         unsigned dist_count = 0;
 

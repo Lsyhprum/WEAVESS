@@ -4,6 +4,9 @@
 
 #include "weavess/builder.h"
 #include "weavess/component.h"
+#include "weavess/matplotlibcpp.h"
+
+namespace plt = matplotlibcpp;
 
 namespace weavess {
     IndexBuilder *IndexBuilder::load(char *data_file, char *query_file, char *ground_file, Parameters &parameters) {
@@ -14,10 +17,6 @@ namespace weavess {
 
         e = std::chrono::high_resolution_clock::now();
 
-        return this;
-    }
-
-    IndexBuilder *IndexBuilder::init(TYPE type) {
         std::cout << "base data len : " << final_index_->getBaseLen() << std::endl;
         std::cout << "base data dim : " << final_index_->getBaseDim() << std::endl;
         std::cout << "query data len : " << final_index_->getQueryLen() << std::endl;
@@ -27,6 +26,10 @@ namespace weavess {
 
         std::cout << final_index_->getParam().toString() << std::endl;
 
+        return this;
+    }
+
+    IndexBuilder *IndexBuilder::init(TYPE type) {
         ComponentInit *a = nullptr;
 
         if (type == INIT_NN_DESCENT) {
@@ -38,8 +41,11 @@ namespace weavess {
         } else if (type == INIT_RANDOM) {
             std::cout << "__INIT : RANDOM__" << std::endl;
             a = new ComponentInitRandom(final_index_);
+        } else if (type == INIT_HCNNG) {
+            std::cout << "__INIT : HCNNG__" << std::endl;
+            a = new ComponentInitHCNNG(final_index_);
         } else {
-
+            std::cout << "__INIT : WRONG TYPE__" << std::endl;
         }
 
         a->InitInner();
@@ -77,6 +83,34 @@ namespace weavess {
                   final_index_->getFinalGraph()[0][0].size() << std::endl;
 
         return this;
+    }
+
+    IndexBuilder *IndexBuilder::draw() {
+
+        for (int i = 0; i < final_index_->getBaseLen(); i++) {
+            for (int j = 0; j < final_index_->getFinalGraph()[i][0].size(); j++) {
+                //std::cout << (final_index_->getBaseData() + 2 * final_index_->getFinalGraph()[i][0][j])[0] << " ";
+                //if(i == 20 ) {
+                std::vector<float> x{(final_index_->getBaseData() + 2 * i)[0],
+                                     (final_index_->getBaseData() + 2 * final_index_->getFinalGraph()[i][0][j])[0]};
+
+                std::vector<float> y{(final_index_->getBaseData() + 2 * i)[1],
+                                     (final_index_->getBaseData() + 2 * final_index_->getFinalGraph()[i][0][j])[1]};
+                plt::plot(x, y, "grey");
+                //}
+            }
+            //std::cout << std::endl;
+        }
+
+        std::vector<float> x;
+        std::vector<float> y;
+        for (int i = 0; i < final_index_->getBaseLen(); i++) {
+            x.push_back((final_index_->getBaseData() + 2 * i)[0]);
+            y.push_back((final_index_->getBaseData() + 2 * i)[1]);
+        }
+        plt::scatter(x, y);
+
+        plt::show();
     }
 
     void IndexBuilder::degree_info() {
@@ -168,9 +202,23 @@ namespace weavess {
         } else if (type == REFINE_VAMANA) {
             std::cout << "__REFINE : VAMANA__" << std::endl;
             a = new ComponentRefineVAMANA(final_index_);
+
+            // first pass α = 1
+            final_index_->alpha = 1;
+            a->RefineInner();
+
+            // second pass α >= 1
+            final_index_->alpha = final_index_->getParam().get<float>("alpha");
+
         } else if (type == REFINE_NN_DESCENT) {
             std::cout << "__REFINE : NN_DESCENT__" << std::endl;
             a = new ComponentRefineEFANNA(final_index_);
+        } else if (type == REFINE_NSW) {
+            std::cout << "__REFINE : NSW__" << std::endl;
+            a = new ComponentRefineNSW(final_index_);
+        } else if (type == REFINE_TEST) {
+            std::cout << "__REFINE : TEST__" << std::endl;
+            a = new ComponentRefineTest(final_index_);
         } else {
             std::cerr << "__REFINE : WRONG TYPE__" << std::endl;
         }
