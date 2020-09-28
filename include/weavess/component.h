@@ -116,6 +116,13 @@ namespace weavess {
         void mergeSubGraphs(size_t treeid, Index::EFANNA::Node* node);
     };
 
+    class ComponentInitHash : public ComponentInit {
+    public:
+        explicit ComponentInitHash(Index *index) : ComponentInit(index) {}
+
+        void InitInner() override;
+    };
+
     class ComponentInitHCNNG : public ComponentInit {
     public:
         explicit ComponentInitHCNNG(Index *index) : ComponentInit(index) {}
@@ -228,7 +235,7 @@ namespace weavess {
         void InsertNode(Index::HnswNode* qnode, Index::VisitedList* visited_list);
 
         void SearchAtLayer(Index::HnswNode* qnode, Index::HnswNode* enterpoint, int level,
-                                                Index::VisitedList* visited_list, std::priority_queue<Index::FurtherFirst>& result);
+                           Index::VisitedList* visited_list, std::priority_queue<Index::FurtherFirst>& result);
 
         void Link(Index::HnswNode* source, Index::HnswNode* target, int level);
     };
@@ -280,7 +287,7 @@ namespace weavess {
         void Link(Index::SimpleNeighbor *cut_graph_);
 
         void InterInsert(unsigned n, unsigned range, float threshold, std::vector<std::mutex> &locks,
-                                              Index::SimpleNeighbor *cut_graph_);
+                         Index::SimpleNeighbor *cut_graph_);
     };
 
 
@@ -334,7 +341,7 @@ namespace weavess {
         explicit ComponentCandidateNSG(Index *index) : ComponentCandidate(index) {}
 
         void CandidateInner(const unsigned query, const unsigned enter, boost::dynamic_bitset<> flags,
-                                    std::vector<Index::Neighbor> &result, int level) override;
+                            std::vector<Index::Neighbor> &result, int level) override;
     };
 
     class ComponentCandidateNSSG : public ComponentCandidate {
@@ -342,7 +349,7 @@ namespace weavess {
         explicit ComponentCandidateNSSG(Index *index) : ComponentCandidate(index) {}
 
         void CandidateInner(const unsigned query, const unsigned enter, boost::dynamic_bitset<> flags,
-                       std::vector<Index::Neighbor> &result, int level) override;
+                            std::vector<Index::Neighbor> &result, int level) override;
     };
 
     class ComponentCandidatePropagation1 : public ComponentCandidate {
@@ -508,9 +515,18 @@ namespace weavess {
         virtual void SearchEntryInner(unsigned query, std::vector<Index::Neighbor> &pool) = 0;
     };
 
+    // L entry
     class ComponentSearchEntryRand : public ComponentSearchEntry {
     public:
         explicit ComponentSearchEntryRand(Index *index) : ComponentSearchEntry(index) {}
+
+        void SearchEntryInner(unsigned query, std::vector<Index::Neighbor> &pool) override;
+    };
+
+    // one entry
+    class ComponentSearchEntryRandom : public ComponentSearchEntry {
+    public:
+        explicit ComponentSearchEntryRandom(Index *index) : ComponentSearchEntry(index) {}
 
         void SearchEntryInner(unsigned query, std::vector<Index::Neighbor> &pool) override;
     };
@@ -521,6 +537,14 @@ namespace weavess {
 
         void SearchEntryInner(unsigned query, std::vector<Index::Neighbor> &pool) override;
     };
+
+    class ComponentSearchEntrySubCentroid : public ComponentSearchEntry {
+    public:
+        explicit ComponentSearchEntrySubCentroid(Index *index) : ComponentSearchEntry(index) {}
+
+        void SearchEntryInner(unsigned query, std::vector<Index::Neighbor> &pool) override;
+    };
+
 
     // search route
     class ComponentSearchRoute : public Component {

@@ -173,46 +173,45 @@ namespace weavess {
         std::random_shuffle(ids.begin(), ids.end());
         for (unsigned i = 0; i < n_try; i++) {
             index->eps_.push_back(ids[i]);
-            //std::cout << eps_[i] << '\n';
         }
 #pragma omp parallel for
-        for (unsigned i = 0; i < n_try; i++) {
+        for(unsigned i=0; i<n_try; i++){
             unsigned rootid = index->eps_[i];
             boost::dynamic_bitset<> flags{index->getBaseLen(), 0};
             std::queue<unsigned> myqueue;
             myqueue.push(rootid);
-            flags[rootid] = true;
+            flags[rootid]=true;
 
             std::vector<unsigned> uncheck_set(1);
 
-            while (uncheck_set.size() > 0) {
-                while (!myqueue.empty()) {
-                    unsigned q_front = myqueue.front();
+            while(uncheck_set.size() >0){
+                while(!myqueue.empty()){
+                    unsigned q_front=myqueue.front();
                     myqueue.pop();
 
-                    for (unsigned j = 0; j < index->getFinalGraph()[q_front][0].size(); j++) {
-                        unsigned child = j < index->getFinalGraph()[q_front][0][j];
-                        if (flags[child])continue;
+                    for(unsigned j=0; j<index->getFinalGraph()[q_front][0].size(); j++){
+                        unsigned child = index->getFinalGraph()[q_front][0][j];
+                        if(flags[child])continue;
                         flags[child] = true;
                         myqueue.push(child);
                     }
                 }
 
                 uncheck_set.clear();
-                for (unsigned j = 0; j < index->getBaseLen(); j++) {
-                    if (flags[j])continue;
+                for(unsigned j=0; j<index->getBaseLen(); j++){
+                    if(flags[j])continue;
                     uncheck_set.push_back(j);
                 }
                 //std::cout <<i<<":"<< uncheck_set.size() << '\n';
-                if (uncheck_set.size() > 0) {
-                    for (unsigned j = 0; j < index->getBaseLen(); j++) {
-                        if (flags[j] && index->getFinalGraph()[j][0].size() < range) {
+                if(uncheck_set.size()>0){
+                    for(unsigned j=0; j<index->getBaseLen(); j++){
+                        if(flags[j] && index->getFinalGraph()[j][0].size()<range){
                             index->getFinalGraph()[j][0].push_back(uncheck_set[0]);
                             break;
                         }
                     }
                     myqueue.push(uncheck_set[0]);
-                    flags[uncheck_set[0]] = true;
+                    flags[uncheck_set[0]]=true;
                 }
             }
         }

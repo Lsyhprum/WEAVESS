@@ -23,6 +23,7 @@
 #include "parameters.h"
 
 namespace weavess {
+
     class NNDescent {
     public:
         unsigned S;
@@ -698,6 +699,7 @@ namespace weavess {
         unsigned dist_count = 0;
 
     };
+
 }
 
 #endif //WEAVESS_INDEX_H

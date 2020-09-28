@@ -22,6 +22,8 @@ namespace weavess {
         CONN_DFS, CONN_NONE,
 
         // SEARCH
+        SEARCH_ENTRY_NSSG_CENTROID, SEARCH_ENTRY_NONE, SEARCH_ENTRY_RANDOM,
+
         ROUTER_GREEDY, ROUTE_GUIED
     };
 }

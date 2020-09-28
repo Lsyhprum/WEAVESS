@@ -8,21 +8,45 @@
 
 |  Algo  |      TYPE      |          Init         |     Entry      |   Candidate   |    Prune    |     Conn     |    Search Entry    |    Search Route    |
 |:------:|:--------------:| :--------------------:| :------------: | :-----------: | :----------:| :-----------:| :-----------------:|:------------------:|
-| KGraph |                |     NN-Descent        |                |               |             |              |                    |                    |
-| NSG    |   Refinement   |     NN-Descent        |    Centroid    |     Greedy    |    MRNG     |     DFS      |    MRNG            |           DFS      |
-| SSG    |   Refinement   |     NN-Descent        |                | PROPAGATION 2 |    SSG      |  DFS_Expand  |    SSG             |        DFS_Expand  |
-| DPG    |   Refinement   |     NN-Descent        |                | PROPAGATION 1 |    DPG      |    Reverse   |    DPG             |          Reverse   |
-| VAMANA |   Refinement   |       Random          |    Centroid    |     Greedy    |    VAMANA   |    Reverse   |    VAMANA          |          Reverse   |
+| KGraph |                |     NN-Descent        |                |               |             |              |      Random        |       Greedy       |
+| NSG    |   Refinement   |     NN-Descent        |    Centroid    |     Greedy    |    MRNG     |     DFS      |     Centroid       |       Greedy       |
+| SSG    |   Refinement   |     NN-Descent        |                | PROPAGATION 2 |    SSG      |  DFS_Expand  |     Centroid       |       Greedy       |
+| DPG    |   Refinement   |     NN-Descent        |                | PROPAGATION 1 |    DPG      |    Reverse   |                    |                    |
+| VAMANA |   Refinement   |       Random          |    Centroid    |     Greedy    |    VAMANA   |    Reverse   |                    |                    |
 | EFANNA |   Refinement   |       KD-tree         |                |               |             |              |                    |                    |
 | IEH    |   Refinement   |                       |                |               |             |              |                    |                    |
-| HNSW   |   Increment    |                       |                |      Naive    |  HEURISTIC  |              |  HEURISTIC C  C    |                    |
+| HNSW   |   Increment    |                       |                |      Naive    |  HEURISTIC  |              |                    |                    |
 | NSW    |   Increment    |                       |     Random     |      Naive    |             |              |                    |                    |
-| HCNGG  |Divide & Conquer|Hierarchical Clustering|                |               |             |              |                    |                    |
+| HCNNG  |Divide & Conquer|Hierarchical Clustering|                |               |             |              |                    |                    |
 | SPTAG  |Divide & Conquer|      TP-tree          |                |               |             |              |                    |                    |
 | FANNG  |                |                       |                |               |             |              |                    |                    |
 | NGT    |                |                       |                |               |             |              |                    |                    |
 
 ### Performance
+
+We provide a analysis of above algorithms from these aspects : 
+
+* Build preformance
+
+    * Build index time
+    
+    * Index size
+    
+    * Graph connectivity : MOD、AOD
+    
+    * Number of Connected Component
+
+* Search performance 
+
+    * QPS/Recall、Speed-up/Recall
+    
+    * Search path length
+
+    * Availability : $L_{in-DB}$、$L_{not-in-DB}$
+
+    * Memory 
+
+    * NN
 
 #### [KGraph](https://github.com/aaalgo/kgraph)
 
@@ -31,9 +55,17 @@
 * **ITER** : NN-Descent iteration times, iter usually < 30.
 * **S** : number of neighbors in local join, larger is more accurate but slower.
 * **R** : number of reverse neighbors, larger is more accurate but slower.
+* **delta** : KGraph stops iteration when number of entries updated becomes less than deltaKN.
 
 |  Dataset  |  K  |  L  | ITER |  S |  R  |
 |:---------:|:---:|:---:|:----:|:--:|:---:|
+| SIFT1M    | 200 | 200 |  12  | 10 | 100 |
+| GIST1M    | 400 | 400 |  12  | 15 | 100 |
+| Crawl     | 400 | 420 |  12  | 15 | 100 |
+| GloVe-100 | 400 | 420 |  12  | 20 | 200 |
+
+|  Dataset  |  Build Time  |  Index Size  | NN |  MOD |  MAD  | Connected Component |
+|:---------:|:------------:|:------------:|:--:|:----:|:-----:|:-------------------:|
 | SIFT1M    | 200 | 200 |  12  | 10 | 100 |
 | GIST1M    | 400 | 400 |  12  | 15 | 100 |
 | Crawl     | 400 | 420 |  12  | 15 | 100 |
@@ -84,7 +116,7 @@
 
 ### HCNNG
 
-* **S** ： min size cluster
+* **S** ： min size of cluster
 * **N** : number of clusters
 
 ### SPTAG
@@ -183,7 +215,8 @@ Please make pull requests against the `dev` branch.
 * 检查参数是否合法 （nmslib Check）
 * id 数据类型 （nmslib idtype）
 
-
+* Random ---> 全部random / random 入口点 + 一次扩散
+* 消除重复代码
 * KGraph 、 NSG 、 NSSG 、DPG 、EFANNA 搜索测试
 * DPG 、 EFANNA 整体构建测试
 * HNSW final_graph 

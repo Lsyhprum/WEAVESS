@@ -22,7 +22,7 @@ namespace weavess {
         IndexBuilder *load(char *data_file, char *query_file, char *ground_file, Parameters &parameters);
 
         // float* -> vector<vector<vector<unsigned>>>
-        IndexBuilder *init(TYPE type);
+        IndexBuilder *init(TYPE type, bool debug);
 
         // vector<vector<vector<unsigned>>> -> file
         IndexBuilder *save_graph(char *graph_file);

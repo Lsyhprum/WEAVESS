@@ -10,14 +10,16 @@ void KGraph(std::string base_path, std::string query_path, std::string ground_pa
     weavess::Parameters parameters;
     parameters.set<unsigned>("K", 25);
     parameters.set<unsigned>("L", 100);
-    parameters.set<unsigned>("ITER", 12);
+    parameters.set<unsigned>("ITER", 30);
     parameters.set<unsigned>("S", 10);
     parameters.set<unsigned>("R", 100);
     parameters.set<float>("delta", 0.002);
 
     auto *builder = new weavess::IndexBuilder();
     builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
-            -> load_graph(&graph_file[0])
+            -> init(weavess::INIT_NN_DESCENT, true)
+            //-> draw()
+            //-> load_graph(&graph_file[0]);
             -> search(weavess::ENTRY_RANDOM, weavess::ROUTER_GREEDY);
 
     std::cout << "Time cost: " << builder->GetBuildTime().count() << std::endl;
@@ -39,11 +41,11 @@ void NSG(std::string base_path, std::string query_path, std::string ground_path)
 
     auto *builder = new weavess::IndexBuilder();
     builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
-            //-> init(weavess::INIT_NN_DESCENT)
+            -> init(weavess::INIT_NN_DESCENT, false)
             //-> save_graph(&graph_file[0])
-            -> load_graph(&graph_file[0])
-            -> refine(weavess::REFINE_NSG, true);
-            //-> search(weavess::ENTRY_NSG_CENTROID, weavess::ROUTER_GREEDY);
+            //-> load_graph(&graph_file[0])
+            -> refine(weavess::REFINE_NSG, true)
+            -> search(weavess::ENTRY_NSG_CENTROID, weavess::ROUTER_GREEDY);
 
     std::cout << "Time cost: " << builder->GetBuildTime().count() << std::endl;
 }
@@ -52,11 +54,11 @@ void NSSG(std::string base_path, std::string query_path, std::string ground_path
     std::string graph_file = R"(nsg.knng)";
 
     weavess::Parameters parameters;
-    parameters.set<unsigned>("K", 10);
-    parameters.set<unsigned>("L", 10);
+    parameters.set<unsigned>("K", 200);
+    parameters.set<unsigned>("L", 200);
     parameters.set<unsigned>("ITER", 1);
     parameters.set<unsigned>("S", 10);
-    parameters.set<unsigned>("R", 20);
+    parameters.set<unsigned>("R", 100);
 
     parameters.set<unsigned>("L_nsg", 100);
     parameters.set<unsigned>("R_nsg", 50);
@@ -65,8 +67,10 @@ void NSSG(std::string base_path, std::string query_path, std::string ground_path
 
     auto *builder = new weavess::IndexBuilder();
     builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
-            -> load_graph(&graph_file[0])
-            -> refine(weavess::REFINE_NSSG, true);     // entry + candidate + prune
+            -> init(weavess::INIT_NN_DESCENT, false)
+            //-> load_graph(&graph_file[0])
+            -> refine(weavess::REFINE_NSSG, true)
+            -> search(weavess::SEARCH_ENTRY_NSSG_CENTROID, weavess::ROUTER_GREEDY);
 
     std::cout << "Time cost: " << builder->GetBuildTime().count() << std::endl;
 }
@@ -102,7 +106,7 @@ void EFANNA(std::string base_path, std::string query_path, std::string ground_pa
 
     auto *builder = new weavess::IndexBuilder();
     builder->load(&base_path[0], &query_path[0], &ground_path[0], parameters)
-            ->init(weavess::INIT_KDT)
+            ->init(weavess::INIT_KDT, true)
             ->refine(weavess::REFINE_NN_DESCENT, true);
 //            -> eva(weavess::IndexBuilder::ENTRY_KDT, weavess::IndexBuilder::ROUTER_GREEDY);
 
@@ -142,7 +146,7 @@ void VAMANA(std::string base_path, std::string query_path, std::string ground_pa
 
     auto *builder = new weavess::IndexBuilder();
     builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
-            -> init(weavess::INIT_RANDOM)
+            -> init(weavess::INIT_RANDOM, true)
             -> refine(weavess::REFINE_VAMANA, true);
     //-> eva(weavess::IndexBuilder::ENTRY_RAND, weavess::IndexBuilder::ROUTER_GREEDY);
 
@@ -152,12 +156,12 @@ void VAMANA(std::string base_path, std::string query_path, std::string ground_pa
 void HCNNG(std::string base_path, std::string query_path, std::string ground_path) {
     weavess::Parameters parameters;
     parameters.set<unsigned>("S", 1000);
-    parameters.set<unsigned>("N", 10);
+    parameters.set<unsigned>("N", 200);
 
     auto *builder = new weavess::IndexBuilder();
     builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
-            -> init(weavess::INIT_HCNNG);
-    //-> eva(weavess::IndexBuilder::ENTRY_RAND, weavess::IndexBuilder::ROUTER_GREEDY);
+            -> init(weavess::INIT_HCNNG, false);
+            //-> search(weavess::IndexBuilder::ENTRY_RAND, weavess::IndexBuilder::ROUTER_GREEDY);
 
     std::cout << "Time cost: " << builder->GetBuildTime().count() << std::endl;
 }
@@ -190,13 +194,13 @@ void InitTest(std::string base_path, std::string query_path, std::string ground_
 
     auto builder = new weavess::IndexBuilder();
     builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
-            -> init(weavess::INIT_RANDOM)
-            //-> init(weavess::INIT_NN_DESCENT)
+            //-> init(weavess::INIT_RANDOM)
+            -> init(weavess::INIT_NN_DESCENT, false)
             //-> init(weavess::INIT_KDT)
             -> refine(weavess::REFINE_TEST, true)
             //-> refine(weavess::REFINE_NSG, false)
             //-> refine(weavess::REFINE_DPG, false)
-            //-> draw()
+            -> draw()
             -> search(weavess::ENTRY_RANDOM, weavess::ROUTER_GREEDY);
 
     std::cout << "Time cost: " << builder->GetBuildTime().count() << std::endl;
@@ -206,6 +210,9 @@ void InitTest(std::string base_path, std::string query_path, std::string ground_
 int main() {
     std::string test_path = R"(F:\ANNS\DATASET\test.txt)";
 
+//    std::string base_path = R"(F:\ANNS\DATASET\sift1M\sift_base.fvecs)";
+//    std::string query_path = R"(F:\ANNS\DATASET\sift1M\sift_query.fvecs)";
+//    std::string ground_path = R"(F:\ANNS\DATASET\sift1M\sift_groundtruth.ivecs)";
     std::string base_path = R"(F:\ANNS\DATASET\siftsmall\siftsmall_base.fvecs)";
     std::string query_path = R"(F:\ANNS\DATASET\siftsmall\siftsmall_query.fvecs)";
     std::string ground_path = R"(F:\ANNS\DATASET\siftsmall\siftsmall_groundtruth.ivecs)";
@@ -219,13 +226,13 @@ int main() {
     //HNSW(base_path, query_path, ground_path);
     //NSW(base_path, query_path, ground_path);
     //VAMANA(base_path, query_path, ground_path);
-    //HCNNG(base_path, query_path, ground_path);
+    HCNNG(base_path, query_path, ground_path);
 
     //IEH(base_path, query_path, ground_path);
     //NGT(base_path, query_path, ground_path);
     //SPTAG(base_path, query_path, ground_path);
 
-    InitTest(test_path, query_path, ground_path);
+    //InitTest(test_path, query_path, ground_path);
 
     return 0;
 }
