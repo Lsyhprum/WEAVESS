@@ -9,81 +9,6 @@
 namespace plt = matplotlibcpp;
 
 namespace weavess {
-    IndexBuilder *IndexBuilder::load(char *data_file, char *query_file, char *ground_file, Parameters &parameters) {
-        std::cout << "__LOAD DATA__" << std::endl;
-
-        auto *a = new ComponentLoad(final_index_);
-        a->LoadInner(data_file, query_file, ground_file, parameters);
-
-        e = std::chrono::high_resolution_clock::now();
-
-        std::cout << "base data len : " << final_index_->getBaseLen() << std::endl;
-        std::cout << "base data dim : " << final_index_->getBaseDim() << std::endl;
-        std::cout << "query data len : " << final_index_->getQueryLen() << std::endl;
-        std::cout << "query data dim : " << final_index_->getQueryDim() << std::endl;
-        std::cout << "ground truth data len : " << final_index_->getGroundLen() << std::endl;
-        std::cout << "ground truth data dim : " << final_index_->getGroundDim() << std::endl;
-
-        std::cout << final_index_->getParam().toString() << std::endl;
-
-        return this;
-    }
-
-    IndexBuilder *IndexBuilder::init(TYPE type) {
-        ComponentInit *a = nullptr;
-
-        if (type == INIT_NN_DESCENT) {
-            std::cout << "__INIT : NN-Descent__" << std::endl;
-            a = new ComponentInitNNDescent(final_index_);
-        } else if (type == INIT_KDT) {
-            std::cout << "__INIT : KDT__" << std::endl;
-            a = new ComponentInitKDT(final_index_);
-        } else if (type == INIT_RANDOM) {
-            std::cout << "__INIT : RANDOM__" << std::endl;
-            a = new ComponentInitRandom(final_index_);
-        } else if (type == INIT_HCNNG) {
-            std::cout << "__INIT : HCNNG__" << std::endl;
-            a = new ComponentInitHCNNG(final_index_);
-        } else {
-            std::cout << "__INIT : WRONG TYPE__" << std::endl;
-        }
-
-        a->InitInner();
-
-        e = std::chrono::high_resolution_clock::now();
-        std::cout << "__INIT FINISH__" << std::endl;
-
-        return this;
-    }
-
-    IndexBuilder *IndexBuilder::save_graph(char *graph_file) {
-        std::cout << "__SAVE__" << std::endl;
-
-        auto *a = new ComponentSerializationCompactGraph(final_index_);
-
-        a->SaveGraphInner(graph_file);
-
-        std::cout << "__SAVE FINISH__" << std::endl;
-
-        return this;
-    }
-
-    IndexBuilder *IndexBuilder::load_graph(char *graph_file) {
-        std::cout << "__LOAD__" << std::endl;
-        Index::CompactGraph().swap(final_index_->getFinalGraph());
-
-        auto *a = new ComponentSerializationCompactGraph(final_index_);
-
-        a->LoadGraphInner(graph_file);
-
-        std::cout << final_index_->getFinalGraph().size() << std::endl;
-        std::cout << final_index_->getFinalGraph()[0][0].size() << std::endl;
-
-        std::cout << "__LOAD FINISH__ : " << final_index_->getFinalGraph().size() << " " <<
-                  final_index_->getFinalGraph()[0][0].size() << std::endl;
-
-        return this;
-    }
 
     IndexBuilder *IndexBuilder::draw() {
 
@@ -111,6 +36,8 @@ namespace weavess {
         plt::scatter(x, y);
 
         plt::show();
+
+        return this;
     }
 
     void IndexBuilder::degree_info() {
@@ -181,6 +108,92 @@ namespace weavess {
         }
     }
 
+
+    IndexBuilder *IndexBuilder::load(char *data_file, char *query_file, char *ground_file, Parameters &parameters) {
+        std::cout << "__LOAD DATA__" << std::endl;
+
+        auto *a = new ComponentLoad(final_index_);
+        a->LoadInner(data_file, query_file, ground_file, parameters);
+
+        e = std::chrono::high_resolution_clock::now();
+
+        std::cout << "base data len : " << final_index_->getBaseLen() << std::endl;
+        std::cout << "base data dim : " << final_index_->getBaseDim() << std::endl;
+        std::cout << "query data len : " << final_index_->getQueryLen() << std::endl;
+        std::cout << "query data dim : " << final_index_->getQueryDim() << std::endl;
+        std::cout << "ground truth data len : " << final_index_->getGroundLen() << std::endl;
+        std::cout << "ground truth data dim : " << final_index_->getGroundDim() << std::endl;
+
+        std::cout << final_index_->getParam().toString() << std::endl;
+
+        return this;
+    }
+
+    IndexBuilder *IndexBuilder::init(TYPE type, bool debug) {
+        ComponentInit *a = nullptr;
+
+        if (type == INIT_NN_DESCENT) {
+            std::cout << "__INIT : NN-Descent__" << std::endl;
+            a = new ComponentInitNNDescent(final_index_);
+        } else if (type == INIT_KDT) {
+            std::cout << "__INIT : KDT__" << std::endl;
+            a = new ComponentInitKDT(final_index_);
+        } else if (type == INIT_RANDOM) {
+            std::cout << "__INIT : RANDOM__" << std::endl;
+            a = new ComponentInitRandom(final_index_);
+        } else if (type == INIT_HCNNG) {
+            std::cout << "__INIT : HCNNG__" << std::endl;
+            a = new ComponentInitHCNNG(final_index_);
+        } else {
+            std::cout << "__INIT : WRONG TYPE__" << std::endl;
+        }
+
+        a->InitInner();
+
+        e = std::chrono::high_resolution_clock::now();
+
+        if (debug) {
+            // degree
+            degree_info();
+
+            // 连通分量
+            conn_info();
+        }
+
+        std::cout << "__INIT FINISH__" << std::endl;
+
+        return this;
+    }
+
+    IndexBuilder *IndexBuilder::save_graph(char *graph_file) {
+        std::cout << "__SAVE__" << std::endl;
+
+        auto *a = new ComponentSerializationCompactGraph(final_index_);
+
+        a->SaveGraphInner(graph_file);
+
+        std::cout << "__SAVE FINISH__" << std::endl;
+
+        return this;
+    }
+
+    IndexBuilder *IndexBuilder::load_graph(char *graph_file) {
+        std::cout << "__LOAD__" << std::endl;
+        Index::CompactGraph().swap(final_index_->getFinalGraph());
+
+        auto *a = new ComponentSerializationCompactGraph(final_index_);
+
+        a->LoadGraphInner(graph_file);
+
+        std::cout << final_index_->getFinalGraph().size() << std::endl;
+        std::cout << final_index_->getFinalGraph()[0][0].size() << std::endl;
+
+        std::cout << "__LOAD FINISH__ : " << final_index_->getFinalGraph().size() << " " <<
+                  final_index_->getFinalGraph()[0][0].size() << std::endl;
+
+        return this;
+    }
+
     IndexBuilder *IndexBuilder::refine(TYPE type, bool debug) {
         ComponentRefine *a = nullptr;
 
@@ -224,7 +237,6 @@ namespace weavess {
         }
 
         a->RefineInner();
-
         if (debug) {
             // degree
             degree_info();
@@ -241,12 +253,12 @@ namespace weavess {
     }
 
     IndexBuilder *IndexBuilder::search(TYPE entry_type, TYPE route_type) {
-        std::cout << "__EVA__" << std::endl;
+        std::cout << "__SEARCH__" << std::endl;
 
         unsigned K = 10;
         unsigned L_start = 10;
         unsigned L_end = 500;
-        unsigned experiment_num = 15;
+        unsigned experiment_num = 10;
         unsigned LI = (L_end - L_start) / experiment_num;
 
         final_index_->getParam().set<unsigned>("K_search", K);
@@ -260,6 +272,10 @@ namespace weavess {
             a = new ComponentSearchEntryRand(final_index_);
         } else if (entry_type == ENTRY_NSG_CENTROID) {
             a = new ComponentSearchEntryCentroid(final_index_);
+        } else if (entry_type == SEARCH_ENTRY_NSSG_CENTROID) {
+            a = new ComponentSearchEntrySubCentroid(final_index_);
+        } else if (entry_type == SEARCH_ENTRY_RANDOM) {
+
         }
 
         // ROUTE
@@ -268,8 +284,9 @@ namespace weavess {
             b = new ComponentSearchRouteGreedy(final_index_);
         }
 
+        std::cout << "wtf" << std::endl;
         for (unsigned L = L_start; L <= L_end; L += LI) {
-
+            std::cout << "SEARCH_L : " << L << std::endl;
             if (L < K) {
                 std::cout << "search_L cannot be smaller than search_K! " << std::endl;
                 exit(-1);
@@ -318,6 +335,7 @@ namespace weavess {
         }
 
         e = std::chrono::high_resolution_clock::now();
+        std::cout << "__SEARCH FINISH__" << std::endl;
 
         return this;
     }

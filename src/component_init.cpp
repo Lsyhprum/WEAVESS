@@ -21,17 +21,19 @@ namespace weavess {
 
         index->getFinalGraph().resize(index->getBaseLen());
 
+        //std::cout << "init pool size : " << std::endl;
         for (unsigned i = 0; i < index->getBaseLen(); i++) {
             std::vector<std::vector<unsigned>> level_tmp;
             std::vector<unsigned> tmp;
 
             std::sort(index->graph_[i].pool.begin(), index->graph_[i].pool.end());
+            //std::cout << i << "|" << index->graph_[i].pool.size() << " ";
 
             for (unsigned j = 0; j < index->graph_[i].pool.size(); j++) {
                 tmp.push_back(index->graph_[i].pool[j].id);
             }
 
-            tmp.resize(index->K);
+            tmp.resize(index->K > index->graph_[i].pool.size() ? index->graph_[i].pool.size() : index->K);
             level_tmp.push_back(tmp);
             level_tmp.resize(1);
             index->getFinalGraph()[i] = level_tmp;
@@ -42,6 +44,8 @@ namespace weavess {
             std::vector<unsigned>().swap(index->graph_[i].rnn_new);
             std::vector<unsigned>().swap(index->graph_[i].rnn_new);
         }
+        //std::cout << std::endl;
+
         std::vector<Index::nhood>().swap(index->graph_);
     }
 
@@ -739,6 +743,13 @@ namespace weavess {
         }
     }
 
+
+    // HASH
+    void ComponentInitHash::InitInner() {
+
+    }
+
+
     // HCNNG
     void ComponentInitHCNNG::InitInner() {
 
@@ -751,7 +762,7 @@ namespace weavess {
         std::vector<std::vector<Index::Edge> > G(index->getBaseLen());
         std::vector<omp_lock_t> locks(index->getBaseLen());
 
-        // MST 图
+        // 初始化数据结构
         for (int i = 0; i < index->getBaseLen(); i++) {
             omp_init_lock(&locks[i]);
             G[i].reserve(max_mst_degree * num_cl);
@@ -772,40 +783,100 @@ namespace weavess {
         sort_edges(G);
         print_stats_graph(G);
 
+        // G - > final_graph
+        index->getFinalGraph().resize(index->getBaseLen());
+
+        for(int i = 0; i < index->getBaseLen(); i ++) {
+            std::vector<std::vector<unsigned>> level_tmp;
+            std::vector<unsigned> tmp;
+
+            int degree = G[i].size();
+
+            for(int j = 0; j < degree; j ++) {
+                tmp.push_back(G[i][j].v2);  // 已排序
+            }
+            level_tmp.push_back(tmp);
+            level_tmp.resize(1);
+            index->getFinalGraph()[i] = level_tmp;
+        }
+
+        index->Tn.resize(index->getBaseLen());
+
         for (size_t i = 0; i < index->getBaseLen(); i++) {
-            auto size = G[i].size();
-            long long min_diff = 1e6, min_diff_dim = -1;
-            for (size_t j = 0; j < index->getBaseDim(); j++) {
-                int lnum = 0, rnum = 0;
-                for (size_t k = 0; k < size; k++) {
-                    if (*(index->getBaseData() + G[i][k].v2 + j) < *(index->getBaseData() + i + j)) {
-                        lnum++;
-                    } else {
-                        rnum++;
-                    }
-                }
-                long long diff = lnum - rnum;
-                if (diff < 0) diff = -diff;
-                if (diff < min_diff) {
-                    min_diff = diff;
-                    min_diff_dim = j;
-                }
+            auto size = index->getFinalGraph()[i][0].size();
+
+            auto *root = new Index::Tnode();
+
+            for(int j = 0; j < size; j ++) {
+                root->val.push_back(index->getFinalGraph()[i][0][j]);
             }
 
-            index->Tn[i].div_dim = min_diff_dim;
-            for (size_t k = 0; k < size; k++) {
-                if (*(index->getBaseData() + G[i][k].v2 + min_diff_dim) < *(index->getBaseData() + i + min_diff_dim)) {
-                    index->Tn[i].left.push_back(G[i][k].v2);
-                } else {
-                    index->Tn[i].right.push_back(G[i][k].v2);
-                }
-            }
+            build_tree(i, root);
+
+            index->Tn[i] = *root;
         }
     }
 
     void ComponentInitHCNNG::SetConfigs() {
         index->S_hcnng = index->getParam().get<float>("S");
         index->N = index->getParam().get<unsigned>("N");
+    }
+
+    void ComponentInitHCNNG::build_tree(unsigned i, Index::Tnode *node) {
+        if(node == nullptr) return ;
+
+        long long min_diff =1e6, min_diff_dim = -1;
+
+        // 获取最为均分的维度
+        for (size_t j = 0; j < index->getBaseDim(); j++) {
+            int lnum = 0, rnum = 0;
+            for (size_t k = 0; k < node->val.size(); k++) {
+                if((index->getBaseData() + node->val[k] * index->getBaseDim())[j] < (index->getBaseData() + i * index->getBaseDim())[j] ) {
+                    lnum ++;
+                }else {
+                    rnum ++;
+                }
+            }
+            long long diff = lnum - rnum;
+            if (diff < 0) diff = -diff;
+            if (diff < min_diff) {
+                min_diff = diff;
+                min_diff_dim = j;
+            }
+        }
+        node->div_dim = min_diff_dim;
+
+        auto *left = new Index::Tnode();
+        auto *right = new Index::Tnode();
+        bool lflag = false;
+        bool rflag = false;
+
+        for (size_t k = 0; k < node->val.size(); k++) {
+            if (*(index->getBaseData() + index->getFinalGraph()[i][0][k] + min_diff_dim) < *(index->getBaseData() + i + min_diff_dim)) {
+                lflag = true;
+                left->val.push_back(index->getFinalGraph()[i][0][k]);
+            } else {
+                rflag = true;
+                right->val.push_back(index->getFinalGraph()[i][0][k]);
+            }
+        }
+
+        if(!lflag || !rflag) {      // 无法区分，作为叶子节点
+            node->isLeaf = true;
+
+            node->left = nullptr;
+            node->right = nullptr;
+        }else{
+            node->isLeaf = false;
+
+            build_tree(i, left);
+            node->left = left;
+            build_tree(i, right);
+            node->right = right;
+
+            std::vector<unsigned>().swap(node->val);
+        }
+
     }
 
     int ComponentInitHCNNG::rand_int(const int &min, const int &max) {
@@ -822,7 +893,11 @@ namespace weavess {
         std::vector<std::vector<Index::Edge >> MST(N);
         auto *disjset = new Index::DisjointSet(N);
         float cost = 0;
+        //std::cout << "www" << edges.size() << std::endl;
         for (Index::Edge &e : edges) {
+            //std::cout << "111 " << (disjset->find(e.v1) != disjset->find(e.v2)) << std::endl;
+            //std::cout << "111 " << (MST[e.v1].size() < max_mst_degree) << std::endl;
+            //std::cout << "111 " << (MST[e.v2].size() < max_mst_degree) << std::endl;
             if (disjset->find(e.v1) != disjset->find(e.v2) && MST[e.v1].size() < max_mst_degree &&
                 MST[e.v2].size() < max_mst_degree) {
                 MST[e.v1].push_back(e);
@@ -854,6 +929,7 @@ namespace weavess {
                             index->getBaseData() + idx_points[left + i] * index->getBaseDim(),
                             index->getBaseData() + idx_points[left + j] * index->getBaseDim(),
                             (unsigned) index->getBaseDim());
+                    full.emplace_back(i, j, dist);
                 }
 
         }
@@ -862,75 +938,75 @@ namespace weavess {
     }
 
     bool check_in_neighbors(int u, std::vector<Index::Edge> &neigh) {
-        for (int i = 0; i < neigh.size(); i++)
+        for (int i = 0; i < neigh.size(); i++){
             if (neigh[i].v2 == u)
                 return true;
+        }
         return false;
     }
 
-    void ComponentInitHCNNG::create_clusters(int *idx_points, int left, int right,
-                                             std::vector<std::vector<Index::Edge> > &graph, int minsize_cl,
-                                             std::vector<omp_lock_t> &locks, int max_mst_degree) {
+    void ComponentInitHCNNG::create_clusters(int *idx_points, int left, int right, std::vector<std::vector<Index::Edge> > &graph,
+                                             int minsize_cl, std::vector<omp_lock_t> &locks, int max_mst_degree){
         int num_points = right - left + 1;
-        std::cout << "points num : " << num_points << std::endl;
-        if (num_points < minsize_cl) {
+
+        if(num_points<minsize_cl){
             std::vector<std::vector<Index::Edge> > mst = create_exact_mst(idx_points, left, right, max_mst_degree);
-            for (int i = 0; i < num_points; i++) {
-                for (int j = 0; j < mst[i].size(); j++) {
-                    omp_set_lock(&locks[idx_points[left + i]]);
-                    if (!check_in_neighbors(idx_points[left + mst[i][j].v2], graph[idx_points[left + i]]))
-                        graph[idx_points[left + i]].push_back(
-                                Index::Edge(idx_points[left + i], idx_points[left + mst[i][j].v2], mst[i][j].weight));
-                    omp_unset_lock(&locks[idx_points[left + i]]);
+            for(int i=0; i<num_points; i++){
+                //std::cout << "w1" << " " << mst.size() << std::endl;
+                //std::cout << "w2" << " " << mst[2].size() <<std::endl;
+                for(int j=0; j<mst[i].size(); j++){
+                    omp_set_lock(&locks[idx_points[left+i]]);
+                    if(!check_in_neighbors(idx_points[left+mst[i][j].v2], graph[idx_points[left+i]])){
+                        graph[idx_points[left+i]].push_back(Index::Edge(idx_points[left+i], idx_points[left+mst[i][j].v2], mst[i][j].weight));
+                    }
+
+                    omp_unset_lock(&locks[idx_points[left+i]]);
                 }
             }
-        } else {
+        }else{
+            // 随机抽取两点进行分簇
             int x = rand_int(left, right);
             int y = rand_int(left, right);
-            while (y == x) y = rand_int(left, right);
+            while(y==x) y = rand_int(left, right);
 
-            std::vector<std::pair<float, int> > dx(num_points);
-            std::vector<std::pair<float, int> > dy(num_points);
+            std::vector<std::pair<float,int> > dx(num_points);
+            std::vector<std::pair<float,int> > dy(num_points);
             std::unordered_set<int> taken;
-            for (int i = 0; i < num_points; i++) {
-                float dist = index->getDist()->compare(index->getBaseData() + idx_points[x] * index->getBaseDim(),
-                                                       index->getBaseData() +
-                                                       idx_points[left + i] * index->getBaseDim(),
-                                                       (unsigned) index->getBaseDim());
-                dx[i] = std::make_pair(dist, idx_points[left + i]);
-
-                dist = index->getDist()->compare(index->getBaseData() + idx_points[y] * index->getBaseDim(),
-                                                 index->getBaseData() + idx_points[left + i] * index->getBaseDim(),
-                                                 (unsigned) index->getBaseDim());
-                dy[i] = std::make_pair(dist, idx_points[left + i]);
+            for(int i=0; i<num_points; i++){
+                dx[i] = std::make_pair(index->getDist()->compare(index->getBaseData() + index->getBaseDim() * idx_points[x],
+                                          index->getBaseData() + index->getBaseDim() * idx_points[left+i],
+                                          index->getBaseDim()), idx_points[left+i]);
+                dy[i] = std::make_pair(index->getDist()->compare(index->getBaseData() + index->getBaseDim() * idx_points[y],
+                                          index->getBaseData() + index->getBaseDim() * idx_points[left+i],
+                                          index->getBaseDim()), idx_points[left+i]);
             }
             sort(dx.begin(), dx.end());
             sort(dy.begin(), dy.end());
             int i = 0, j = 0, turn = rand_int(0, 1), p = left, q = right;
-            while (i < num_points || j < num_points) {
-                if (turn == 0) {
-                    if (i < num_points) {
-                        if (not_in_set(dx[i].second, taken)) {
+            while(i<num_points || j<num_points){
+                if(turn == 0){
+                    if(i<num_points){
+                        if(not_in_set(dx[i].second, taken)){
                             idx_points[p] = dx[i].second;
                             taken.insert(dx[i].second);
                             p++;
-                            turn = (turn + 1) % 2;
+                            turn = (turn+1)%2;
                         }
                         i++;
-                    } else {
-                        turn = (turn + 1) % 2;
+                    }else{
+                        turn = (turn+1)%2;
                     }
-                } else {
-                    if (j < num_points) {
-                        if (not_in_set(dy[j].second, taken)) {
+                }else{
+                    if(j<num_points){
+                        if(not_in_set(dy[j].second, taken)){
                             idx_points[q] = dy[j].second;
                             taken.insert(dy[j].second);
                             q--;
-                            turn = (turn + 1) % 2;
+                            turn = (turn+1)%2;
                         }
                         j++;
-                    } else {
-                        turn = (turn + 1) % 2;
+                    }else{
+                        turn = (turn+1)%2;
                     }
                 }
             }
@@ -938,10 +1014,10 @@ namespace weavess {
             dx.clear();
             dy.clear();
             taken.clear();
-            std::vector<std::pair<float, int> >().swap(dx);
-            std::vector<std::pair<float, int> >().swap(dy);
+            std::vector<std::pair<float,int> >().swap(dx);
+            std::vector<std::pair<float,int> >().swap(dy);
 
-            create_clusters(idx_points, left, p - 1, graph, minsize_cl, locks, max_mst_degree);
+            create_clusters(idx_points, left, p-1, graph, minsize_cl, locks, max_mst_degree);
             create_clusters(idx_points, p, right, graph, minsize_cl, locks, max_mst_degree);
         }
     }
