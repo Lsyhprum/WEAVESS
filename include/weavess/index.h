@@ -491,8 +491,11 @@ namespace weavess {
 
         struct Tnode {
             unsigned div_dim;
-            std::vector <unsigned> left;
-            std::vector <unsigned> right;
+            Tnode *left;
+            Tnode *right;
+            bool isLeaf;
+
+            std::vector<unsigned> val;
         };
         std::vector <Tnode> Tn;
 

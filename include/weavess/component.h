@@ -132,6 +132,8 @@ namespace weavess {
     private:
         void SetConfigs();
 
+        void build_tree(unsigned id, Index::Tnode *node);
+
         int rand_int(const int & min, const int & max);
 
         std::vector<std::vector< Index::Edge > >  create_exact_mst(int *idx_points, int left, int right, int max_mst_degree);
@@ -557,6 +559,13 @@ namespace weavess {
     class ComponentSearchRouteGreedy : public ComponentSearchRoute {
     public:
         explicit ComponentSearchRouteGreedy(Index *index) : ComponentSearchRoute(index) {}
+
+        void RouteInner(unsigned query, std::vector<Index::Neighbor> &pool, std::vector<unsigned> &res) override;
+    };
+
+    class ComponentSearchRouteGuide : public ComponentSearchRoute {
+    public:
+        explicit ComponentSearchRouteGuide(Index *index) : ComponentSearchRoute(index) {}
 
         void RouteInner(unsigned query, std::vector<Index::Neighbor> &pool, std::vector<unsigned> &res) override;
     };

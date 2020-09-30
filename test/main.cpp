@@ -160,8 +160,8 @@ void HCNNG(std::string base_path, std::string query_path, std::string ground_pat
 
     auto *builder = new weavess::IndexBuilder();
     builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
-            -> init(weavess::INIT_HCNNG, false);
-            //-> search(weavess::IndexBuilder::ENTRY_RAND, weavess::IndexBuilder::ROUTER_GREEDY);
+            -> init(weavess::INIT_HCNNG, false)
+            -> search(weavess::ENTRY_RANDOM, weavess::ROUTE_GUIDE);
 
     std::cout << "Time cost: " << builder->GetBuildTime().count() << std::endl;
 }
@@ -171,6 +171,8 @@ void IEH(std::string base_path, std::string query_path, std::string ground_path)
 void NGT(std::string base_path, std::string query_path, std::string ground_path) {}
 
 void SPTAG(std::string base_path, std::string query_path, std::string ground_path) {}
+
+void FANNG(std::string base_path, std::string query_path, std::string ground_path) {}
 
 void InitTest(std::string base_path, std::string query_path, std::string ground_path) {
     weavess::Parameters parameters;

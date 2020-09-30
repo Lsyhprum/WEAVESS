@@ -190,6 +190,8 @@ Please make pull requests against the `dev` branch.
 -[ ] HCNNG
 
 
+* route pool 内元素 缺失 flag !!! 重要
+
 * 整体评价
     * 搜索性能
         * 评价指标：召回率、Speed-up、(QPS _ 需修改代码支持 SIMD)
@@ -206,7 +208,11 @@ Please make pull requests against the `dev` branch.
 
 * 评价指标 ： 
     * 召回率、 Speed-up
-* route 缺失 flag
+    
+    
+
+
+
 * IEH 实现
 * 重写 HCNNG MST 算法， 去掉原数据结构
 * 分离算法接口与 IndexBuilder 接口
@@ -215,6 +221,7 @@ Please make pull requests against the `dev` branch.
 * 检查参数是否合法 （nmslib Check）
 * id 数据类型 （nmslib idtype）
 
+* init 是否排序 、 entry -> route 是否排序
 * Random ---> 全部random / random 入口点 + 一次扩散
 * 消除重复代码
 * KGraph 、 NSG 、 NSSG 、DPG 、EFANNA 搜索测试

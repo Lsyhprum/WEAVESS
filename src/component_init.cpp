@@ -783,40 +783,100 @@ namespace weavess {
         sort_edges(G);
         print_stats_graph(G);
 
-//        for (size_t i = 0; i < index->getBaseLen(); i++) {
-//            auto size = G[i].size();
-//            long long min_diff = 1e6, min_diff_dim = -1;
-//            for (size_t j = 0; j < index->getBaseDim(); j++) {
-//                int lnum = 0, rnum = 0;
-//                for (size_t k = 0; k < size; k++) {
-//                    if (*(index->getBaseData() + G[i][k].v2 + j) < *(index->getBaseData() + i + j)) {
-//                        lnum++;
-//                    } else {
-//                        rnum++;
-//                    }
-//                }
-//                long long diff = lnum - rnum;
-//                if (diff < 0) diff = -diff;
-//                if (diff < min_diff) {
-//                    min_diff = diff;
-//                    min_diff_dim = j;
-//                }
-//            }
-//
-//            index->Tn[i].div_dim = min_diff_dim;
-//            for (size_t k = 0; k < size; k++) {
-//                if (*(index->getBaseData() + G[i][k].v2 + min_diff_dim) < *(index->getBaseData() + i + min_diff_dim)) {
-//                    index->Tn[i].left.push_back(G[i][k].v2);
-//                } else {
-//                    index->Tn[i].right.push_back(G[i][k].v2);
-//                }
-//            }
-//        }
+        // G - > final_graph
+        index->getFinalGraph().resize(index->getBaseLen());
+
+        for(int i = 0; i < index->getBaseLen(); i ++) {
+            std::vector<std::vector<unsigned>> level_tmp;
+            std::vector<unsigned> tmp;
+
+            int degree = G[i].size();
+
+            for(int j = 0; j < degree; j ++) {
+                tmp.push_back(G[i][j].v2);  // 已排序
+            }
+            level_tmp.push_back(tmp);
+            level_tmp.resize(1);
+            index->getFinalGraph()[i] = level_tmp;
+        }
+
+        index->Tn.resize(index->getBaseLen());
+
+        for (size_t i = 0; i < index->getBaseLen(); i++) {
+            auto size = index->getFinalGraph()[i][0].size();
+
+            auto *root = new Index::Tnode();
+
+            for(int j = 0; j < size; j ++) {
+                root->val.push_back(index->getFinalGraph()[i][0][j]);
+            }
+
+            build_tree(i, root);
+
+            index->Tn[i] = *root;
+        }
     }
 
     void ComponentInitHCNNG::SetConfigs() {
         index->S_hcnng = index->getParam().get<float>("S");
         index->N = index->getParam().get<unsigned>("N");
+    }
+
+    void ComponentInitHCNNG::build_tree(unsigned i, Index::Tnode *node) {
+        if(node == nullptr) return ;
+
+        long long min_diff =1e6, min_diff_dim = -1;
+
+        // 获取最为均分的维度
+        for (size_t j = 0; j < index->getBaseDim(); j++) {
+            int lnum = 0, rnum = 0;
+            for (size_t k = 0; k < node->val.size(); k++) {
+                if((index->getBaseData() + node->val[k] * index->getBaseDim())[j] < (index->getBaseData() + i * index->getBaseDim())[j] ) {
+                    lnum ++;
+                }else {
+                    rnum ++;
+                }
+            }
+            long long diff = lnum - rnum;
+            if (diff < 0) diff = -diff;
+            if (diff < min_diff) {
+                min_diff = diff;
+                min_diff_dim = j;
+            }
+        }
+        node->div_dim = min_diff_dim;
+
+        auto *left = new Index::Tnode();
+        auto *right = new Index::Tnode();
+        bool lflag = false;
+        bool rflag = false;
+
+        for (size_t k = 0; k < node->val.size(); k++) {
+            if (*(index->getBaseData() + index->getFinalGraph()[i][0][k] + min_diff_dim) < *(index->getBaseData() + i + min_diff_dim)) {
+                lflag = true;
+                left->val.push_back(index->getFinalGraph()[i][0][k]);
+            } else {
+                rflag = true;
+                right->val.push_back(index->getFinalGraph()[i][0][k]);
+            }
+        }
+
+        if(!lflag || !rflag) {      // 无法区分，作为叶子节点
+            node->isLeaf = true;
+
+            node->left = nullptr;
+            node->right = nullptr;
+        }else{
+            node->isLeaf = false;
+
+            build_tree(i, left);
+            node->left = left;
+            build_tree(i, right);
+            node->right = right;
+
+            std::vector<unsigned>().swap(node->val);
+        }
+
     }
 
     int ComponentInitHCNNG::rand_int(const int &min, const int &max) {
