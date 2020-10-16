@@ -31,7 +31,7 @@ void NSG(std::string base_path, std::string query_path, std::string ground_path)
     weavess::Parameters parameters;
     parameters.set<unsigned>("K", 200);
     parameters.set<unsigned>("L", 200);
-    parameters.set<unsigned>("ITER", 1);
+    parameters.set<unsigned>("ITER", 10);
     parameters.set<unsigned>("S", 10);
     parameters.set<unsigned>("R", 100);
 
@@ -166,7 +166,9 @@ void HCNNG(std::string base_path, std::string query_path, std::string ground_pat
     std::cout << "Time cost: " << builder->GetBuildTime().count() << std::endl;
 }
 
-void IEH(std::string base_path, std::string query_path, std::string ground_path) {}
+void IEH(std::string base_path, std::string query_path, std::string ground_path) {
+
+}
 
 void NGT(std::string base_path, std::string query_path, std::string ground_path) {}
 
@@ -210,16 +212,19 @@ void InitTest(std::string base_path, std::string query_path, std::string ground_
 
 
 int main() {
-    std::string test_path = R"(F:\ANNS\DATASET\test.txt)";
+//    std::string test_path = R"(F:\ANNS\DATASET\test.txt)";
 
+    std::string base_path = R"(F:\ANNS\DATASET\sift1M\sift_sample_base.fvecs)";
+    std::string query_path = R"(F:\ANNS\DATASET\sift1M\sift_sample_query.fvecs)";
+    std::string ground_path = R"(F:\ANNS\DATASET\sift1M\sift_sample_groundtruth.ivecs)";
 //    std::string base_path = R"(F:\ANNS\DATASET\sift1M\sift_base.fvecs)";
 //    std::string query_path = R"(F:\ANNS\DATASET\sift1M\sift_query.fvecs)";
 //    std::string ground_path = R"(F:\ANNS\DATASET\sift1M\sift_groundtruth.ivecs)";
-    std::string base_path = R"(F:\ANNS\DATASET\siftsmall\siftsmall_base.fvecs)";
-    std::string query_path = R"(F:\ANNS\DATASET\siftsmall\siftsmall_query.fvecs)";
-    std::string ground_path = R"(F:\ANNS\DATASET\siftsmall\siftsmall_groundtruth.ivecs)";
+//    std::string base_path = R"(F:\ANNS\DATASET\siftsmall\siftsmall_base.fvecs)";
+//    std::string query_path = R"(F:\ANNS\DATASET\siftsmall\siftsmall_query.fvecs)";
+//    std::string ground_path = R"(F:\ANNS\DATASET\siftsmall\siftsmall_groundtruth.ivecs)";
 
-    //KGraph(base_path, query_path, ground_path);
+    KGraph(base_path, query_path, ground_path);
     //NSG(base_path, query_path, ground_path);
     //NSSG(base_path, query_path, ground_path);
     //DPG(base_path, query_path, ground_path);
@@ -228,9 +233,9 @@ int main() {
     //HNSW(base_path, query_path, ground_path);
     //NSW(base_path, query_path, ground_path);
     //VAMANA(base_path, query_path, ground_path);
-    HCNNG(base_path, query_path, ground_path);
-
+    //HCNNG(base_path, query_path, ground_path);
     //IEH(base_path, query_path, ground_path);
+
     //NGT(base_path, query_path, ground_path);
     //SPTAG(base_path, query_path, ground_path);
 
