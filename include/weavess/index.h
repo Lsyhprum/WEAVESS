@@ -505,7 +505,30 @@ namespace weavess {
         unsigned N = 0;
     };
 
-    class Index : public NNDescent, public NSG, public NSSG, public DPG, public EFANNA, public HNSW, public VAMANA, public HCNNG, public NSW {
+    class IEH {
+    public:
+        template<typename T>
+        struct Candidate2 {
+            size_t row_id;
+            T distance;
+            Candidate2(const size_t row_id, const T distance): row_id(row_id), distance(distance) { }
+
+            bool operator >(const Candidate2& rhs) const {
+                if (this->distance == rhs.distance) {
+                    return this->row_id > rhs.row_id;
+                }
+                return this->distance > rhs.distance;
+            }
+        };
+
+        typedef std::vector<std::vector<float> > Matrix;
+        typedef std::vector<unsigned int> Codes;
+        typedef std::unordered_map<unsigned int, std::vector<unsigned int> > HashBucket;
+        typedef std::vector<HashBucket> HashTable;
+        typedef std::set<Candidate2<float>, std::greater<Candidate2<float> > > CandidateHeap2;
+    };
+
+    class Index : public NNDescent, public NSG, public NSSG, public DPG, public EFANNA, public HNSW, public VAMANA, public HCNNG, public NSW, public IEH {
     public:
 
         explicit Index() {

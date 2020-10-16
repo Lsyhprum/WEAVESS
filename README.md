@@ -71,6 +71,8 @@ We provide a analysis of above algorithms from these aspects :
 | Crawl     | 400 | 420 |  12  | 15 | 100 |
 | GloVe-100 | 400 | 420 |  12  | 20 | 200 |
 
+<div align="center"> <img src="./pic/kgraph_compare.png" width="300"/> </div><br>
+
 ### EFANNA
 
 * **nTrees** : 'nTrees' is the number of trees used to build the graph (larger is more accurate but slower)
@@ -93,10 +95,11 @@ We provide a analysis of above algorithms from these aspects :
 + **C_nsg** : controls the maximum candidate pool size during NSG contruction.
 
 | Dataset |  L_nsg |  R_nsg |  C_nsg  |
-|:-------:|:--:|:--:|:---:|
-|  SIFT1M | 40 | 50 | 500 |
-|  GIST1M | 60 | 70 | 500 |
+|:-------:|:------:|:------:|:-------:|
+|  SIFT1M |   40   |    50  |   500   |
+|  GIST1M |   60   |    70  |   500   |
 
+<div align="center"> <img src="./pic/nsg_compare.png" width="300"/> </div><br>
 
 ### NSSG
 
@@ -173,7 +176,7 @@ Please make pull requests against the `dev` branch.
 
 -[ ] DPG
 
--[ ] NSG
+-[ x ] NSG
 
 -[ ] NSSG
 
@@ -229,3 +232,7 @@ Please make pull requests against the `dev` branch.
 * HNSW final_graph 
 * VAMANA 实现区别 ：论文构建中添加反向边， 本项目实现论文后添加反向边
 * InterInsert
+
+* KGraph : nndescent 后近邻数量 K ？ graph.size()
+
+    * 随机初始化 --> 并行

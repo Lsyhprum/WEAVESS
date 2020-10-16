@@ -256,7 +256,7 @@ namespace weavess {
         std::cout << "__SEARCH__" << std::endl;
 
         unsigned K = 10;
-        unsigned L_start = 10;
+        unsigned L_start = K;
         unsigned L_end = 500;
         unsigned experiment_num = 10;
         unsigned LI = (L_end - L_start) / experiment_num;
@@ -284,7 +284,6 @@ namespace weavess {
             b = new ComponentSearchRouteGreedy(final_index_);
         }
 
-        std::cout << "wtf" << std::endl;
         for (unsigned L = L_start; L <= L_end; L += LI) {
             std::cout << "SEARCH_L : " << L << std::endl;
             if (L < K) {

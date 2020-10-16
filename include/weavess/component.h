@@ -121,6 +121,17 @@ namespace weavess {
         explicit ComponentInitHash(Index *index) : ComponentInit(index) {}
 
         void InitInner() override;
+
+    private:
+        void LoadHashFunc(char *filename, std::vector<std::vector<float> > func);
+
+        void LoadBaseCode(char* filename, std::vector<unsigned int>& base);
+
+        void BuildHashTable(int upbits, int lowbits, Index::Codes base ,Index::HashTable& tb);
+
+        void QueryToCode(Index::Matrix query, Index::Matrix func, Index::Codes& querycode);
+
+        void HashTest(int upbits,int lowbits, Index::Codes querycode, Index::HashTable tb, std::vector<std::vector<int> >& cands);
     };
 
     class ComponentInitHCNNG : public ComponentInit {

@@ -5,13 +5,21 @@
 #include "weavess/component.h"
 
 #define _CONTROL_NUM 100
+
 #define not_in_set(_elto, _set) (_set.find(_elto)==_set.end())
+
+#define MAX_ROWSIZE 1024
+#define HASH_RADIUS 1
+#define DEPTH 16 //smaller than code length
+#define INIT_NUM 5500
+#define POOL_SIZE 1100
 
 namespace weavess {
 
-
     // NN-Descent
     void ComponentInitNNDescent::InitInner() {
+
+        // K L ITER S R
         SetConfigs();
 
         // 添加随机点作为近邻
@@ -19,24 +27,23 @@ namespace weavess {
 
         NNDescent();
 
+        // graph_ -> final_graph
         index->getFinalGraph().resize(index->getBaseLen());
-
-        //std::cout << "init pool size : " << std::endl;
         for (unsigned i = 0; i < index->getBaseLen(); i++) {
             std::vector<std::vector<unsigned>> level_tmp;
             std::vector<unsigned> tmp;
 
             std::sort(index->graph_[i].pool.begin(), index->graph_[i].pool.end());
-            //std::cout << i << "|" << index->graph_[i].pool.size() << " ";
 
-            for (unsigned j = 0; j < index->graph_[i].pool.size(); j++) {
-                tmp.push_back(index->graph_[i].pool[j].id);
-            }
+            for (auto & j : index->graph_[i].pool)
+                tmp.push_back(j.id);
 
             tmp.resize(index->K > index->graph_[i].pool.size() ? index->graph_[i].pool.size() : index->K);
             level_tmp.push_back(tmp);
             level_tmp.resize(1);
+
             index->getFinalGraph()[i] = level_tmp;
+
             // 内存释放
             std::vector<Index::Neighbor>().swap(index->graph_[i].pool);
             std::vector<unsigned>().swap(index->graph_[i].nn_new);
@@ -44,8 +51,8 @@ namespace weavess {
             std::vector<unsigned>().swap(index->graph_[i].rnn_new);
             std::vector<unsigned>().swap(index->graph_[i].rnn_new);
         }
-        //std::cout << std::endl;
 
+        // 内存释放
         std::vector<Index::nhood>().swap(index->graph_);
     }
 
@@ -746,7 +753,235 @@ namespace weavess {
 
     // HASH
     void ComponentInitHash::InitInner() {
+//        Index::Matrix func;
+//        Index::Codes basecode;
+//        Index::Codes querycode;
+//        Index::Matrix train;
+//        Index::Matrix test;
+//
+//        LoadHashFunc(argv[1],func);
+//        LoadBaseCode(argv[2],basecode);
+//
+//        int UpperBits = 8;
+//        int LowerBits = 8; //change with code length:code length = up + low;
+//        Index::HashTable tb;
+//        BuildHashTable(UpperBits,LowerBits,basecode,tb);
+//        std::cout<<"build hash table complete"<<std::endl;
+//        clock_t s,f;
+//        s = clock();
+//
+//        QueryToCode(test, func, querycode);
+//        std::cout<<"convert query code complete"<<std::endl;
+//        std::vector<std::vector<int> > hashcands;
+//        HashTest(UpperBits, LowerBits, querycode, tb, hashcands);
+//        std::cout<<"hash candidates ready"<<std::endl;
+//
+//        f = clock();
+//        std::cout<<"initial time : "<<(f-s)*1.0/CLOCKS_PER_SEC<<" seconds"<<std::endl;
+//
+//
+//        std::vector<Index::CandidateHeap2 > knntable;
+//        LoadKnnTable(argv[5],knntable);
+//        std::cout<<"load knn graph complete"<<std::endl;
+//        //GNN
+//
+//        s = clock();
+//        std::vector<Index::CandidateHeap2 > res;
+//        for(size_t i = 0; i < hashcands.size(); i++){
+//            Index::CandidateHeap2 cands;
+//            for(size_t j = 0; j < hashcands[i].size(); j++){
+//                int neighbor = hashcands[i][j];
+//                Index::Candidate2<float> c(neighbor, index->getDist()->compare(&test[i][0], &train[neighbor][0], index->getBaseDim()));
+//                cands.insert(c);
+//                if(cands.size() > POOL_SIZE)cands.erase(cands.begin());
+//            }
+//            res.push_back(cands);
+//        }
+//        //iteration
+//        int expand = atoi(argv[6]);
+//        int iterlimit = atoi(argv[7]);
+//        for(size_t i = 0; i < res.size(); i++){
+//            int niter = 0;
+//            while(niter++ < iterlimit){
+//                Index::CandidateHeap2::reverse_iterator it = res[i].rbegin();
+//                std::vector<int> ids;
+//                for(int j = 0; it != res[i].rend() && j < expand; it++, j++){
+//                    int neighbor = it->row_id;
+//                    Index::CandidateHeap2::reverse_iterator nnit = knntable[neighbor].rbegin();
+//                    for(int k = 0; nnit != knntable[neighbor].rend() && k < expand; nnit++, k++){
+//                        int nn = nnit->row_id;
+//                        ids.push_back(nn);
+//                    }
+//                }
+//                for(size_t j = 0; j < ids.size(); j++){
+//                    Index::Candidate2<float> c(ids[j], index->getDist()->compare(&test[i][0], &train[ids[j]][0], test[i].size()));
+//                    res[i].insert(c);
+//                    if(res[i].size() > POOL_SIZE)res[i].erase(res[i].begin());
+//                }
+//            }//cout<<i<<endl;
+//        }
+//        std::cout<<"GNNS complete "<<std::endl;
+//        f = clock();
+//        std::cout<<"GNNS time : "<<(f-s)*1.0/CLOCKS_PER_SEC<<" seconds"<<std::endl;
+//
+//        index->getFinalGraph().resize(index->getBaseLen());
+//
+//        int knn_k = atoi(argv[8]);
+//        for(size_t i = 0; i < res.size(); i++){
+//            auto it = res[i].rbegin();
+//            std::vector<std::vector<unsigned>> level_tmp;
+//            std::vector<unsigned> vtmp;
+//            level_tmp.push_back(vtmp);
+//            for(int j = 0; it != res[i].rend() && j < knn_k; it++, j++){
+//                vtmp.push_back(it->row_id);
+//            }
+//            index->getFinalGraph()[i] = level_tmp;
+//        }
+    }
 
+    void StringSplit(std::string src, std::vector<std::string>& des){
+        int start = 0;
+        int end = 0;
+        for(size_t i = 0; i < src.length(); i++){
+            if(src[i]==' '){
+                end = i;
+                //if(end>start)cout<<start<<" "<<end<<" "<<src.substr(start,end-start)<<endl;
+                des.push_back(src.substr(start,end-start));
+                start = i+1;
+            }
+        }
+    }
+
+    void ComponentInitHash::LoadHashFunc(char *filename, std::vector<std::vector<float> > func) {
+        std::ifstream in(filename);
+        char buf[MAX_ROWSIZE];
+
+        while(!in.eof()){
+            in.getline(buf,MAX_ROWSIZE);
+            std::string strtmp(buf);
+            std::vector<std::string> strs;
+            StringSplit(strtmp,strs);
+            if(strs.size()<2)continue;
+            std::vector<float> ftmp;
+            for(size_t i = 0; i < strs.size(); i++){
+                float f = atof(strs[i].c_str());
+                ftmp.push_back(f);
+                //cout<<f<<" ";
+            }//cout<<endl;
+            //cout<<strtmp<<endl;
+            func.push_back(ftmp);
+        }//cout<<func.size()<<endl;
+        in.close();
+    }
+
+    void ComponentInitHash::LoadBaseCode(char* filename, std::vector<unsigned int>& base){
+        std::ifstream in(filename);
+        char buf[MAX_ROWSIZE];
+        //int cnt = 0;
+        while(!in.eof()){
+            in.getline(buf,MAX_ROWSIZE);
+            std::string strtmp(buf);
+            std::vector<std::string> strs;
+            StringSplit(strtmp,strs);
+            if(strs.size()<2)continue;
+            unsigned int codetmp = 0;
+            for(size_t i = 0; i < strs.size(); i++){
+                unsigned int c = atoi(strs[i].c_str());
+                codetmp = codetmp << 1;
+                codetmp += c;
+
+            }//if(cnt++ > 999998){cout<<strs.size()<<" "<<buf<<" "<<codetmp<<endl;}
+            base.push_back(codetmp);
+        }//cout<<base.size()<<endl;
+        in.close();
+    }
+
+    void ComponentInitHash::BuildHashTable(int upbits, int lowbits, Index::Codes base ,Index::HashTable& tb){
+        tb.clear();
+        for(int i = 0; i < (1 << upbits); i++){
+            Index::HashBucket emptyBucket;
+            tb.push_back(emptyBucket);
+        }
+        for(size_t i = 0; i < base.size(); i ++){
+            unsigned int idx1 = base[i] >> lowbits;
+            unsigned int idx2 = base[i] - (idx1 << lowbits);
+            if(tb[idx1].find(idx2) != tb[idx1].end()){
+                tb[idx1][idx2].push_back(i);
+            }else{
+                std::vector<unsigned int> v;
+                v.push_back(i);
+                tb[idx1].insert(make_pair(idx2,v));
+            }
+        }
+    }
+
+    bool MatrixMultiply(Index::Matrix A, Index::Matrix B, Index::Matrix& C){
+        if(A.size() == 0 || B.size() == 0){std::cout<<"matrix a or b size 0"<<std::endl;return false;}
+        else if(A[0].size() != B.size()){
+            std::cout<<"--error: matrix a, b dimension not agree"<<std::endl;
+            std::cout<<"A"<<A.size()<<" * "<<A[0].size()<<std::endl;
+            std::cout<<"B"<<B.size()<<" * "<<B[0].size()<<std::endl;
+            return false;
+        }
+        for(size_t i = 0; i < A.size(); i++){
+            std::vector<float> tmp;
+            for(size_t j = 0; j < B[0].size(); j++){
+                float fnum = 0;
+                for(size_t k=0; k < B.size(); k++)fnum += A[i][k] * B[k][j];
+                tmp.push_back(fnum);
+            }
+            C.push_back(tmp);
+        }
+        return true;
+    }
+    void ComponentInitHash::QueryToCode(Index::Matrix query, Index::Matrix func, Index::Codes& querycode){
+        Index::Matrix Z;
+        if(!MatrixMultiply(query, func, Z)){return;}
+        for(size_t i = 0; i < Z.size(); i++){
+            unsigned int codetmp = 0;
+            for(size_t j = 0; j < Z[0].size(); j++){
+                if(Z[i][j]>0){codetmp = codetmp << 1;codetmp += 1;}
+                else {codetmp = codetmp << 1;codetmp += 0;}
+            }
+            //if(i<3)cout<<codetmp<<endl;
+            querycode.push_back(codetmp);
+        }//cout<<querycode.size()<<endl;
+    }
+
+    void ComponentInitHash::HashTest(int upbits,int lowbits, Index::Codes querycode, Index::HashTable tb, std::vector<std::vector<int> >& cands){
+        for(size_t i = 0; i < querycode.size(); i++){
+
+            unsigned int idx1 = querycode[i] >> lowbits;
+            unsigned int idx2 = querycode[i] - (idx1 << lowbits);
+            Index::HashBucket::iterator bucket= tb[idx1].find(idx2);
+            std::vector<int> canstmp;
+            if(bucket != tb[idx1].end()){
+                std::vector<unsigned int> vp = bucket->second;
+                //cout<<i<<":"<<vp.size()<<endl;
+                for(size_t j = 0; j < vp.size() && canstmp.size() < INIT_NUM; j++){
+                    canstmp.push_back(vp[j]);
+                }
+            }
+
+
+            if(HASH_RADIUS == 0){
+                cands.push_back(canstmp);
+                continue;
+            }
+            for(size_t j = 0; j < DEPTH; j++){
+                unsigned int searchcode = querycode[i] ^ (1 << j);
+                unsigned int idx1 = searchcode >> lowbits;
+                unsigned int idx2 = searchcode - (idx1 << lowbits);
+                Index::HashBucket::iterator bucket= tb[idx1].find(idx2);
+                if(bucket != tb[idx1].end()){
+                    std::vector<unsigned int> vp = bucket->second;
+                    for(size_t k = 0; k < vp.size() && canstmp.size() < INIT_NUM; k++){
+                        canstmp.push_back(vp[k]);
+                    }
+                }
+            }
+            cands.push_back(canstmp);
+        }
     }
 
 
