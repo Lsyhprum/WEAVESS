@@ -50,17 +50,27 @@ We provide a analysis of above algorithms from these aspects :
 
 #### [KGraph](https://github.com/aaalgo/kgraph)
 
-* **K** : 'K' of K-NNG
-* **L** : candidate pool size, larger is more accurate but slower, no smaller than K.
+[Indexing/k-NN Graph Construction](https://github.com/aaalgo/kgraph/blob/master/doc/params.md)
+
+* **K** : KGraph constructs a M-NN graph, with K <= M <= L, and M being different for each object depending on its local intrinsinc dimension. 
+* **L** : candidate pool size, larger is more accurate but slower, no smaller than K. L is set to at least K + 50 to give KGraph some wiggling space. Typical settings are (K = 25, L = 100), (K=50~100, L=150), (K=200, L=300), etc.
 * **ITER** : NN-Descent iteration times, iter usually < 30.
-* **S** : number of neighbors in local join, larger is more accurate but slower.
-* **R** : number of reverse neighbors, larger is more accurate but slower.
+* **S** : number of neighbors in local join, larger is more accurate but slower. Enlarging S slightly increases accuracy, but slows down computation significantly, and is typically set below 30.
+* **R** : number of reverse neighbors, larger is more accurate but slower. R typically does not have to be changed, default is 100.
 * **delta** : KGraph stops iteration when number of entries updated becomes less than deltaKN.
 
-|  Dataset  |  K  |  L  | ITER |  S |  R  |
+| Name       | Default | Description |
+|------------|---------|-------------|
+| K          | 25      |             |
+| L          | 100     | >= K + 50   |
+| S          | 10      | Use default.|
+| R          | 100     | Use default.|
+
+|  Dataset  |  K  |  L  | Iter |  S |  R  |
 |:---------:|:---:|:---:|:----:|:--:|:---:|
-| SIFT1M    | 200 | 200 |  12  | 10 | 100 |
-| GIST1M    | 400 | 400 |  12  | 15 | 100 |
+| SIFT1M    | 50  | 70  |  10  | 10 | 50  |
+| GIST1M    | 100 | 120 |  10  | 15 | 100 |
+
 | Crawl     | 400 | 420 |  12  | 15 | 100 |
 | GloVe-100 | 400 | 420 |  12  | 20 | 200 |
 
@@ -131,6 +141,10 @@ to be continue
 + `SEARCH_K` controls the number of result neighbors we want to query.
 + `search_L`: range from `search_K` to 2000, controls the quality of the search results, 
 the larger the better but slower. The `SEARCH_L` cannot be samller than the `SEARCH_K`
+
+### ANNG
+
+### ONNG
 
 
 
@@ -236,3 +250,6 @@ Please make pull requests against the `dev` branch.
 * KGraph : nndescent 后近邻数量 K ？ graph.size()
 
     * 随机初始化 --> 并行
+    
+* EFANNA search 修改
+

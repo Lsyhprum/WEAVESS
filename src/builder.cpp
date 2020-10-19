@@ -232,6 +232,9 @@ namespace weavess {
         } else if (type == REFINE_TEST) {
             std::cout << "__REFINE : TEST__" << std::endl;
             a = new ComponentRefineTest(final_index_);
+        } else if(type == REFINE_ANNG) {
+            std::cout << "__REFINE : ANNG__" << std::endl;
+            a = new ComponentRefineANNG(final_index_);
         } else {
             std::cerr << "__REFINE : WRONG TYPE__" << std::endl;
         }

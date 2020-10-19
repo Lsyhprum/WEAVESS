@@ -5,6 +5,7 @@
 #ifndef WEAVESS_INDEX_H
 #define WEAVESS_INDEX_H
 
+#include <set>
 #include <omp.h>
 #include <mutex>
 #include <queue>
@@ -528,7 +529,13 @@ namespace weavess {
         typedef std::set<Candidate2<float>, std::greater<Candidate2<float> > > CandidateHeap2;
     };
 
-    class Index : public NNDescent, public NSG, public NSSG, public DPG, public EFANNA, public HNSW, public VAMANA, public HCNNG, public NSW, public IEH {
+    class ANNG {
+    public :
+        unsigned truncationThreshold;
+        unsigned edgeSizeForCreation;
+    };
+
+    class Index : public NNDescent, public NSG, public NSSG, public DPG, public EFANNA, public HNSW, public VAMANA, public HCNNG, public NSW, public IEH, public ANNG {
     public:
 
         explicit Index() {

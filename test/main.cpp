@@ -170,7 +170,17 @@ void IEH(std::string base_path, std::string query_path, std::string ground_path)
 
 }
 
-void NGT(std::string base_path, std::string query_path, std::string ground_path) {}
+void ANNG(std::string base_path, std::string query_path, std::string ground_path) {
+    weavess::Parameters parameters;
+    parameters.set<unsigned>("truncationThreshold", 10);
+    parameters.set<unsigned>("edgeSizeForCreation", 10);
+
+    auto *builder = new weavess::IndexBuilder();
+    builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
+            -> refine(weavess::REFINE_ANNG, true);
+}
+
+void ONNG(std::string base_path, std::string query_path, std::string ground_path) {}
 
 void SPTAG(std::string base_path, std::string query_path, std::string ground_path) {}
 

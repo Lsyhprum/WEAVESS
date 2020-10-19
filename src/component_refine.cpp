@@ -1118,6 +1118,257 @@ namespace weavess {
     }
 
 
+    // ANNG
+    void ComponentRefineANNG::RefineInner() {
+        SetConfigs();
+
+        Build();
+    }
+
+    void ComponentRefineANNG::SetConfigs() {}
+
+    void ComponentRefineANNG::Build() {
+        index->graph_.reserve(index->getBaseLen());
+
+        for(unsigned idxi = 0; idxi < index->getBaseLen(); idxi ++){
+            index->graph_.emplace_back(Index::nhood());
+            for(unsigned idxj = 0; idxj < idxi; idxj ++) {
+                float d = index->getDist()->compare(index->getBaseData() + idxi * index->getBaseDim(),
+                                                    index->getBaseData() + idxj * index->getBaseDim(),
+                                                    index->getBaseDim());
+                index->graph_[idxi].pool.emplace_back(Index::Neighbor(idxj, d, true));
+            }
+            std::sort(index->graph_[idxi].pool.begin(), index->graph_[idxi].pool.end());
+            index->graph_[idxi].pool.reserve(index->K);
+        }
+
+        for(unsigned i = 0; i < index->getBaseLen(); i ++) {
+            InsertNode(i);
+        }
+
+    }
+
+    bool ComponentRefineANNG::addEdge(unsigned target, unsigned addID, float dist) {
+        Index::Neighbor obj(addID, dist, true);
+        auto ni = std::lower_bound(index->graph_[target].pool.begin(), index->graph_[target].pool.end(), obj);
+
+        if((ni != index->graph_[target].pool.end()) && (ni->id == addID)) {
+            std::cout << "NGT::addEdge: already existed! " << ni->id << ":" << addID << std::endl;
+        }else{
+            index->graph_[target].pool.insert(ni, obj);
+        }
+
+        if(index->truncationThreshold != 0 && index->graph_[target].pool.size() > index->truncationThreshold){
+            return true;
+        }
+        return false;
+    }
+
+    int ComponentRefineANNG::truncateEdgesOptimally(unsigned id, size_t truncationSize) {
+
+        std::vector<Index::Neighbor> delNodes;
+        size_t osize = index->graph_[id].pool.size();
+
+        size_t resSize = 2;
+
+        for (size_t i = truncationSize; i < osize; i++) {
+            if (id == index->graph_[id].pool[i].id) {
+                continue;
+            }
+            delNodes.push_back(index->graph_[id].pool[i]);
+        }
+
+        auto ri = index->graph_[id].pool.begin();
+        ri += truncationSize;
+        index->graph_[id].pool.erase(ri, index->graph_[id].pool.end());
+
+        for (size_t i = 0; i < delNodes.size(); i++) {
+            for (auto j = index->graph_[delNodes[i].id].pool.begin(); j != index->graph_[delNodes[i].id].pool.end(); j++) {
+                if ((*j).id == id) {
+                    index->graph_[delNodes[i].id].pool.erase(j);
+                    break;
+                }
+            }
+        }
+
+        for(unsigned i = 0; i < delNodes.size(); i ++) {
+            std::vector<Index::Neighbor> pool;
+            search(id, delNodes[i], pool);
+
+            //for(unsigned j = 0; j < )
+        }
+
+
+
+        bool retry = true;
+        size_t maxResSize = osize * 2;
+        size_t batchSize = 20;
+
+        for (; retry == true; resSize = maxResSize) {
+            retry = false;
+            sd.resultSize = resSize;
+            size_t nodeidx = 0;
+            for (;;) {
+                size_t nodeSize = 0;
+                for (; nodeidx < delNodes.size(); nodeidx++) {
+                    if (delNodes[nodeidx].id == 0) {
+                        continue;
+                    }
+                    nodeSize++;
+                    job.object =
+                            getObjectRepository().get(delNodes[nodeidx].id);
+                    job.idx = nodeidx;
+                    job.start.id = id;
+                    job.start.distance = delNodes[nodeidx].distance;
+                    job.radius = FLT_MAX;
+                    threads.pushInputQueue(job);
+                    if (nodeSize >= batchSize) {
+                        break;
+                    }
+                }
+                if (nodeSize == 0) {
+                    break;
+                }
+                threads.waitForFinish();
+
+                if (output.size() != nodeSize) {
+                    nodeSize = output.size();
+                }
+                size_t cannotMoveCnt = 0;
+                for (size_t i = 0; i < nodeSize; i++) {
+                    TruncationSearchJob &ojob = output.front();
+                    ObjectID nearestID = ojob.nearest.id;
+                    size_t idx = ojob.idx;
+                    if (nearestID == delNodes[idx].id) {
+                        delNodes[idx].id = 0;
+                        output.pop_front();
+                        continue;
+                    } else if (nearestID == id) {
+                        cannotMoveCnt++;
+                        if ((resSize < maxResSize) && (cannotMoveCnt > 1)) {
+                            retry = true;
+                            output.pop_front();
+                            continue;
+                        }
+                    } else {
+                    }
+
+                    ObjectID tid = delNodes[idx].id;
+                    delNodes[idx].id = 0;
+
+                    GraphNode &delres = *getNode(tid);
+                    {
+                        GraphNode::iterator ei = std::lower_bound(
+                                delres.begin(), delres.end(), ojob.nearest);
+                        if ((*ei).id != ojob.nearest.id) {
+                            delres.insert(ei, ojob.nearest);
+                        } else {
+                            output.pop_front();
+                            continue;
+                        }
+                    }
+                    ObjectDistance r;
+                    r.distance = ojob.nearest.distance;
+                    r.id = tid;
+                    if (nearestID != id) {
+                        GraphNode &rs = *getNode(nearestID);
+                        rs.push_back(r);
+                        std::sort(rs.begin(), rs.end());
+                    } else {
+                        results.push_back(r);
+                        std::sort(results.begin(), results.end());
+                    }
+                    output.pop_front();
+                }
+            }
+        }
+
+        int cnt = 0;
+        for (size_t i = 0; i < delNodes.size(); i++) {
+            if (delNodes[i].id != 0) {
+                cnt++;
+            }
+        }
+        if (cnt != 0) {
+            for (size_t i = 0; i < delNodes.size(); i++) {
+                if (delNodes[i].id != 0) {
+                }
+            }
+        }
+
+        size_t delsize = osize - results.size();
+
+        return delsize;
+    }
+
+    void ComponentRefineANNG::InsertNode(unsigned id) {
+        std::queue<unsigned> truncateQueue;
+        for(unsigned i = 0; i < index->graph_[id].pool.size(); i ++) {
+            assert(index->graph_[id].pool[i].id != id);
+
+            if(addEdge(index->graph_[id].pool[i].id, id, index->graph_[id].pool[i].distance)){
+                truncateQueue.push(index->graph_[id].pool[i].id);
+            }
+        }
+
+        while(!truncateQueue.empty()) {
+            unsigned tid = truncateQueue.front();
+            truncateEdgesOptimally(tid, index->edgeSizeForCreation);
+            truncateQueue.pop();
+        }
+    }
+
+    void ComponentRefineANNG::Search(unsigned startId, unsigned query, std::vector<Index::Neighbor> &pool) {
+        unsigned edgeSize = index->graph_[startId].pool.size();
+
+        float explorationCoefficient = ;
+        float radius = ;
+        float explorationRadius = explorationCoefficient * radius;
+        float size = ;
+
+        std::priority_queue<Index::Neighbor, std::vector<Index::Neighbor>, std::less<Index::Neighbor>> result;
+
+        std::priority_queue<Index::Neighbor, std::vector<Index::Neighbor>, std::greater<Index::Neighbor>> unchecked;
+
+        float d = index->getDist()->compare(index->getBaseData() + index->getBaseDim() * startId,
+                                            index->getBaseData() + index->getBaseDim() * query,
+                                            index->getBaseDim());
+        unchecked.push(Index::Neighbor(startId, d, true));
+
+        while(!unchecked.empty()) {
+            Index::Neighbor target = unchecked.top();
+            unchecked.pop();
+
+            if(target.distance > explorationRadius) {
+                break;
+            }
+
+            for(int i = 0; i < index->graph_[target.id].pool.size(); i ++) {
+                float dist = index->getDist()->compare(index->getBaseData() + index->getBaseDim() * index->graph_[target.id].pool[i],
+                                                       index->getBaseData() + index->getBaseDim() * query,
+                                                       index->getBaseDim());
+                if(dist <= explorationRadius) {
+                    unchecked.push(Index::Neighbor(index->graph_[target.id].pool[i].id, dist, true));
+                    if(dist <= radius) {
+                        result.push(Index::Neighbor(index->graph_[target.id].pool[i].id, dist, true));
+                        if(result.size() > size) {
+                            if(result.top().distance >= dist) {
+                                if(result.size() > size){
+                                    result.pop();
+                                }
+                                radius = result.top().distance;
+                                explorationRadius = explorationCoefficient * radius;
+                            }
+                        }
+                    }
+                }
+            }
+
+        }
+
+    }
+
+
     // Test
     void ComponentRefineTest::RefineInner() {
         SetConfigs();

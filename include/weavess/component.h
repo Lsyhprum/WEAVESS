@@ -288,6 +288,24 @@ namespace weavess {
         void Link(Index::SimpleNeighbor *cut_graph_);
     };
 
+    class ComponentRefineANNG : public ComponentRefine {
+    public:
+        explicit ComponentRefineANNG(Index *index) : ComponentRefine(index) {}
+
+        void RefineInner() override;
+
+    private:
+        void SetConfigs();
+
+        void Build();
+
+        bool addEdge(unsigned target, unsigned addID, float dist);
+
+        void InsertNode(unsigned id);
+
+        int truncateEdgesOptimally(unsigned id, size_t truncationSize);
+    };
+
     class ComponentRefineTest : public ComponentRefine {
     public:
         explicit ComponentRefineTest(Index *index) : ComponentRefine(index) {}
