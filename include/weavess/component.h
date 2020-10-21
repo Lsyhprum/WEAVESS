@@ -303,7 +303,9 @@ namespace weavess {
 
         void InsertNode(unsigned id);
 
-        int truncateEdgesOptimally(unsigned id, size_t truncationSize);
+        void truncateEdgesOptimally(unsigned id, size_t truncationSize);
+
+        void Search(unsigned startId, unsigned query, std::vector<Index::Neighbor> &pool);
     };
 
     class ComponentRefineTest : public ComponentRefine {

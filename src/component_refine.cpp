@@ -5,6 +5,7 @@
 #include "weavess/component.h"
 
 #define _CONTROL_NUM 100
+#define FLT_MAX          3.402823466e+38F        // max value
 
 namespace weavess {
 
@@ -1120,16 +1121,23 @@ namespace weavess {
 
     // ANNG
     void ComponentRefineANNG::RefineInner() {
+        // 设置参数
         SetConfigs();
 
         Build();
     }
 
-    void ComponentRefineANNG::SetConfigs() {}
+    void ComponentRefineANNG::SetConfigs() {
+        index->truncationThreshold = index->getParam().get<unsigned>("truncationThreshold");
+        index->edgeSizeForCreation = index->getParam().get<unsigned>("edgeSizeForCreation");
+
+        index->size = index->getParam().get<unsigned>("size");
+    }
 
     void ComponentRefineANNG::Build() {
         index->graph_.reserve(index->getBaseLen());
 
+        // 为插入操作提前计算距离
         for(unsigned idxi = 0; idxi < index->getBaseLen(); idxi ++){
             index->graph_.emplace_back(Index::nhood());
             for(unsigned idxj = 0; idxj < idxi; idxj ++) {
@@ -1140,12 +1148,33 @@ namespace weavess {
             }
             std::sort(index->graph_[idxi].pool.begin(), index->graph_[idxi].pool.end());
             index->graph_[idxi].pool.reserve(index->K);
+
+            if(index->graph_[idxi].pool.size() > index->edgeSizeForCreation) {
+                index->graph_[idxi].pool.resize(index->edgeSizeForCreation);
+            }
         }
 
+        // 逐个进行插入操作
         for(unsigned i = 0; i < index->getBaseLen(); i ++) {
             InsertNode(i);
         }
+    }
 
+    void ComponentRefineANNG::InsertNode(unsigned id) {
+        std::queue<unsigned> truncateQueue;
+        for(unsigned i = 0; i < index->graph_[id].pool.size(); i ++) {
+            assert(index->graph_[id].pool[i].id != id);
+
+            if(addEdge(index->graph_[id].pool[i].id, id, index->graph_[id].pool[i].distance)){
+                truncateQueue.push(index->graph_[id].pool[i].id);
+            }
+        }
+
+        while(!truncateQueue.empty()) {
+            unsigned tid = truncateQueue.front();
+            truncateEdgesOptimally(tid, index->edgeSizeForCreation);
+            truncateQueue.pop();
+        }
     }
 
     bool ComponentRefineANNG::addEdge(unsigned target, unsigned addID, float dist) {
@@ -1164,12 +1193,10 @@ namespace weavess {
         return false;
     }
 
-    int ComponentRefineANNG::truncateEdgesOptimally(unsigned id, size_t truncationSize) {
+    void ComponentRefineANNG::truncateEdgesOptimally(unsigned id, size_t truncationSize) {
 
         std::vector<Index::Neighbor> delNodes;
         size_t osize = index->graph_[id].pool.size();
-
-        size_t resSize = 2;
 
         for (size_t i = truncationSize; i < osize; i++) {
             if (id == index->graph_[id].pool[i].id) {
@@ -1193,147 +1220,42 @@ namespace weavess {
 
         for(unsigned i = 0; i < delNodes.size(); i ++) {
             std::vector<Index::Neighbor> pool;
-            search(id, delNodes[i], pool);
+            Search(id, delNodes[i].id, pool);
 
-            //for(unsigned j = 0; j < )
-        }
-
-
-
-        bool retry = true;
-        size_t maxResSize = osize * 2;
-        size_t batchSize = 20;
-
-        for (; retry == true; resSize = maxResSize) {
-            retry = false;
-            sd.resultSize = resSize;
-            size_t nodeidx = 0;
-            for (;;) {
-                size_t nodeSize = 0;
-                for (; nodeidx < delNodes.size(); nodeidx++) {
-                    if (delNodes[nodeidx].id == 0) {
-                        continue;
-                    }
-                    nodeSize++;
-                    job.object =
-                            getObjectRepository().get(delNodes[nodeidx].id);
-                    job.idx = nodeidx;
-                    job.start.id = id;
-                    job.start.distance = delNodes[nodeidx].distance;
-                    job.radius = FLT_MAX;
-                    threads.pushInputQueue(job);
-                    if (nodeSize >= batchSize) {
-                        break;
-                    }
+            Index::Neighbor nearest = pool.front();
+            if(nearest.id != delNodes[i].id) {
+                unsigned tid = delNodes[i].id;
+                auto iter = std::lower_bound(index->graph_[tid].pool.begin(), index->graph_[tid].pool.end(), nearest);
+                if((*iter).id != nearest.id){
+                    index->graph_[tid].pool.insert(iter, nearest);
                 }
-                if (nodeSize == 0) {
-                    break;
-                }
-                threads.waitForFinish();
 
-                if (output.size() != nodeSize) {
-                    nodeSize = output.size();
-                }
-                size_t cannotMoveCnt = 0;
-                for (size_t i = 0; i < nodeSize; i++) {
-                    TruncationSearchJob &ojob = output.front();
-                    ObjectID nearestID = ojob.nearest.id;
-                    size_t idx = ojob.idx;
-                    if (nearestID == delNodes[idx].id) {
-                        delNodes[idx].id = 0;
-                        output.pop_front();
-                        continue;
-                    } else if (nearestID == id) {
-                        cannotMoveCnt++;
-                        if ((resSize < maxResSize) && (cannotMoveCnt > 1)) {
-                            retry = true;
-                            output.pop_front();
-                            continue;
-                        }
-                    } else {
-                    }
-
-                    ObjectID tid = delNodes[idx].id;
-                    delNodes[idx].id = 0;
-
-                    GraphNode &delres = *getNode(tid);
-                    {
-                        GraphNode::iterator ei = std::lower_bound(
-                                delres.begin(), delres.end(), ojob.nearest);
-                        if ((*ei).id != ojob.nearest.id) {
-                            delres.insert(ei, ojob.nearest);
-                        } else {
-                            output.pop_front();
-                            continue;
-                        }
-                    }
-                    ObjectDistance r;
-                    r.distance = ojob.nearest.distance;
-                    r.id = tid;
-                    if (nearestID != id) {
-                        GraphNode &rs = *getNode(nearestID);
-                        rs.push_back(r);
-                        std::sort(rs.begin(), rs.end());
-                    } else {
-                        results.push_back(r);
-                        std::sort(results.begin(), results.end());
-                    }
-                    output.pop_front();
-                }
+                Index::Neighbor obj(tid, delNodes[i].distance, true);
+                index->graph_[nearest.id].pool.push_back(obj);
+                std::sort(index->graph_[nearest.id].pool.begin(), index->graph_[nearest.id].pool.end());
             }
-        }
-
-        int cnt = 0;
-        for (size_t i = 0; i < delNodes.size(); i++) {
-            if (delNodes[i].id != 0) {
-                cnt++;
-            }
-        }
-        if (cnt != 0) {
-            for (size_t i = 0; i < delNodes.size(); i++) {
-                if (delNodes[i].id != 0) {
-                }
-            }
-        }
-
-        size_t delsize = osize - results.size();
-
-        return delsize;
-    }
-
-    void ComponentRefineANNG::InsertNode(unsigned id) {
-        std::queue<unsigned> truncateQueue;
-        for(unsigned i = 0; i < index->graph_[id].pool.size(); i ++) {
-            assert(index->graph_[id].pool[i].id != id);
-
-            if(addEdge(index->graph_[id].pool[i].id, id, index->graph_[id].pool[i].distance)){
-                truncateQueue.push(index->graph_[id].pool[i].id);
-            }
-        }
-
-        while(!truncateQueue.empty()) {
-            unsigned tid = truncateQueue.front();
-            truncateEdgesOptimally(tid, index->edgeSizeForCreation);
-            truncateQueue.pop();
         }
     }
 
     void ComponentRefineANNG::Search(unsigned startId, unsigned query, std::vector<Index::Neighbor> &pool) {
-        unsigned edgeSize = index->graph_[startId].pool.size();
+        unsigned edgeSize = index->edgeSizeForSearch;
+        float radius = FLT_MAX;
+        float explorationRadius = index->explorationCoefficient * radius;
 
-        float explorationCoefficient = ;
-        float radius = ;
-        float explorationRadius = explorationCoefficient * radius;
-        float size = ;
 
+        // 大顶堆
         std::priority_queue<Index::Neighbor, std::vector<Index::Neighbor>, std::less<Index::Neighbor>> result;
 
         std::priority_queue<Index::Neighbor, std::vector<Index::Neighbor>, std::greater<Index::Neighbor>> unchecked;
+        std::unordered_set<unsigned> distanceChecked;
 
         float d = index->getDist()->compare(index->getBaseData() + index->getBaseDim() * startId,
                                             index->getBaseData() + index->getBaseDim() * query,
                                             index->getBaseDim());
-        unchecked.push(Index::Neighbor(startId, d, true));
+        Index::Neighbor obj(startId, d, true);
+        unchecked.push(obj);
+        result.push(obj);
+        distanceChecked.insert(startId);
 
         while(!unchecked.empty()) {
             Index::Neighbor target = unchecked.top();
@@ -1343,29 +1265,41 @@ namespace weavess {
                 break;
             }
 
-            for(int i = 0; i < index->graph_[target.id].pool.size(); i ++) {
-                float dist = index->getDist()->compare(index->getBaseData() + index->getBaseDim() * index->graph_[target.id].pool[i],
+            if(index->graph_[target.id].pool.size() == 0) continue;
+            unsigned neighborSize = index->graph_[target.id].pool.size() < edgeSize ?
+                    index->graph_[target.id].pool.size() : edgeSize;
+
+            for(int i = 0; i < neighborSize; i ++) {
+                if(distanceChecked.find(index->graph_[target.id].pool[i].id) != distanceChecked.end())
+                    continue;
+
+                distanceChecked.insert(index->graph_[target.id].pool[i].id);
+                float dist = index->getDist()->compare(index->getBaseData() + index->getBaseDim() * index->graph_[target.id].pool[i].id,
                                                        index->getBaseData() + index->getBaseDim() * query,
                                                        index->getBaseDim());
                 if(dist <= explorationRadius) {
                     unchecked.push(Index::Neighbor(index->graph_[target.id].pool[i].id, dist, true));
                     if(dist <= radius) {
                         result.push(Index::Neighbor(index->graph_[target.id].pool[i].id, dist, true));
-                        if(result.size() > size) {
+                        if(result.size() > index->size) {
                             if(result.top().distance >= dist) {
-                                if(result.size() > size){
+                                if(result.size() > index->size){
                                     result.pop();
                                 }
                                 radius = result.top().distance;
-                                explorationRadius = explorationCoefficient * radius;
+                                explorationRadius = index->explorationCoefficient * radius;
                             }
                         }
                     }
                 }
             }
-
         }
 
+        for(int i = 0; i < result.size(); i ++) {
+            pool.push_back(result.top());
+            result.pop();
+        }
+        std::sort(pool.begin(), pool.end());
     }
 
 

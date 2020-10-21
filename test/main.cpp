@@ -172,12 +172,17 @@ void IEH(std::string base_path, std::string query_path, std::string ground_path)
 
 void ANNG(std::string base_path, std::string query_path, std::string ground_path) {
     weavess::Parameters parameters;
+    parameters.set<unsigned>("edgeSizeForCreation", 10); // 初始化边数阈值
     parameters.set<unsigned>("truncationThreshold", 10);
-    parameters.set<unsigned>("edgeSizeForCreation", 10);
+    parameters.set<unsigned>("edgeSizeForSearch", 10);
+    parameters.set<unsigned>("size", 10);
 
     auto *builder = new weavess::IndexBuilder();
     builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
-            -> refine(weavess::REFINE_ANNG, true);
+            -> refine(weavess::REFINE_ANNG, true)
+            -> search();
+
+    std::cout << "Time cost: " << builder->GetBuildTime().count() << std::endl;
 }
 
 void ONNG(std::string base_path, std::string query_path, std::string ground_path) {}

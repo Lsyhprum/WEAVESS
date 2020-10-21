@@ -89,6 +89,7 @@ namespace weavess {
                 pool.reserve(other.pool.capacity());
             }
 
+            // 插入大顶堆
             void insert(unsigned id, float dist) {
                 LockGuard guard(lock);
                 if (dist > pool.front().distance) return;
@@ -533,6 +534,9 @@ namespace weavess {
     public :
         unsigned truncationThreshold;
         unsigned edgeSizeForCreation;
+        unsigned edgeSizeForSearch;
+        unsigned size;
+        float explorationCoefficient = 1.1;
     };
 
     class Index : public NNDescent, public NSG, public NSSG, public DPG, public EFANNA, public HNSW, public VAMANA, public HCNNG, public NSW, public IEH, public ANNG {
