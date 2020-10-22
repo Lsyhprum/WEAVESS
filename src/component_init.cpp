@@ -62,6 +62,7 @@ namespace weavess {
         index->S = index->getParam().get<unsigned>("S");
         index->R = index->getParam().get<unsigned>("R");
         index->ITER = index->getParam().get<unsigned>("ITER");
+        index->delta = index->getParam().get<float>("delta");
     }
 
     void ComponentInitNNDescent::init() {
@@ -97,10 +98,10 @@ namespace weavess {
         std::mt19937 rng(rand());
 
         // 采样用于评估每次迭代效果，与算法无关
-        std::vector<unsigned> control_points(_CONTROL_NUM);
-        std::vector<std::vector<unsigned> > acc_eval_set(_CONTROL_NUM);
-        GenRandom(rng, &control_points[0], control_points.size(), index->getBaseLen());
-        generate_control_set(control_points, acc_eval_set, index->getBaseLen());
+//        std::vector<unsigned> control_points(_CONTROL_NUM);
+//        std::vector<std::vector<unsigned> > acc_eval_set(_CONTROL_NUM);
+//        GenRandom(rng, &control_points[0], control_points.size(), index->getBaseLen());
+//        generate_control_set(control_points, acc_eval_set, index->getBaseLen());
 
         for (unsigned it = 0; it < index->ITER; it++) {
             std::cout << "NN-Descent iter: " << it << std::endl;
@@ -115,9 +116,9 @@ namespace weavess {
 
             update();
 
-            eval_recall(control_points, acc_eval_set);
+//            eval_recall(control_points, acc_eval_set);
 
-            if(num != 0 && total / num  <= index->delta) {
+            if(num != 0 && (total * 1.0 / num)  <= index->delta) {
                 std::cout << "stop condition : delta" << std::endl;
                 break;
             }
@@ -225,8 +226,7 @@ namespace weavess {
         }
     }
 
-    void ComponentInitNNDescent::generate_control_set(std::vector<unsigned> &c, std::vector<std::vector<unsigned> > &v,
-                                                      unsigned N) {
+    void ComponentInitNNDescent::generate_control_set(std::vector<unsigned> &c, std::vector<std::vector<unsigned> > &v, unsigned N) {
 #pragma omp parallel for
         for (unsigned i = 0; i < c.size(); i++) {
             std::vector<Index::Neighbor> tmp;
@@ -243,8 +243,7 @@ namespace weavess {
         }
     }
 
-    void ComponentInitNNDescent::eval_recall(std::vector<unsigned> &ctrl_points,
-                                             std::vector<std::vector<unsigned> > &acc_eval_set) {
+    void ComponentInitNNDescent::eval_recall(std::vector<unsigned> &ctrl_points, std::vector<std::vector<unsigned> > &acc_eval_set) {
         float mean_acc = 0;
         for (unsigned i = 0; i < ctrl_points.size(); i++) {
             float acc = 0;

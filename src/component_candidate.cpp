@@ -10,7 +10,7 @@ namespace weavess {
     void ComponentCandidateGreedy::CandidateInner(const unsigned int query, const unsigned int enter,
                                                   boost::dynamic_bitset<> flags, std::vector<Index::Neighbor> &result,
                                                   int level) {
-        auto L = index->getParam().get<unsigned>("L_nsg");
+        auto L = index->getParam().get<unsigned>("L_refine");
 
         std::vector<unsigned> init_ids(L);
         std::vector<Index::Neighbor> retset;
@@ -91,7 +91,7 @@ namespace weavess {
     // NO LIMIT GREEDY
     void ComponentCandidateNSG::CandidateInner(const unsigned query, const unsigned enter, boost::dynamic_bitset<> flags,
                                                std::vector<Index::Neighbor> &result, int level) {
-        auto L = index->getParam().get<unsigned>("L_nsg");
+        auto L = index->getParam().get<unsigned>("L_refine");
 
         std::vector<unsigned> init_ids(L);
         std::vector<Index::Neighbor> retset;
@@ -182,9 +182,9 @@ namespace weavess {
                 float dist = index->getDist()->compare(index->getBaseData() + index->getBaseDim() * query,
                                                        index->getBaseData() + index->getBaseDim() * nnid, index->getBaseDim());
                 result.emplace_back(nnid, dist, true);
-                if (result.size() >= index->L_nsg) break;
+                if (result.size() >= index->L_refine) break;
             }
-            if (result.size() >= index->L_nsg) break;
+            if (result.size() >= index->L_refine) break;
         }
     }
 

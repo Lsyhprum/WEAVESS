@@ -32,7 +32,7 @@ namespace weavess {
         unsigned L;
         unsigned ITER;
         unsigned K;
-        unsigned delta;
+        float delta;
 
         struct Neighbor {
             unsigned id;
@@ -158,9 +158,9 @@ namespace weavess {
 
     class NSG {
     public:
-        unsigned R_nsg;     // nsg 中可变
-        unsigned L_nsg;
-        unsigned C_nsg;
+        unsigned R_refine;
+        unsigned L_refine;
+        unsigned C_refine;
 
         unsigned ep_;
     };

@@ -5,8 +5,13 @@
 #include "weavess/component.h"
 
 namespace weavess {
-    void ComponentSearchRouteGreedy::RouteInner(unsigned int query, std::vector<Index::Neighbor> &pool,
-                                                std::vector<unsigned int> &res) {
+    /**
+     * 贪婪搜索
+     * @param query 查询点
+     * @param pool 侯选池
+     * @param res 结果集
+     */
+    void ComponentSearchRouteGreedy::RouteInner(unsigned int query, std::vector<Index::Neighbor> &pool, std::vector<unsigned int> &res) {
         const auto L = index->getParam().get<unsigned>("L_search");
         const auto K = index->getParam().get<unsigned>("K_search");
 

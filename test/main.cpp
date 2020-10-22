@@ -17,7 +17,7 @@ void KGraph(std::string base_path, std::string query_path, std::string ground_pa
 
     auto *builder = new weavess::IndexBuilder();
     builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
-            -> init(weavess::INIT_NN_DESCENT, true)
+            -> init(weavess::INIT_NN_DESCENT, false)
             //-> draw()
             //-> load_graph(&graph_file[0]);
             -> search(weavess::ENTRY_RANDOM, weavess::ROUTER_GREEDY);
@@ -35,17 +35,17 @@ void NSG(std::string base_path, std::string query_path, std::string ground_path)
     parameters.set<unsigned>("S", 10);
     parameters.set<unsigned>("R", 100);
 
-    parameters.set<unsigned>("L_nsg", 40);
-    parameters.set<unsigned>("R_nsg", 50);
-    parameters.set<unsigned>("C_nsg", 500);
+    parameters.set<unsigned>("L_refine", 40);
+    parameters.set<unsigned>("R_refine", 50);
+    parameters.set<unsigned>("C_refine", 500);
 
     auto *builder = new weavess::IndexBuilder();
     builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
             -> init(weavess::INIT_NN_DESCENT, false)
             //-> save_graph(&graph_file[0])
             //-> load_graph(&graph_file[0])
-            -> refine(weavess::REFINE_NSG, true)
-            -> search(weavess::ENTRY_NSG_CENTROID, weavess::ROUTER_GREEDY);
+            -> refine(weavess::REFINE_NSG, false)
+            -> search(weavess::ENTRY_CENTROID, weavess::ROUTER_GREEDY);
 
     std::cout << "Time cost: " << builder->GetBuildTime().count() << std::endl;
 }
@@ -56,7 +56,7 @@ void NSSG(std::string base_path, std::string query_path, std::string ground_path
     weavess::Parameters parameters;
     parameters.set<unsigned>("K", 200);
     parameters.set<unsigned>("L", 200);
-    parameters.set<unsigned>("ITER", 1);
+    parameters.set<unsigned>("ITER", 12);
     parameters.set<unsigned>("S", 10);
     parameters.set<unsigned>("R", 100);
 
@@ -69,7 +69,7 @@ void NSSG(std::string base_path, std::string query_path, std::string ground_path
     builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
             -> init(weavess::INIT_NN_DESCENT, false)
             //-> load_graph(&graph_file[0])
-            -> refine(weavess::REFINE_NSSG, true)
+            -> refine(weavess::REFINE_NSSG, false)
             -> search(weavess::SEARCH_ENTRY_NSSG_CENTROID, weavess::ROUTER_GREEDY);
 
     std::cout << "Time cost: " << builder->GetBuildTime().count() << std::endl;
@@ -178,9 +178,9 @@ void ANNG(std::string base_path, std::string query_path, std::string ground_path
     parameters.set<unsigned>("size", 10);
 
     auto *builder = new weavess::IndexBuilder();
-    builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
-            -> refine(weavess::REFINE_ANNG, true)
-            -> search();
+//    builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
+//            -> refine(weavess::REFINE_ANNG, true)
+//            -> search();
 
     std::cout << "Time cost: " << builder->GetBuildTime().count() << std::endl;
 }
@@ -193,9 +193,9 @@ void ONNG(std::string base_path, std::string query_path, std::string ground_path
     parameters.set<unsigned>("numOfResultantObjects", 20);  // k
 
     auto *builder = new weavess::IndexBuilder();
-    builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
-            -> init() // ANNG
-            -> refine(weavess::REFINE_ONNG);
+//    builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
+//            -> init() // ANNG
+//            -> refine(weavess::REFINE_ONNG);
 
     std::cout << "Time cost: " << builder->GetBuildTime().count() << std::endl;
 }
@@ -242,19 +242,21 @@ void InitTest(std::string base_path, std::string query_path, std::string ground_
 int main() {
 //    std::string test_path = R"(F:\ANNS\DATASET\test.txt)";
 
-    std::string base_path = R"(F:\ANNS\DATASET\sift1M\sift_sample_base.fvecs)";
-    std::string query_path = R"(F:\ANNS\DATASET\sift1M\sift_sample_query.fvecs)";
-    std::string ground_path = R"(F:\ANNS\DATASET\sift1M\sift_sample_groundtruth.ivecs)";
-//    std::string base_path = R"(F:\ANNS\DATASET\sift1M\sift_base.fvecs)";
-//    std::string query_path = R"(F:\ANNS\DATASET\sift1M\sift_query.fvecs)";
-//    std::string ground_path = R"(F:\ANNS\DATASET\sift1M\sift_groundtruth.ivecs)";
+//    std::string base_path = R"(F:\ANNS\DATASET\sift1M\sift_sample_base.fvecs)";
+//    std::string query_path = R"(F:\ANNS\DATASET\sift1M\sift_sample_query.fvecs)";
+//    std::string ground_path = R"(F:\ANNS\DATASET\sift1M\sift_sample_groundtruth.ivecs)";
+
+    std::string base_path = R"(F:\ANNS\DATASET\sift1M\sift_base.fvecs)";
+    std::string query_path = R"(F:\ANNS\DATASET\sift1M\sift_query.fvecs)";
+    std::string ground_path = R"(F:\ANNS\DATASET\sift1M\sift_groundtruth.ivecs)";
+
 //    std::string base_path = R"(F:\ANNS\DATASET\siftsmall\siftsmall_base.fvecs)";
 //    std::string query_path = R"(F:\ANNS\DATASET\siftsmall\siftsmall_query.fvecs)";
 //    std::string ground_path = R"(F:\ANNS\DATASET\siftsmall\siftsmall_groundtruth.ivecs)";
 
-    KGraph(base_path, query_path, ground_path);
+    //KGraph(base_path, query_path, ground_path);
     //NSG(base_path, query_path, ground_path);
-    //NSSG(base_path, query_path, ground_path);
+    NSSG(base_path, query_path, ground_path);
     //DPG(base_path, query_path, ground_path);
     //EFANNA(base_path, query_path, ground_path);
 

@@ -6,7 +6,7 @@
 
 namespace weavess {
 
-    void ComponentEntryCentroidNSG::EntryInner() {
+    void ComponentRefineEntryCentroid::EntryInner() {
         auto *center = new float[index->getBaseDim()];
         for (unsigned j = 0; j < index->getBaseDim(); j++) center[j] = 0;
         for (unsigned i = 0; i < index->getBaseLen(); i++) {
@@ -27,9 +27,9 @@ namespace weavess {
         std::cout << "ep_ " << index->ep_ << std::endl;
     }
 
-    void ComponentEntryCentroidNSG::get_neighbors(const float *query, std::vector<Index::Neighbor> &retset,
-                                                  std::vector<Index::Neighbor> &fullset) {
-        unsigned L = index->L_nsg;
+    void ComponentRefineEntryCentroid::get_neighbors(const float *query, std::vector<Index::Neighbor> &retset,
+                                                     std::vector<Index::Neighbor> &fullset) {
+        unsigned L = index->L_refine;
         retset.resize(L + 1);
         std::vector<unsigned> init_ids(L);
         // initializer_->Search(query, nullptr, L, parameter, init_ids.data());
@@ -92,86 +92,11 @@ namespace weavess {
         }
     }
 
-    void ComponentEntryCentroidNSSG::EntryInner() {
-        std::cout << "__ENTRY : NSSG__ " << std::endl;
-        float *center = new float[index->getBaseDim()];
-        for (unsigned j = 0; j < index->getBaseDim(); j++) center[j] = 0;
-        for (unsigned i = 0; i < index->getBaseLen(); i++) {
-            for (unsigned j = 0; j < index->getBaseDim(); j++) {
-                center[j] += index->getBaseData()[i * index->getBaseDim() + j];
-            }
-        }
-        for (unsigned j = 0; j < index->getBaseDim(); j++) {
-            center[j] /= index->getBaseLen();
-        }
-        std::vector<Index::Neighbor> tmp, pool;
-        // ep_ = rand() % nd_;  // random initialize navigating point
-        get_neighbors(center, tmp, pool);
-        //std::cout << "pool size : " << pool.size() << std::endl;
-        index->ep_ = tmp[0].id;  // For Compatibility
-        std::cout << "ep_" << index->ep_ << std::endl;
-        std::cout << "__ENTRY : FINISH__ " << std::endl;
-    }
-
-    void ComponentEntryCentroidNSSG::get_neighbors(const float *query, std::vector<Index::Neighbor> &retset,
-                                                   std::vector<Index::Neighbor> &fullset) {
-        unsigned L = index->L_nsg;
-
-        retset.resize(L + 1);
-        std::vector<unsigned> init_ids(L);
-        // initializer_->Search(query, nullptr, L, parameter, init_ids.data());
-        std::mt19937 rng(rand());
-        GenRandom(rng, init_ids.data(), L, (unsigned) index->getBaseLen());
-
-        boost::dynamic_bitset<> flags{index->getBaseLen(), 0};
-        L = 0;
-        for (unsigned i = 0; i < init_ids.size(); i++) {
-            unsigned id = init_ids[i];
-            if (id >= index->getBaseLen()) continue;
-            // std::cout<<id<<std::endl;
-            float dist = index->getDist()->compare(index->getBaseData() + index->getBaseDim() * (size_t) id, query,
-                                                   (unsigned) index->getBaseDim());
-            retset[i] = Index::Neighbor(id, dist, true);
-            flags[id] = 1;
-            L++;
-        }
-
-        std::sort(retset.begin(), retset.begin() + L);
-        int k = 0;
-        while (k < (int) L) {
-            int nk = L;
-
-            if (retset[k].flag) {
-                retset[k].flag = false;
-                unsigned n = retset[k].id;
-
-                for (unsigned m = 0; m < index->getFinalGraph()[n][0].size(); ++m) {
-                    unsigned id = index->getFinalGraph()[n][0][m];
-                    if (flags[id]) continue;
-                    flags[id] = 1;
-
-                    float dist = index->getDist()->compare(query,
-                                                           index->getBaseData() + index->getBaseDim() * (size_t) id,
-                                                           (unsigned) index->getBaseDim());
-
-                    Index::Neighbor nn(id, dist, true);
-                    fullset.push_back(nn);
-
-                    if (dist >= retset[L - 1].distance) continue;
-                    int r = Index::InsertIntoPool(retset.data(), L, nn);
-
-                    if (L + 1 < retset.size()) ++L;
-                    if (r < nk) nk = r;
-                }
-            }
-            if (nk <= k)
-                k = nk;
-            else
-                ++k;
-        }
-    }
-
-
+    /**
+     * 随机入口点
+     * @param query 查询点
+     * @param pool 候选池
+     */
     void ComponentSearchEntryRand::SearchEntryInner(unsigned query, std::vector<Index::Neighbor> &pool) {
         const auto L = index->getParam().get<unsigned>("L_search");
 
@@ -187,14 +112,19 @@ namespace weavess {
         for (unsigned i = 0; i < L; i++) {
             unsigned id = init_ids[i];
             float dist = index->getDist()->compare(index->getQueryData() + query * index->getQueryDim(),
-                                                    index->getBaseData() + id * index->getBaseDim(),
-                                                    (unsigned) index->getBaseDim());
+                                                   index->getBaseData() + id * index->getBaseDim(),
+                                                   (unsigned) index->getBaseDim());
             index->addDistCount();
             pool[i] = Index::Neighbor(id, dist, true);
         }
         std::sort(pool.begin(), pool.begin() + L);
     }
 
+    /**
+     * 质心入口点
+     * @param query 查询点
+     * @param pool 候选池
+     */
     void ComponentSearchEntryCentroid::SearchEntryInner(unsigned int query, std::vector<Index::Neighbor> &pool) {
         const auto L = index->getParam().get<unsigned>("L_search");
         pool.reserve(L + 1);
@@ -222,7 +152,7 @@ namespace weavess {
             float dist =
                     index->getDist()->compare(index->getBaseData() + index->getBaseDim() * id,
                                               index->getQueryData() + index->getQueryDim() * query,
-                                              (unsigned)index->getBaseDim());
+                                              (unsigned) index->getBaseDim());
             pool[i] = Index::Neighbor(id, dist, true);
             // flags[id] = true;
         }
@@ -233,13 +163,13 @@ namespace weavess {
     void ComponentSearchEntrySubCentroid::SearchEntryInner(unsigned int query, std::vector<Index::Neighbor> &pool) {
         auto L = index->getParam().get<unsigned>("L_search");
         //std::vector<Neighbor> retset(L + 1);
-        pool.resize(L+1);
+        pool.resize(L + 1);
         std::vector<unsigned> init_ids(L);
         std::mt19937 rng(rand());
-        GenRandom(rng, init_ids.data(), L, (unsigned)index->getBaseLen());
+        GenRandom(rng, init_ids.data(), L, (unsigned) index->getBaseLen());
 
         assert(index->eps_.size() <= L);
-        for(unsigned i=0; i< index->eps_.size(); i++){
+        for (unsigned i = 0; i < index->eps_.size(); i++) {
             init_ids[i] = index->eps_[i];
         }
 
@@ -248,10 +178,11 @@ namespace weavess {
         for (unsigned i = 0; i < init_ids.size(); i++) {
             unsigned id = init_ids[i];
             if (id >= index->getBaseLen()) continue;
-            float *x = (float *)(index->getBaseData() + index->getBaseDim() * id);
+            float *x = (float *) (index->getBaseData() + index->getBaseDim() * id);
             float norm_x = *x;
             x++;
-            float dist = index->getDist()->compare(x, index->getBaseData() + query * index->getBaseDim(), (unsigned)index->getBaseDim());
+            float dist = index->getDist()->compare(x, index->getBaseData() + query * index->getBaseDim(),
+                                                   (unsigned) index->getBaseDim());
             pool[i] = Index::Neighbor(id, dist, true);
             flags[id] = true;
             L++;

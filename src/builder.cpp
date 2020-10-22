@@ -108,7 +108,14 @@ namespace weavess {
         }
     }
 
-
+    /**
+     * 加载数据集及参数
+     * @param data_file *_base.fvecs
+     * @param query_file *_query.fvecs
+     * @param ground_file *_groundtruth.ivecs
+     * @param parameters 构建参数
+     * @return 当前建造者指针
+     */
     IndexBuilder *IndexBuilder::load(char *data_file, char *query_file, char *ground_file, Parameters &parameters) {
         std::cout << "__LOAD DATA__" << std::endl;
 
@@ -129,6 +136,12 @@ namespace weavess {
         return this;
     }
 
+    /**
+     * 构建初始图
+     * @param type 初始化类型
+     * @param debug 是否输出图索引相关信息（开启将对性能产生一定影响）
+     * @return 当前建造者指针
+     */
     IndexBuilder *IndexBuilder::init(TYPE type, bool debug) {
         ComponentInit *a = nullptr;
 
@@ -144,8 +157,12 @@ namespace weavess {
         } else if (type == INIT_HCNNG) {
             std::cout << "__INIT : HCNNG__" << std::endl;
             a = new ComponentInitHCNNG(final_index_);
+        } else if (type == INIT_ANNG) {
+            std::cout << "__INIT : ANNG__" << std::endl;
+            a = new ComponentInitANNG(final_index_);
         } else {
             std::cout << "__INIT : WRONG TYPE__" << std::endl;
+            exit(-1);
         }
 
         a->InitInner();
@@ -194,6 +211,12 @@ namespace weavess {
         return this;
     }
 
+    /**
+     * 构建改进图, 通常包含获取 入口点、获取候选点、裁边、增强连通性 四部分
+     * @param type 改进类型
+     * @param debug 是否输出图索引相关信息（开启将对性能产生一定影响）
+     * @return 当前建造者指针
+     */
     IndexBuilder *IndexBuilder::refine(TYPE type, bool debug) {
         ComponentRefine *a = nullptr;
 
@@ -258,6 +281,12 @@ namespace weavess {
         return this;
     }
 
+    /**
+     * 离线搜索
+     * @param entry_type 入口点策略
+     * @param route_type 路由策略
+     * @return 当前建造者指针
+     */
     IndexBuilder *IndexBuilder::search(TYPE entry_type, TYPE route_type) {
         std::cout << "__SEARCH__" << std::endl;
 
@@ -276,7 +305,7 @@ namespace weavess {
         ComponentSearchEntry *a = nullptr;
         if (entry_type == ENTRY_RANDOM) {
             a = new ComponentSearchEntryRand(final_index_);
-        } else if (entry_type == ENTRY_NSG_CENTROID) {
+        } else if (entry_type == ENTRY_CENTROID) {
             a = new ComponentSearchEntryCentroid(final_index_);
         } else if (entry_type == SEARCH_ENTRY_NSSG_CENTROID) {
             a = new ComponentSearchEntrySubCentroid(final_index_);

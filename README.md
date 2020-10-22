@@ -182,7 +182,7 @@ Please make pull requests against the `dev` branch.
 
 ## TODO
 
--[ ] KGraph
+-[ x ] KGraph
 
 -[ ] IEH
 
@@ -255,4 +255,12 @@ Please make pull requests against the `dev` branch.
 
 * ANNG -> init
 * ONNG -> refine
+
+* debug 兼容修改
+
+* 并行代码删除
+
+* KGraph 与 KGraph 比较
+
+* init 多文件类型支持
 

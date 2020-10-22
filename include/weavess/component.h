@@ -157,6 +157,13 @@ namespace weavess {
         void print_stats_graph(std::vector<std::vector< Index::Edge > > &G);
     };
 
+    class ComponentInitANNG : public ComponentInit {
+    public:
+        explicit ComponentInitANNG(Index *index) : ComponentInit(index) {}
+
+        void InitInner() override;
+    };
+
 
     // refine graph
     class ComponentRefine : public Component {
@@ -341,33 +348,23 @@ namespace weavess {
 
 
     // entry
-    class ComponentEntry : public Component {
+    class ComponentRefineEntry : public Component {
     public:
-        explicit ComponentEntry(Index *index) : Component(index) {}
+        explicit ComponentRefineEntry(Index *index) : Component(index) {}
 
         virtual void EntryInner() = 0;
     };
 
-    class ComponentEntryNone : public ComponentEntry {
+    class ComponentRefineEntryNone : public ComponentRefineEntry {
     public:
-        explicit ComponentEntryNone(Index *index) : ComponentEntry(index) {}
+        explicit ComponentRefineEntryNone(Index *index) : ComponentRefineEntry(index) {}
 
         void EntryInner() override {}
     };
 
-    class ComponentEntryCentroidNSG : public ComponentEntry {
+    class ComponentRefineEntryCentroid : public ComponentRefineEntry {
     public:
-        explicit ComponentEntryCentroidNSG(Index *index) : ComponentEntry(index) {}
-
-        void EntryInner() override;
-
-    private:
-        void get_neighbors(const float *query, std::vector<Index::Neighbor> &retset, std::vector<Index::Neighbor> &fullset);
-    };
-
-    class ComponentEntryCentroidNSSG : public ComponentEntry {
-    public:
-        explicit ComponentEntryCentroidNSSG(Index *index) : ComponentEntry(index) {}
+        explicit ComponentRefineEntryCentroid(Index *index) : ComponentRefineEntry(index) {}
 
         void EntryInner() override;
 
