@@ -308,6 +308,22 @@ namespace weavess {
         void Search(unsigned startId, unsigned query, std::vector<Index::Neighbor> &pool);
     };
 
+    class ComponentRefineONNG : public ComponentRefine {
+    public:
+        explicit ComponentRefineONNG(Index *index) : ComponentRefine(index) {}
+
+        void RefineInner() override;
+
+    private:
+        void SetConfigs();
+
+        void Build();
+
+        void insert(unsigned id, size_t edgeID);
+
+        bool hasEdge(size_t srcNodeID, size_t dstNodeID);
+    };
+
     class ComponentRefineTest : public ComponentRefine {
     public:
         explicit ComponentRefineTest(Index *index) : ComponentRefine(index) {}

@@ -539,7 +539,12 @@ namespace weavess {
         float explorationCoefficient = 1.1;
     };
 
-    class Index : public NNDescent, public NSG, public NSSG, public DPG, public EFANNA, public HNSW, public VAMANA, public HCNNG, public NSW, public IEH, public ANNG {
+    class ONNG {
+    public:
+        unsigned reverseEdgeSize;
+    };
+
+    class Index : public NNDescent, public NSG, public NSSG, public DPG, public EFANNA, public HNSW, public VAMANA, public HCNNG, public NSW, public IEH, public ANNG, public ONNG {
     public:
 
         explicit Index() {

@@ -20,7 +20,7 @@
 | HCNNG  |Divide & Conquer|Hierarchical Clustering|                |               |             |              |                    |                    |
 | SPTAG  |Divide & Conquer|      TP-tree          |                |               |             |              |                    |                    |
 | FANNG  |                |                       |                |               |             |              |                    |                    |
-| NGT    |                |                       |                |               |             |              |                    |                    |
+| NGT    |   Increment    |       ANNG            |                |               |    ONNG     |              |      DVPTree       |Greedy(Range Search)|
 
 ### Performance
 
@@ -252,4 +252,7 @@ Please make pull requests against the `dev` branch.
     * 随机初始化 --> 并行
     
 * EFANNA search 修改
+
+* ANNG -> init
+* ONNG -> refine
 

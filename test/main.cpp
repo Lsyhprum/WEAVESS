@@ -185,7 +185,20 @@ void ANNG(std::string base_path, std::string query_path, std::string ground_path
     std::cout << "Time cost: " << builder->GetBuildTime().count() << std::endl;
 }
 
-void ONNG(std::string base_path, std::string query_path, std::string ground_path) {}
+void ONNG(std::string base_path, std::string query_path, std::string ground_path) {
+    weavess::Parameters parameters;
+    parameters.set<unsigned>("numOfOutgoingEdges", 10);
+    parameters.set<unsigned>("numOfIncomingEdges", 100);
+    parameters.set<unsigned>("numOfQueries", 200);
+    parameters.set<unsigned>("numOfResultantObjects", 20);  // k
+
+    auto *builder = new weavess::IndexBuilder();
+    builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
+            -> init() // ANNG
+            -> refine(weavess::REFINE_ONNG);
+
+    std::cout << "Time cost: " << builder->GetBuildTime().count() << std::endl;
+}
 
 void SPTAG(std::string base_path, std::string query_path, std::string ground_path) {}
 
