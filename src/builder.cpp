@@ -19,7 +19,6 @@ namespace weavess {
      * @return 当前建造者指针
      */
     IndexBuilder *IndexBuilder::load(char *data_file, char *query_file, char *ground_file, Parameters &parameters) {
-
         auto *a = new ComponentLoad(final_index_);
         a->LoadInner(data_file, query_file, ground_file, parameters);
 
@@ -57,6 +56,9 @@ namespace weavess {
         } else if (type == INIT_KDT) {
             std::cout << "__INIT : KDT__" << std::endl;
             a = new ComponentInitKDT(final_index_);
+        } else if (type == INIT_IEH) {
+            std::cout << "__INIT : IEH__" << std::endl;
+            a = new ComponentInitIEH(final_index_);
         } else if (type == INIT_NSW) {
             std::cout << "__INIT : NSW__" << std::endl;
             a = new ComponentInitNSW(final_index_);

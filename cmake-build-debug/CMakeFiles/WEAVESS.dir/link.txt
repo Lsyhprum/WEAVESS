@@ -1,3 +1,0 @@
-G:\JetBrains\Toolbox\apps\CLion\ch-0\202.7660.37\bin\cmake\win\bin\cmake.exe -E rm -f CMakeFiles\WEAVESS.dir/objects.a
-G:\MinGW-w64\mingw64\bin\ar.exe cr CMakeFiles\WEAVESS.dir/objects.a @CMakeFiles\WEAVESS.dir\objects1.rsp
-G:\MinGW-w64\mingw64\bin\g++.exe -g   -Wl,--whole-archive CMakeFiles\WEAVESS.dir/objects.a -Wl,--no-whole-archive  -o WEAVESS.exe -Wl,--out-implib,libWEAVESS.dll.a -Wl,--major-image-version,0,--minor-image-version,0 @CMakeFiles\WEAVESS.dir\linklibs.rsp

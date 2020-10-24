@@ -8,6 +8,13 @@
 #define PARALLEL
 #define FLT_EPSILON 1.19209290E-07F
 
+// IEH
+#define MAX_ROWSIZE 1024
+#define HASH_RADIUS 1
+#define DEPTH 16 //smaller than code length
+#define INIT_NUM 5500
+#define POOL_SIZE 1100
+
 #include <set>
 #include <omp.h>
 #include <mutex>
@@ -16,6 +23,7 @@
 #include <thread>
 #include <vector>
 #include <chrono>
+#include <cstring>
 #include <fstream>
 #include <cassert>
 #include <iostream>
@@ -249,10 +257,34 @@ namespace weavess {
         unsigned nTrees;
     };
 
+    class IEH {
+    public:
+        template<typename T>
+        struct Candidate2 {
+            size_t row_id;
+            T distance;
+            Candidate2(const size_t row_id, const T distance): row_id(row_id), distance(distance) { }
+
+            bool operator >(const Candidate2& rhs) const {
+                if (this->distance == rhs.distance) {
+                    return this->row_id > rhs.row_id;
+                }
+                return this->distance > rhs.distance;
+            }
+        };
+
+        typedef std::vector<std::vector<float> > Matrix;
+        typedef std::vector<unsigned int> Codes;
+        typedef std::unordered_map<unsigned int, std::vector<unsigned int> > HashBucket;
+        typedef std::vector<HashBucket> HashTable;
+        typedef std::set<Candidate2<float>, std::greater<Candidate2<float> > > CandidateHeap2;
+    };
+
     class NSW {
     public:
         unsigned NN_ ;
         unsigned ef_construction_;
+        unsigned n_threads_;
     };
 
     class HNSW {
@@ -412,7 +444,7 @@ namespace weavess {
 
     };
 
-    class Index : public NNDescent, public NSG, public SSG, public DPG, public VAMANA, public EFANNA, public HNSW{
+    class Index : public NNDescent, public NSG, public SSG, public DPG, public VAMANA, public EFANNA, public IEH, public NSW, public HNSW{
     public:
         explicit Index() {
             dist_ = new Distance();

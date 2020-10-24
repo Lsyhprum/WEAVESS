@@ -15,7 +15,7 @@ else()
 endif()
 
 #Boost
-set(BOOST_ROOT G:/MinGW-w64/boost_1_73_0)
+set(BOOST_ROOT F:/MinGW-W64/boost_1_73_0)
 find_package(BOOST)
 if(Boost_FOUND)
     message(Boost_INCLUDE_DIRS "${Boost_INCLUDE_DIRS}")

@@ -89,6 +89,26 @@ namespace weavess {
         void mergeSubGraphs(size_t treeid, Index::EFANNA::Node* node);
     };
 
+    class ComponentInitIEH : public ComponentInit {
+    public:
+        explicit ComponentInitIEH(Index *index) : ComponentInit(index) {}
+
+        void InitInner() override;
+
+    private:
+        void LoadHashFunc(char* filename, Index::Matrix& func);
+
+        void LoadBaseCode(char* filename, Index::Codes& base);
+
+        void BuildHashTable(int upbits, int lowbits, Index::Codes base ,Index::HashTable& tb);
+
+        void QueryToCode(Index::Matrix query, Index::Matrix func, Index::Codes& querycode);
+
+        void HashTest(int upbits,int lowbits, Index::Codes querycode, Index::HashTable tb, std::vector<std::vector<int> >& cands);
+
+        void LoadKnnTable(char* filename, std::vector<Index::CandidateHeap2 >& tb);
+    };
+
     class ComponentInitNSW : public ComponentInit {
     public:
         explicit ComponentInitNSW(Index *index) : ComponentInit(index) {}
@@ -96,6 +116,8 @@ namespace weavess {
         void InitInner() override;
 
     private:
+        void SetConfigs();
+
         void Build(bool reverse);
 
         int GetRandomSeedPerThread();
@@ -399,6 +421,9 @@ namespace weavess {
         explicit ComponentSearchEntryKDT(Index *index) : ComponentSearchEntry(index) {}
 
         void SearchEntryInner(unsigned query, std::vector<Index::Neighbor> &pool) override;
+
+    private:
+        void getSearchNodeList(Index::Node* node, const float *q, unsigned int lsize, std::vector<Index::Node*>& vn);
     };
 
 

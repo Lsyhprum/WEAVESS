@@ -2,10 +2,6 @@
 
 ## Architecture
 
-### Data Structure
-
-std::vector<std::vector<SimpleNeighbor>>
-
 ## Algorithms
 
 |  Algo  |             TYPE             |        Init         |     Entry      |   Candidate   |        Prune         |     Conn     |    Search Entry    |    Search Route    |
@@ -15,9 +11,9 @@ std::vector<std::vector<SimpleNeighbor>>
 | SSG    |          Refinement          |     NN-Descent      |     Query      | PROPAGATION 2 |        SSG           | Reverse+DFS  |    Sub Centroid    |       Greedy       |
 | DPG    |          Refinement          |     NN-Descent      |     Query      | PROPAGATION 1 |        DPG           |    Reverse   |      Random        |       Greedy       |
 | VAMANA |          Refinement          |       Random        |    Centroid    |     Greedy    |  HEURISTIC + VAMANA  |    Reverse   |     Centroid       |       Greedy       |
-| EFANNA | Divide&Conquer + Refinement  |       KD-tree       |                |               |             |              |                    |                    |
+| EFANNA | Divide&Conquer + Refinement  |                     |    KD-tree     |   NN-Descent  |                      |              |      KD-tree       |       Greedy       |
+| IEH    |      Hash + Refinement       |                     |      LSH       |               |                      |              |                    |                    |
 
-| IEH    |   Refinement   |                       |                |               |             |              |                    |                    |
 | HNSW   |   Increment    |                       |                |      Naive    |  HEURISTIC  |              |                    |                    |
 | NSW    |   Increment    |                       |     Random     |      Naive    |             |              |                    |                    |
 | NGT    |   Increment    |       ANNG            |                |               |    ONNG     |              |      DVPTree       |Greedy(Range Search)|
@@ -54,9 +50,9 @@ dataset -> load(float*) ->
 
 -[ x ] NSSG
 
--[ x ] DPG
+-[ ] DPG
 
--[ x ] VAMANA
+-[ ] VAMANA
 
 -[ ] EFANNA
 
@@ -77,5 +73,4 @@ dataset -> load(float*) ->
 
 * DPG recall 问题
 * 注意 flags 是否reset
-* KDT 入口点
 

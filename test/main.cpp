@@ -128,20 +128,16 @@ void EFANNA(std::string base_path, std::string query_path, std::string ground_pa
 
 void IEH(std::string base_path, std::string query_path, std::string ground_path) {
     weavess::Parameters parameters;
-    parameters.set<unsigned>("nTrees", 8);
-    parameters.set<unsigned>("mLevel", 8);
+    parameters.set<std::string>("func", "");
+    parameters.set<std::string>("basecode", "");
 
-    parameters.set<unsigned>("K", 200);
-    parameters.set<unsigned>("L", 200);
-    parameters.set<unsigned>("ITER", 8);
-    parameters.set<unsigned>("S", 10);
-    parameters.set<unsigned>("R", 10);
+    parameters.set<unsigned>("expand", 8);
+    parameters.set<unsigned>("iterlimit", 8);
 
     auto *builder = new weavess::IndexBuilder();
     builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
-            -> init(weavess::INIT_KDT)
-            -> refine(weavess::REFINE_EFANNA, true)
-            -> search(weavess::SEARCH_ENTRY_KDT, weavess::ROUTER_GREEDY);
+            -> init(weavess::INIT_IEH);
+            //-> search(weavess::SEARCH_ENTRY_KDT, weavess::ROUTER_GREEDY);
 
     std::cout << "Time cost: " << builder->GetBuildTime().count() << std::endl;
 }
@@ -150,6 +146,7 @@ void NSW(std::string base_path, std::string query_path, std::string ground_path)
     weavess::Parameters parameters;
     parameters.set<unsigned>("NN", 1);
     parameters.set<unsigned>("ef_construction", 10);
+    parameters.set<unsigned>("n_threads_", 1);
 
     auto *builder = new weavess::IndexBuilder();
     builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
@@ -178,6 +175,19 @@ void NGT(std::string base_path, std::string query_path, std::string ground_path)
             -> refine(weavess::REFINE_ONNG, false);
 }
 
+void HCNNG(std::string base_path, std::string query_path, std::string ground_path) {
+
+}
+
+void SPTAG(std::string base_path, std::string query_path, std::string ground_path) {
+
+}
+
+void FANNG(std::string base_path, std::string query_path, std::string ground_path) {
+
+}
+
+
 int main() {
     std::string base_path = R"(G:\ANNS\dataset\sift1M\sift_base.fvecs)";
     std::string query_path = R"(G:\ANNS\dataset\sift1M\sift_query.fvecs)";
@@ -191,7 +201,7 @@ int main() {
     //VAMANA(base_path, query_path, ground_path);
     //EFANNA(base_path, query_path, ground_path);
     //IEH(base_path, query_path, ground_path);
-    NSW(base_path, query_path, ground_path);
+    //NSW(base_path, query_path, ground_path);
     //HNSW(base_path, query_path, ground_path);
     //NGT(base_path, query_path, ground_path);
 
