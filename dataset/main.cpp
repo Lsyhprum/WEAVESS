@@ -11,13 +11,16 @@
 class DatasetGenerator {
 public:
 
-    DatasetGenerator(const std::string& dir, const std::string& prefix) : dir_(dir), prefix_(prefix),
-                                                            base_path(ROOT + dir + "/" + prefix + "_base.fvecs"),
-                                                            query_path(ROOT + dir + "/" + prefix + "_query.fvecs"),
-                                                            ground_path(ROOT + dir + "/" + prefix + "_groundtruth.ivecs"){}
+    DatasetGenerator(const std::string &dir, const std::string &prefix) : dir_(dir), prefix_(prefix),
+                                                                          base_path(ROOT + dir + "/" + prefix +
+                                                                                    "_base.fvecs"),
+                                                                          query_path(ROOT + dir + "/" + prefix +
+                                                                                     "_query.fvecs"),
+                                                                          ground_path(ROOT + dir + "/" + prefix +
+                                                                                      "_groundtruth.ivecs") {}
 
     /**
-     * 加载所有数据
+     * 加载所有数据，除 genGroundTruth 外，均需提前调用该函数
      */
     void loadAllData() {
         load_data(&base_path[0], base_data, base_num, base_dim);
@@ -95,10 +98,10 @@ public:
         unsigned k = 0;
         for (size_t i = 0; i < base_num; i++) {
             in.seekg(4, std::ios::cur);
-            if(set.find(i) != set.end()) {
+            if (set.find(i) != set.end()) {
                 in.read((char *) (sample_base_data + k * base_dim), base_dim * sizeof(float));
-                k ++;
-            }else{
+                k++;
+            } else {
                 in.read((char *) tmp, base_dim * sizeof(float));
             }
         }
@@ -121,7 +124,8 @@ public:
 
 
         // ============ 生成验证集 =============
-        gen_ground_truth(sample_ground_path, ground_dim, sample_base_data, query_data, sample_base_num, sample_query_num);
+        gen_ground_truth(sample_ground_path, ground_dim, sample_base_data, query_data, sample_base_num,
+                         sample_query_num);
 
         std::cout << "gen sample ground truth success" << std::endl;
 
@@ -131,12 +135,6 @@ public:
 
         delete[] sample_base_data;
     }
-
-    unsigned getBaseNum() const { return base_num; }
-
-    unsigned getBaseDim() const { return base_dim; }
-
-    float *getBaseData() const { return base_data; }
 
 private:
     const std::string ROOT = "F:/ANNS/DATASET/";
@@ -232,22 +230,14 @@ private:
         unsigned off = rng() % N;
 
         std::unordered_set<unsigned> set;
-        for (unsigned i = 0; i < num; ++i){
+        for (unsigned i = 0; i < num; ++i) {
             index[i] = (index[i] + off) % N;
-            if(set.find(index[i]) != set.end())
+            if (set.find(index[i]) != set.end())
                 std::cout << "gen random index failed" << std::endl;
             set.insert(index[i]);
             //std::cout << index[i] << std::endl;
         }
     }
-
-    struct cmp{
-        template<typename T, typename U>
-        bool operator()(T const& left, U const &right) {
-            if (left.first > right.first) return true;
-            return false;
-        }
-    };
 
     template<typename T>
     T compare(const T *a, const T *b, unsigned length) {
@@ -277,15 +267,16 @@ private:
     }
 
     /**
-    * 生成验证集
-    *
-    * @param ground_path 验证集保存路径
-    * @param base_data 训练集数据
-    * @param query_data 测试集数据
-    * @param base_num 训练集个数
-    * @param query_num 测试集个数
-    */
-    void gen_ground_truth(std::string ground_path, unsigned ground_dim, float *base_data, float *query_data, unsigned base_num, unsigned query_num) {
+     * 生成验证集
+     *
+     * @param ground_path 验证集保存路径
+     * @param base_data 训练集数据
+     * @param query_data 测试集数据
+     * @param base_num 训练集个数
+     * @param query_num 测试集个数
+     */
+    void gen_ground_truth(std::string ground_path, unsigned ground_dim, float *base_data, float *query_data,
+                          unsigned base_num, unsigned query_num) {
 
         std::chrono::high_resolution_clock::time_point s = std::chrono::high_resolution_clock::now();
         unsigned *groundtruth = new unsigned[query_num * ground_dim];
@@ -299,14 +290,14 @@ private:
                 dist.push(std::pair<float, unsigned>(d, j));
             }
 
-            for(int j = 0; j < ground_dim; j ++) {
+            for (int j = 0; j < ground_dim; j++) {
                 std::pair<float, unsigned> p = dist.top();
                 dist.pop();
                 groundtruth[i * ground_dim + j] = p.second;
 //              std::cout << p.first << std::endl;
 //              std::cout << p.second << std::endl;
             }
-//            std::cout << std::endl;
+//          std::cout << std::endl;
         }
         std::chrono::high_resolution_clock::time_point e = std::chrono::high_resolution_clock::now();
 
@@ -319,10 +310,29 @@ private:
         save_data<unsigned>(&ground_path[0], groundtruth, query_num, ground_dim);
     }
 
+    struct cmp {
+        template<typename T, typename U>
+        bool operator()(T const &left, U const &right) {
+            if (left.first > right.first) return true;
+            return false;
+        }
+    };
+
+    static bool test_cmp(const std::pair<float, unsigned> a, const std::pair<float, unsigned> b) {
+        return a.first < b.first;
+    }
+
+    /**
+     * 测试采样数据集正确性
+     *
+     * @param sample_base_num 采样数据集数据个数
+     * @param sample_query_num 采样测试集数据个数
+     */
     void sample_test(unsigned sample_base_num, unsigned sample_query_num) {
         unsigned dim{};
         unsigned num{};
 
+        // 测试 sample base 数据规模
         std::ifstream in(sample_base_path, std::ios::binary);
         if (!in.is_open()) {
             std::cerr << "open file error" << std::endl;
@@ -344,8 +354,9 @@ private:
 
         assert(sample_base_num == num);
         assert(base_dim == dim);
-        std::cout << "test  sample base success" << std::endl;
+        std::cout << "test sample base num success" << std::endl;
 
+        // 测试 sample query 数据规模
         std::ifstream in2(sample_query_path, std::ios::binary);
         if (!in2.is_open()) {
             std::cerr << "open file error" << std::endl;
@@ -367,8 +378,9 @@ private:
 
         assert(sample_query_num == num);
         assert(query_dim == dim);
-        std::cout << "test  sample query success" << std::endl;
+        std::cout << "test  sample query num success" << std::endl;
 
+        // 测试 sample groundtruth 数据规模
         std::ifstream in3(sample_ground_path, std::ios::binary);
         if (!in3.is_open()) {
             std::cerr << "open file error" << std::endl;
@@ -390,17 +402,32 @@ private:
 
         assert(sample_query_num == num);
         assert(ground_dim == dim);
-        std::cout << "test  sample ground success" << std::endl;
+        std::cout << "test sample ground num success" << std::endl;
 
-//        unsigned *ground_data = new unsigned[ground_dim * ground_num];
-//        load_data(&sample_ground_path[0], ground_data, ground_num, ground_dim);
-//
-//        for(int i = 0; i < ground_num; i ++) {
-//            for(int j = 0; j < ground_dim; j ++) {
-//                std::cout << ground_data[i * ground_dim + j] << " ";
-//            }
-//            std::cout << std::endl;
-//        }
+        // 随机抽取测试数据进行验证
+        std::vector<unsigned> index;
+        std::mt19937 rng(rand());
+        gen_random(index, rng, query_num, 10);
+
+        for (int i : index) {
+            std::vector<std::pair<float, unsigned>> dist;
+            for (int j = 0; j < base_num; j++) {
+                float d = compare(query_data + query_dim * i, base_data + base_dim * j, base_dim);
+                dist.emplace_back(d, j);
+            }
+            std::sort(dist.begin(), dist.end(), test_cmp);
+
+            for (int j = 0; j < ground_dim; j++) {
+                if(ground_data[i * ground_dim + j] != dist[j].second){
+                    float d = compare(query_data + query_dim * i, base_data + base_dim * ground_data[i * ground_dim + j], base_dim);
+                    if(d != dist[j].first) {
+                        std::cout << "some wrong has happend" << std::endl;
+                        return;
+                    }
+                }
+            }
+        }
+        std::cout << "test sample dataset success" << std::endl;
     }
 
 };
@@ -410,8 +437,8 @@ int main() {
     std::vector<std::string> dataset = {"sift1M", "gist", "glove-100", "crawl", "audio", "msong", "uqv", "enron"};
     std::vector<std::string> prefix = {"sift", "gist", "glove-100", "crawl", "audio", "msong", "uqv", "enron"};
 
-    for(int i = 0; i < dataset.size(); i ++) {
-        DatasetGenerator gen(dataset[i], prefix[i] + "_sample");
+    for (int i = 0; i < dataset.size(); i++) {
+        DatasetGenerator gen(dataset[i], prefix[i]);
         gen.loadAllData();
 
         //gen.genSample(10000, 100);

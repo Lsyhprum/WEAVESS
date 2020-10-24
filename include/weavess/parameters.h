@@ -22,7 +22,7 @@ namespace weavess {
         inline T get(const std::string &name) const {
             auto item = params.find(name);
             if (item == params.end()) {
-                throw std::invalid_argument("Invalid paramter name.");
+                throw std::invalid_argument("Invalid paramter name : " + name + ".");
             } else {
                 return ConvertStrToValue<T>(item->second);
             }

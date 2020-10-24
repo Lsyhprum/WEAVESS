@@ -1,0 +1,1 @@
+  -LG:/MinGW-w64/boost_1_73_0/stage/lib  -lkernel32 -luser32 -lgdi32 -lwinspool -lshell32 -lole32 -loleaut32 -luuid -lcomdlg32 -ladvapi32 

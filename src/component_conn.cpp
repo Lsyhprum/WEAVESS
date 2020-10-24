@@ -1,5 +1,5 @@
 //
-// Created by Murph on 2020/9/19.
+// Created by MurphySL on 2020/10/24.
 //
 
 #include "weavess/component.h"
@@ -23,8 +23,8 @@ namespace weavess {
             // std::cout << "new root"<<":"<<root << '\n';
         }
         for (size_t i = 0; i < index->getBaseLen(); ++i) {
-            if (index->getFinalGraph()[i][0].size() > index->R_nsg) {
-                index->R_nsg = index->getFinalGraph()[i][0].size();
+            if (index->getFinalGraph()[i].size() > index->width) {
+                index->width = index->getFinalGraph()[i].size();
             }
         }
     }
@@ -37,9 +37,9 @@ namespace weavess {
         flag[root] = true;
         while (!s.empty()) {
             unsigned next = index->getBaseLen() + 1;
-            for (unsigned i = 0; i < index->getFinalGraph()[tmp][0].size(); i++) {
-                if (!flag[index->getFinalGraph()[tmp][0][i]]) {
-                    next = index->getFinalGraph()[tmp][0][i];
+            for (unsigned i = 0; i < index->getFinalGraph()[tmp].size(); i++) {
+                if (!flag[index->getFinalGraph()[tmp][i].id]) {
+                    next = index->getFinalGraph()[tmp][i].id;
                     break;
                 }
             }
@@ -77,6 +77,7 @@ namespace weavess {
             if (flag[pool[i].id]) {
                 // std::cout << pool[i].id << '\n';
                 root = pool[i].id;
+
                 found = 1;
                 break;
             }
@@ -90,7 +91,10 @@ namespace weavess {
                 }
             }
         }
-        index->getFinalGraph()[root][0].push_back(id);
+        float dist = index->getDist()->compare(index->getBaseData() + index->getBaseDim() * root,
+                                         index->getBaseData() + index->getBaseDim() * id,
+                                         index->getBaseDim());
+        index->getFinalGraph()[root].push_back(Index::SimpleNeighbor(id, dist));
     }
 
     void ComponentConnNSGDFS::get_neighbors(const float *query, std::vector<Index::Neighbor> &retset,
@@ -103,8 +107,8 @@ namespace weavess {
 
         boost::dynamic_bitset<> flags{index->getBaseLen(), 0};
         L = 0;
-        for (unsigned i = 0; i < init_ids.size() && i < index->getFinalGraph()[index->ep_][0].size(); i++) {
-            init_ids[i] = index->getFinalGraph()[index->ep_][0][i];
+        for (unsigned i = 0; i < init_ids.size() && i < index->getFinalGraph()[index->ep_].size(); i++) {
+            init_ids[i] = index->getFinalGraph()[index->ep_][i].id;
             flags[init_ids[i]] = true;
             L++;
         }
@@ -137,8 +141,8 @@ namespace weavess {
                 retset[k].flag = false;
                 unsigned n = retset[k].id;
 
-                for (unsigned m = 0; m < index->getFinalGraph()[n][0].size(); ++m) {
-                    unsigned id = index->getFinalGraph()[n][0][m];
+                for (unsigned m = 0; m < index->getFinalGraph()[n].size(); ++m) {
+                    unsigned id = index->getFinalGraph()[n][m].id;
                     if (flags[id]) continue;
                     flags[id] = 1;
 
@@ -164,7 +168,7 @@ namespace weavess {
     // DFS EXPAND
     void ComponentConnSSGDFS::ConnInner() {
         unsigned n_try = index->getParam().get<unsigned>("n_try");
-        unsigned range = index->getParam().get<unsigned>("R_nsg");
+        unsigned range = index->getParam().get<unsigned>("R_refine");
 
         std::vector<unsigned> ids(index->getBaseLen());
         for (unsigned i = 0; i < index->getBaseLen(); i++) {
@@ -189,8 +193,8 @@ namespace weavess {
                     unsigned q_front=myqueue.front();
                     myqueue.pop();
 
-                    for(unsigned j=0; j<index->getFinalGraph()[q_front][0].size(); j++){
-                        unsigned child = index->getFinalGraph()[q_front][0][j];
+                    for(unsigned j=0; j<index->getFinalGraph()[q_front].size(); j++){
+                        unsigned child = index->getFinalGraph()[q_front][j].id;
                         if(flags[child])continue;
                         flags[child] = true;
                         myqueue.push(child);
@@ -205,8 +209,11 @@ namespace weavess {
                 //std::cout <<i<<":"<< uncheck_set.size() << '\n';
                 if(uncheck_set.size()>0){
                     for(unsigned j=0; j<index->getBaseLen(); j++){
-                        if(flags[j] && index->getFinalGraph()[j][0].size()<range){
-                            index->getFinalGraph()[j][0].push_back(uncheck_set[0]);
+                        if(flags[j] && index->getFinalGraph()[j].size()<range){
+                            float dist = index->getDist()->compare(index->getBaseData() + index->getBaseDim() * j,
+                                                                   index->getBaseData() + index->getBaseDim() * uncheck_set[0],
+                                                                   index->getBaseDim());
+                            index->getFinalGraph()[j].push_back(Index::SimpleNeighbor(uncheck_set[0], dist));
                             break;
                         }
                     }
@@ -221,88 +228,41 @@ namespace weavess {
     void ComponentConnReverse::ConnInner() {
         //ofstream os(hubs_path, ios::binary);
         //vector <hub_pair > hubs;
-        std::vector<std::vector<unsigned>> rknn_graph;
+        std::vector<std::vector<Index::SimpleNeighbor>> rknn_graph;
         rknn_graph.resize(index->getBaseLen());
 
         int count = 0;
 
         for (unsigned i = 0; i < index->getBaseLen(); ++i)
         {
-            auto const &knn = index->getFinalGraph()[i][0];
-            uint32_t K = index->getFinalGraph()[i][0].size(); //knn.size();
+            auto const &knn = index->getFinalGraph()[i];
+            uint32_t K = index->getFinalGraph()[i].size(); //knn.size();
             for (unsigned j = 0; j < K; j++)
             {
-                rknn_graph[knn[j]].push_back(i);
+                rknn_graph[knn[j].id].push_back(Index::SimpleNeighbor(i, knn[j].distance));
             }
         }
 
         for (unsigned i = 0; i < index->getBaseLen(); ++i)
         {
-            std::vector<unsigned> rknn_list = rknn_graph[i];
+            std::vector<Index::SimpleNeighbor> rknn_list = rknn_graph[i];
             count += rknn_list.size();
 
             for (unsigned j = 0; j < rknn_list.size(); ++j)
             {
-                index->getFinalGraph()[i][0].push_back(rknn_list[j]);
+                index->getFinalGraph()[i].push_back(rknn_list[j]);
                 //sum += exp(-1 * sqrt(rknn_list[j].dist) * beta); // a function with dist
             }
 
-            sort(index->getFinalGraph()[i][0].begin(), index->getFinalGraph()[i][0].end());
-            int len = index->getFinalGraph()[i][0].size();
-            for (unsigned j = 1; j < index->getFinalGraph()[i][0].size(); ++j)
+            sort(index->getFinalGraph()[i].begin(), index->getFinalGraph()[i].end());
+            for (unsigned j = 1; j < index->getFinalGraph()[i].size(); ++j)
             {
-                if (index->getFinalGraph()[i][0][j] == index->getFinalGraph()[i][0][j - 1])
+                if (index->getFinalGraph()[i][j].id == index->getFinalGraph()[i][j - 1].id)
                 {
-                    index->getFinalGraph()[i][0].erase(index->getFinalGraph()[i][0].begin() + j);
+                    index->getFinalGraph()[i].erase(index->getFinalGraph()[i].begin() + j);
                     j--;
-                    len --;
                 }
             }
-            index->getFinalGraph()[i][0].resize(len);
-        }
-        fprintf(stderr, "inverse edges: %d\n", count);
-    }
-
-    // REVERSE - VAMANA
-    void ComponentConnReverseVAMANA::ConnInner() {
-        std::vector<std::vector<unsigned>> rknn_graph;
-        rknn_graph.resize(index->getBaseLen());
-
-        int count = 0;
-
-        for (unsigned i = 0; i < index->getBaseLen(); ++i)
-        {
-            auto const &knn = index->getFinalGraph()[i][0];
-            uint32_t K = index->getFinalGraph()[i][0].size(); //knn.size();
-            for (unsigned j = 0; j < K; j++)
-            {
-                rknn_graph[knn[j]].push_back(i);
-            }
-        }
-
-        for (unsigned i = 0; i < index->getBaseLen(); ++i)
-        {
-            std::vector<unsigned> rknn_list = rknn_graph[i];
-            count += rknn_list.size();
-
-            for (unsigned j = 0; j < rknn_list.size(); ++j)
-            {
-                index->getFinalGraph()[i][0].push_back(rknn_list[j]);
-                //sum += exp(-1 * sqrt(rknn_list[j].dist) * beta); // a function with dist
-            }
-
-            sort(index->getFinalGraph()[i][0].begin(), index->getFinalGraph()[i][0].end());
-            int len = index->getFinalGraph()[i][0].size();
-            for (unsigned j = 1; j < index->getFinalGraph()[i][0].size(); ++j)
-            {
-                if (index->getFinalGraph()[i][0][j] == index->getFinalGraph()[i][0][j - 1])
-                {
-                    index->getFinalGraph()[i][0].erase(index->getFinalGraph()[i][0].begin() + j);
-                    j--;
-                    len --;
-                }
-            }
-            index->getFinalGraph()[i][0].resize(len);
         }
         fprintf(stderr, "inverse edges: %d\n", count);
     }

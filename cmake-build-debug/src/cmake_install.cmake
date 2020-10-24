@@ -1,4 +1,4 @@
-# Install script for directory: F:/ANNS/WEAVESS_dev/src
+# Install script for directory: G:/ANNS/WEAVESS/src
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)

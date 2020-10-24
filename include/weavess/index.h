@@ -1,10 +1,14 @@
 //
-// Created by MurphySL on 2020/9/14.
+// Created by MurphySL on 2020/10/23.
 //
 
 #ifndef WEAVESS_INDEX_H
 #define WEAVESS_INDEX_H
 
+#define PARALLEL
+#define FLT_EPSILON 1.19209290E-07F
+
+#include <set>
 #include <omp.h>
 #include <mutex>
 #include <queue>
@@ -15,6 +19,7 @@
 #include <fstream>
 #include <cassert>
 #include <iostream>
+#include <algorithm>
 #include <unordered_set>
 #include <boost/dynamic_bitset.hpp>
 #include "util.h"
@@ -26,12 +31,11 @@ namespace weavess {
 
     class NNDescent {
     public:
+        unsigned K;
         unsigned S;
         unsigned R;
         unsigned L;
         unsigned ITER;
-        unsigned K;
-        unsigned delta;
 
         struct Neighbor {
             unsigned id;
@@ -43,18 +47,6 @@ namespace weavess {
             Neighbor(unsigned id, float distance, bool f) : id{id}, distance{distance}, flag(f) {}
 
             inline bool operator<(const Neighbor &other) const {
-                return distance < other.distance;
-            }
-        };
-
-        struct SimpleNeighbor{
-            unsigned id;
-            float distance;
-
-            SimpleNeighbor() = default;
-            SimpleNeighbor(unsigned id, float distance) : id{id}, distance{distance}{}
-
-            inline bool operator<(const SimpleNeighbor &other) const {
                 return distance < other.distance;
             }
         };
@@ -88,6 +80,7 @@ namespace weavess {
                 pool.reserve(other.pool.capacity());
             }
 
+            // 插入大顶堆
             void insert(unsigned id, float dist) {
                 LockGuard guard(lock);
                 if (dist > pool.front().distance) return;
@@ -156,18 +149,19 @@ namespace weavess {
 
     class NSG {
     public:
-        unsigned R_nsg;     // nsg 中可变
-        unsigned L_nsg;
-        unsigned C_nsg;
+        unsigned R_refine;
+        unsigned L_refine;
+        unsigned C_refine;
 
         unsigned ep_;
+        unsigned width;
     };
 
-    class NSSG {
+    class SSG {
     public:
         float A;
         unsigned n_try;
-        unsigned width;
+        //unsigned width;
 
         std::vector<unsigned> eps_;
         unsigned test_min = INT_MAX;
@@ -180,9 +174,14 @@ namespace weavess {
         unsigned L_dpg;
     };
 
+    class VAMANA {
+    public:
+        float alpha;
+    };
+
     class EFANNA {
     public:
-                // 节点不保存数据，只维护一个 LeafLists 中对应的数据编号
+        // 节点不保存数据，只维护一个 LeafLists 中对应的数据编号
         struct Node {
             int DivDim;
             float DivVal;
@@ -253,22 +252,61 @@ namespace weavess {
     class NSW {
     public:
         unsigned NN_ ;
+        unsigned ef_construction_;
     };
 
     class HNSW {
     public:
-        unsigned m_ = 12;
-        unsigned max_m_ = 12;
-        unsigned max_m0_ = 24;
-        unsigned ef_construction_ = 150;
-        unsigned n_threads_ = 1;
-        unsigned mult;
-        float level_mult_ = 1 / log(1.0*m_);
+        template <typename KeyType, typename DataType>
+        class MinHeap {
+        public:
+            class Item {
+            public:
+                KeyType key;
+                DataType data;
+                Item() {}
+                Item(const KeyType& key) :key(key) {}
+                Item(const KeyType& key, const DataType& data) :key(key), data(data) {}
+                bool operator<(const Item& i2) const {
+                    return key > i2.key;
+                }
+            };
+
+            MinHeap() {
+            }
+
+            const KeyType top_key() {
+                if (v_.size() <= 0) return 0.0;
+                return v_[0].key;
+            }
+
+            Item top() {
+                if (v_.size() <= 0) throw std::runtime_error("[Error] Called top() operation with empty heap");
+                return v_[0];
+            }
+
+            void pop() {
+                std::pop_heap(v_.begin(), v_.end());
+                v_.pop_back();
+            }
+
+            void push(const KeyType& key, const DataType& data) {
+                v_.emplace_back(Item(key, data));
+                std::push_heap(v_.begin(), v_.end());
+            }
+
+            size_t size() {
+                return v_.size();
+            }
+
+        private:
+            std::vector<Item> v_;
+        };
 
         class HnswNode {
         public:
             explicit HnswNode(int id, int level, size_t max_m, size_t max_m0)
-                : id_(id), level_(level), max_m_(max_m), max_m0_(max_m0), friends_at_layer_(level+1) {
+                    : id_(id), level_(level), max_m_(max_m), max_m0_(max_m0), friends_at_layer_(level+1) {
                 for (int i = 1; i <= level; ++i) {
                     friends_at_layer_[i].reserve(max_m_ + 1);
                 }
@@ -340,52 +378,6 @@ namespace weavess {
             float distance_;
         };
 
-        template <typename KeyType, typename DataType>
-        class MinHeap {
-        public:
-            class Item {
-            public:
-                KeyType key;
-                DataType data;
-                Item() {}
-                Item(const KeyType& key) :key(key) {}
-                Item(const KeyType& key, const DataType& data) :key(key), data(data) {}
-                bool operator<(const Item& i2) const {
-                    return key > i2.key;
-                }
-            };
-
-            MinHeap() {
-            }
-
-            const KeyType top_key() {
-                if (v_.size() <= 0) return 0.0;
-                return v_[0].key;
-            }
-
-            Item top() {
-                if (v_.size() <= 0) throw std::runtime_error("[Error] Called top() operation with empty heap");
-                return v_[0];
-            }
-
-            void pop() {
-                std::pop_heap(v_.begin(), v_.end());
-                v_.pop_back();
-            }
-
-            void push(const KeyType& key, const DataType& data) {
-                v_.emplace_back(Item(key, data));
-                std::push_heap(v_.begin(), v_.end());
-            }
-
-            size_t size() {
-                return v_.size();
-            }
-
-        private:
-            std::vector<Item> v_;
-        };
-
         class VisitedList {
         public:
             VisitedList(unsigned size) : size_(size), mark_(1) {
@@ -418,119 +410,10 @@ namespace weavess {
             unsigned int mark_;
         };
 
-        int max_level_ = 0;
-        HnswNode* enterpoint_ = nullptr;
-        std::vector<HnswNode*> nodes_;
-
-        mutable std::mutex max_level_guard_;
     };
 
-    class VAMANA {
+    class Index : public NNDescent, public NSG, public SSG, public DPG, public VAMANA, public EFANNA, public HNSW{
     public:
-        float alpha;
-    };
-
-    class HCNNG {
-    public:
-        struct Edge{
-            int v1, v2;
-            float weight;
-            Edge(){
-                v1 = -1;
-                v2 = -1;
-                weight = -1;
-            }
-            Edge(int _v1, int _v2, float _weight){
-                v1 = _v1;
-                v2 = _v2;
-                weight = _weight;
-            }
-            bool operator<(const Edge& e) const {
-                return weight < e.weight;
-            }
-            ~Edge() { }
-        };
-
-        struct DisjointSet{
-            int * parent;
-            int * rank;
-            DisjointSet(int N){
-                parent = new int[N];
-                rank = new int[N];
-                for(int i=0; i<N; i++){
-                    parent[i] = i;
-                    rank[i] = 0;
-                }
-            }
-            void _union(int x, int y){
-                int xroot = parent[x];
-                int yroot = parent[y];
-                int xrank = rank[x];
-                int yrank = rank[y];
-                if(xroot == yroot)
-                    return;
-                else if(xrank < yrank)
-                    parent[xroot] = yroot;
-                else{
-                    parent[yroot] = xroot;
-                    if(xrank == yrank)
-                        rank[xroot] = rank[xroot] + 1;
-                }
-            }
-            int find(int x){
-                if(parent[x] != x)
-                    parent[x] = find(parent[x]);
-                return parent[x];
-            }
-
-            ~DisjointSet() {
-                delete[] parent;
-                delete[] rank;
-            }
-        };
-
-        struct Tnode {
-            unsigned div_dim;
-            Tnode *left;
-            Tnode *right;
-            bool isLeaf;
-
-            std::vector<unsigned> val;
-        };
-        std::vector <Tnode> Tn;
-
-        int xxx = 0;
-
-        float S_hcnng = 0.0;
-        unsigned N = 0;
-    };
-
-    class IEH {
-    public:
-        template<typename T>
-        struct Candidate2 {
-            size_t row_id;
-            T distance;
-            Candidate2(const size_t row_id, const T distance): row_id(row_id), distance(distance) { }
-
-            bool operator >(const Candidate2& rhs) const {
-                if (this->distance == rhs.distance) {
-                    return this->row_id > rhs.row_id;
-                }
-                return this->distance > rhs.distance;
-            }
-        };
-
-        typedef std::vector<std::vector<float> > Matrix;
-        typedef std::vector<unsigned int> Codes;
-        typedef std::unordered_map<unsigned int, std::vector<unsigned int> > HashBucket;
-        typedef std::vector<HashBucket> HashTable;
-        typedef std::set<Candidate2<float>, std::greater<Candidate2<float> > > CandidateHeap2;
-    };
-
-    class Index : public NNDescent, public NSG, public NSSG, public DPG, public EFANNA, public HNSW, public VAMANA, public HCNNG, public NSW, public IEH {
-    public:
-
         explicit Index() {
             dist_ = new Distance();
         }
@@ -539,35 +422,17 @@ namespace weavess {
             delete dist_;
         }
 
-        static inline int InsertIntoPool(Neighbor *addr, unsigned K, Neighbor nn) {
-            // find the location to insert
-            int left = 0, right = K - 1;
-            if (addr[left].distance > nn.distance) {
-                memmove((char *) &addr[left + 1], &addr[left], K * sizeof(Neighbor));
-                addr[left] = nn;
-                return left;
-            }
-            if (addr[right].distance < nn.distance) {
-                addr[K] = nn;
-                return K;
-            }
-            while (left < right - 1) {
-                int mid = (left + right) / 2;
-                if (addr[mid].distance > nn.distance)right = mid;
-                else left = mid;
-            }
-            //check equal ID
+        struct SimpleNeighbor{
+            unsigned id;
+            float distance;
 
-            while (left > 0) {
-                if (addr[left].distance < nn.distance) break;
-                if (addr[left].id == nn.id) return K + 1;
-                left--;
+            SimpleNeighbor() = default;
+            SimpleNeighbor(unsigned id, float distance) : id{id}, distance{distance}{}
+
+            inline bool operator<(const SimpleNeighbor &other) const {
+                return distance < other.distance;
             }
-            if (addr[left].id == nn.id || addr[right].id == nn.id)return K + 1;
-            memmove((char *) &addr[right + 1], &addr[right], (K - right) * sizeof(Neighbor));
-            addr[right] = nn;
-            return right;
-        }
+        };
 
         float *getBaseData() const {
             return base_data_;
@@ -657,9 +522,10 @@ namespace weavess {
             dist_ = dist;
         }
 
-        typedef std::vector<std::vector<std::vector<unsigned>>> CompactGraph;
+        // sorted
+        typedef std::vector<std::vector<SimpleNeighbor>> FinalGraph;
 
-        CompactGraph &getFinalGraph() {
+        FinalGraph &getFinalGraph() {
             return final_graph_;
         }
 
@@ -715,7 +581,7 @@ namespace weavess {
 
         Distance *dist_;
 
-        CompactGraph final_graph_;
+        FinalGraph final_graph_;
 
         TYPE entry_type;
         TYPE candidate_type;
@@ -723,9 +589,7 @@ namespace weavess {
         TYPE conn_type;
 
         unsigned dist_count = 0;
-
     };
-
 }
 
 #endif //WEAVESS_INDEX_H
