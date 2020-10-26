@@ -476,9 +476,9 @@ namespace weavess {
         index->getFinalGraph().resize(index->getBaseLen());
 
         for (size_t i = 0; i < index->getBaseLen(); i++) {
-            Index::SimpleNeighbor *pool = cut_graph_ + i * (size_t) index->L_dpg;
+            Index::SimpleNeighbor *pool = cut_graph_ + i * (size_t) index->R_refine;
             unsigned pool_size = 0;
-            for (unsigned j = 0; j < index->L_dpg; j++) {
+            for (unsigned j = 0; j < index->R_refine; j++) {
                 if (pool[j].distance == -1) break;
                 pool_size = j;
             }
@@ -493,7 +493,6 @@ namespace weavess {
 
     void ComponentRefineVAMANA::SetConfigs() {
         index->R_refine = index->getParam().get<unsigned>("R_refine");
-        index->L_refine = index->getParam().get<unsigned>("L_refine");
         index->alpha = index->getParam().get<float>("alpha");
     }
 
@@ -506,8 +505,7 @@ namespace weavess {
 
         // PRUNE
         std::cout << "__PRUNE : VAMANA__" << std::endl;
-        ComponentPrune *b1 = new ComponentPruneHeuristic(index);
-        ComponentPrune *b2 = new ComponentPruneVAMANA(index);
+        ComponentPrune *b = new ComponentPruneHeuristic(index);
 
         // first prune
 #pragma omp parallel
@@ -522,166 +520,18 @@ namespace weavess {
                 flags.reset();
                 a->CandidateInner(n, index->ep_, flags, pool);
 
-                b1->PruneInner(n, index->R_refine, flags, pool, cut_graph_);
-            }
-
-            std::vector<Index::SimpleNeighbor>().swap(pool);
-        }
-
-#pragma omp for schedule(dynamic, 100)
-        for (unsigned n = 0; n < index->getBaseLen(); ++n) {
-            InterInsert1(n, index->R_refine, locks, cut_graph_);
-        }
-
-        index->getFinalGraph().resize(index->getBaseLen());
-
-        for (size_t i = 0; i < index->getBaseLen(); i++) {
-            Index::SimpleNeighbor *pool = cut_graph_ + i * (size_t) index->R_refine;
-            unsigned pool_size = 0;
-            for (unsigned j = 0; j < index->R_refine; j++) {
-                if (pool[j].distance == -1) break;
-                pool_size = j;
-            }
-            pool_size++;
-            index->getFinalGraph()[i].resize(pool_size);
-            for (unsigned j = 0; j < pool_size; j++) {
-                index->getFinalGraph()[i][j].id = pool[j].id;
-                index->getFinalGraph()[i][j].distance = pool[j].distance;
+                b->PruneInner(n, index->R_refine, flags, pool, cut_graph_);
             }
         }
-
 
         // second prune
-#pragma omp parallel
-        {
-            std::vector<Index::SimpleNeighbor> pool;
-            pool.resize(index->getBaseLen());
-            boost::dynamic_bitset<> flags(index->getBaseLen(), 0);
-
-#pragma omp for schedule(dynamic, 100)
-            for (unsigned n = 0; n < index->getBaseLen(); ++n) {
-                pool.clear();
-                flags.reset();
-                a->CandidateInner(n, index->ep_, flags, pool);
-
-                b2->PruneInner(n, index->R_refine, flags, pool, cut_graph_);
-            }
-
-            std::vector<Index::SimpleNeighbor>().swap(pool);
-        }
-
 #pragma omp for schedule(dynamic, 100)
         for (unsigned n = 0; n < index->getBaseLen(); ++n) {
-            InterInsert2(n, index->R_refine, locks, cut_graph_);
-        }
-
-        index->getFinalGraph().resize(index->getBaseLen());
-
-        for (size_t i = 0; i < index->getBaseLen(); i++) {
-            Index::SimpleNeighbor *pool = cut_graph_ + i * (size_t) index->R_refine;
-            unsigned pool_size = 0;
-            for (unsigned j = 0; j < index->R_refine; j++) {
-                if (pool[j].distance == -1) break;
-                pool_size = j;
-            }
-            pool_size++;
-            index->getFinalGraph()[i].resize(pool_size);
-            for (unsigned j = 0; j < pool_size; j++) {
-                index->getFinalGraph()[i][j].id = pool[j].id;
-                index->getFinalGraph()[i][j].distance = pool[j].distance;
-            }
-        }
-
-    }
-
-    void ComponentRefineVAMANA::InterInsert1(unsigned int n, unsigned range, std::vector<std::mutex> &locks,
-                                             Index::SimpleNeighbor *cut_graph_) {
-        // 结点 n 近邻
-        Index::SimpleNeighbor *src_pool = cut_graph_ + (size_t) n * (size_t) range;
-        // 遍历近邻
-        for (size_t i = 0; i < range; i++) {
-            if (src_pool[i].distance == -1) break;
-
-            Index::SimpleNeighbor sn(n, src_pool[i].distance);
-            size_t des = src_pool[i].id;
-            // 结点 n 近 des 邻信息
-            Index::SimpleNeighbor *des_pool = cut_graph_ + des * (size_t) range;
-
-            // 单向边近邻 （n -> des.nn)
-            std::vector<Index::SimpleNeighbor> temp_pool;
-            // 查询 res 与 des近邻 是否存在双向边
-            int dup = 0;
-            {
-                Index::LockGuard guard(locks[des]);
-                for (size_t j = 0; j < range; j++) {
-                    if (des_pool[j].distance == -1) break;
-                    if (n == des_pool[j].id) {
-                        dup = 1;
-                        break;
-                    }
-                    temp_pool.push_back(des_pool[j]);
-                }
-            }
-            if (dup) continue;
-
-            // 插入待查询点 n
-            temp_pool.push_back(sn);
-            if (temp_pool.size() > range) {
-                // 裁边
-                std::vector<Index::SimpleNeighbor> result;
-                Index::MinHeap<float, Index::SimpleNeighbor> skipped;
-                std::sort(temp_pool.begin(), temp_pool.end());
-
-                for (int k = temp_pool.size() - 1; k >= 0; --k) {
-                    bool skip = false;
-                    float cur_dist = temp_pool[i].distance;
-                    for (size_t j = 0; j < result.size(); j++) {
-                        float dist = index->getDist()->compare(
-                                index->getBaseData() + index->getBaseDim() * (size_t) result[j].id,
-                                index->getBaseData() + index->getBaseDim() * (size_t) temp_pool[k].id,
-                                (unsigned) index->getBaseDim());
-                        if (dist < cur_dist) {
-                            skip = true;
-                            break;
-                        }
-                    }
-
-                    if (!skip) {
-                        result.push_back(temp_pool[k]);
-                    } else {
-                        // save_remains  ??
-                        skipped.push(cur_dist, temp_pool[k]);
-                    }
-
-                    if (result.size() == range)
-                        break;
-                }
-
-                while (result.size() < range && skipped.size()) {
-                    result.push_back(skipped.top().data);
-                    skipped.pop();
-                }
-                {
-                    Index::LockGuard guard(locks[des]);
-                    for (unsigned t = 0; t < result.size(); t++) {
-                        des_pool[t] = result[t];
-                    }
-                }
-            } else {
-                // 添加反向边
-                Index::LockGuard guard(locks[des]);
-                for (unsigned t = 0; t < range; t++) {
-                    if (des_pool[t].distance == -1) {
-                        des_pool[t] = sn;
-                        if (t + 1 < range) des_pool[t + 1].distance = -1;
-                        break;
-                    }
-                }
-            }
+            InterInsert(n, index->R_refine, locks, cut_graph_);
         }
     }
 
-    void ComponentRefineVAMANA::InterInsert2(unsigned int n, unsigned int range, std::vector<std::mutex> &locks,
+    void ComponentRefineVAMANA::InterInsert(unsigned int n, unsigned int range, std::vector<std::mutex> &locks,
                                              Index::SimpleNeighbor *cut_graph_) {
         // 结点 n 近邻
         Index::SimpleNeighbor *src_pool = cut_graph_ + (size_t) n * (size_t) range;
@@ -956,4 +806,11 @@ namespace weavess {
     }
 
 
+    /**
+     * ONNG Refine :
+     *  PRUNE      : ONNG
+     */
+    void ComponentRefineONNG::RefineInner() {
+
+    }
 }

@@ -181,5 +181,5 @@ namespace weavess {
             vn.push_back(node);
     }
 
-
+    void ComponentSearchEntryNone::SearchEntryInner(unsigned int query, std::vector<Index::Neighbor> &pool) { }
 }

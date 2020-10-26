@@ -15,7 +15,6 @@
 #define INIT_NUM 5500
 #define POOL_SIZE 1100
 
-#include <set>
 #include <omp.h>
 #include <mutex>
 #include <queue>
@@ -27,6 +26,7 @@
 #include <fstream>
 #include <cassert>
 #include <iostream>
+#include <windows.h>
 #include <algorithm>
 #include <unordered_set>
 #include <boost/dynamic_bitset.hpp>
@@ -283,12 +283,21 @@ namespace weavess {
     class NSW {
     public:
         unsigned NN_ ;
-        unsigned ef_construction_;
-        unsigned n_threads_;
+        unsigned ef_construction_ = 150;    //l
+        unsigned n_threads_ = 1;
     };
 
     class HNSW {
     public:
+        unsigned m_ = 12;       // k
+        unsigned max_m_ = 12;
+        unsigned max_m0_ = 24;
+        unsigned mult;
+        float level_mult_ = 1 / log(1.0*m_);
+
+        int max_level_ = 0;
+        mutable std::mutex max_level_guard_;
+
         template <typename KeyType, typename DataType>
         class MinHeap {
         public:
@@ -442,9 +451,37 @@ namespace weavess {
             unsigned int mark_;
         };
 
+        HnswNode* enterpoint_ = nullptr;
+        std::vector<HnswNode*> nodes_;
     };
 
-    class Index : public NNDescent, public NSG, public SSG, public DPG, public VAMANA, public EFANNA, public IEH, public NSW, public HNSW{
+    class NGT {
+    public :
+        unsigned truncationThreshold;
+        unsigned edgeSizeForCreation;
+        unsigned edgeSizeForSearch;
+        unsigned size;
+        float explorationCoefficient = 1.1;
+    };
+
+    class SPTAG {
+    public:
+        struct KDTNode
+        {
+            unsigned left;
+            unsigned right;
+            unsigned split_dim;
+            float split_value;
+        };
+
+        std::vector<unsigned> m_pTreeStart;
+        std::vector<KDTNode> m_pTreeRoots;
+
+        unsigned numOfThreads;
+    };
+
+    class Index : public NNDescent, public NSG, public SSG, public DPG, public VAMANA, public EFANNA, public IEH,
+            public NSW, public HNSW, public NGT, public SPTAG {
     public:
         explicit Index() {
             dist_ = new Distance();
@@ -613,6 +650,7 @@ namespace weavess {
 
         Distance *dist_;
 
+        // 迭代式
         FinalGraph final_graph_;
 
         TYPE entry_type;

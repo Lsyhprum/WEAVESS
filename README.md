@@ -13,10 +13,9 @@
 | VAMANA |          Refinement          |       Random        |    Centroid    |     Greedy    |  HEURISTIC + VAMANA  |    Reverse   |     Centroid       |       Greedy       |
 | EFANNA | Divide&Conquer + Refinement  |                     |    KD-tree     |   NN-Descent  |                      |              |      KD-tree       |       Greedy       |
 | IEH    |      Hash + Refinement       |                     |      LSH       |               |                      |              |                    |                    |
-
-| HNSW   |   Increment    |                       |                |      Naive    |  HEURISTIC  |              |                    |                    |
-| NSW    |   Increment    |                       |     Random     |      Naive    |             |              |                    |                    |
-| NGT    |   Increment    |       ANNG            |                |               |    ONNG     |              |      DVPTree       |Greedy(Range Search)|
+| NSW    |          Increment           |                     |                |               |                      |              |                    |                    |
+| HNSW   |          Increment           |                     |                |               |      HEURISTIC       |              |                    |                    |
+| NGT    |          Increment           |       ANNG          |                |               |    ONNG     |              |      DVPTree       |Greedy(Range Search)|
 
 ### KGraph
                                                                       not need sort   need sort
@@ -50,15 +49,15 @@ dataset -> load(float*) ->
 
 -[ x ] NSSG
 
--[ ] DPG
+-[ x ] DPG
 
--[ ] VAMANA
+-[ x ] VAMANA
 
--[ ] EFANNA
+-[ x ] EFANNA
 
 -[ ] IEH
 
--[ ] NSW
+-[ x ] NSW
 
 -[ ] HNSW
 
@@ -71,6 +70,8 @@ dataset -> load(float*) ->
 -[ ] FANNG
 
 
-* DPG recall 问题
 * 注意 flags 是否reset
+* 增量式 search_L, search_K ？
+* HNSW 召回率
+* SPTAG init(KDT) -> refine(PBT ? )
 

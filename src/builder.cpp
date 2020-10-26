@@ -65,7 +65,13 @@ namespace weavess {
         } else if (type == INIT_HNSW) {
             std::cout << "__INIT : HNSW__" << std::endl;
             a = new ComponentInitHNSW(final_index_);
+        } else if (type == INIT_ANNG) {
+            std::cout << "__INIT : ANNG__" << std::endl;
+            a = new ComponentInitANNG(final_index_);
+        } else if (type == INIT_SPTAG_KDT) {
+            final_index_->t.wtf();
         }
+
         else {
             std::cout << "__INIT : WRONG TYPE__" << std::endl;
             exit(-1);
@@ -107,8 +113,7 @@ namespace weavess {
         } else if (type == REFINE_EFANNA) {
             std::cout << "__REFINE : EFANNA__" << std::endl;
             a = new ComponentRefineEFANNA(final_index_);
-        }
-        else {
+        } else {
             std::cerr << "__REFINE : WRONG TYPE__" << std::endl;
         }
 
@@ -165,25 +170,25 @@ namespace weavess {
         } else if (entry_type == SEARCH_ENTRY_KDT) {
             std::cout << "__SEARCH ENTRY : KDT__" << std::endl;
             a = new ComponentSearchEntryKDT(final_index_);
-        }
-
-        else {
+        } else if (entry_type == SEARCH_ENTRY_NONE) {
+            std::cout << "__SEARCH ENTRY : NONE__" << std::endl;
+            a = new ComponentSearchEntryNone(final_index_);
+        } else {
             std::cerr << "__SEARCH ENTRY : WRONG TYPE__" << std::endl;
             exit(-1);
         }
-//        } else if (entry_type == ENTRY_CENTROID) {
-//            a = new ComponentSearchEntryCentroid(final_index_);
-//        } else if (entry_type == SEARCH_ENTRY_NSSG_CENTROID) {
-//            a = new ComponentSearchEntrySubCentroid(final_index_);
-//        } else if (entry_type == SEARCH_ENTRY_RANDOM) {
-//
-//        }
 
         // ROUTE
         ComponentSearchRoute *b = nullptr;
         if (route_type == ROUTER_GREEDY) {
             std::cout << "__ROUTER : GREEDY__" << std::endl;
             b = new ComponentSearchRouteGreedy(final_index_);
+        } else if (route_type == ROUTER_NSW) {
+            std::cout << "__ROUTER : NSW__" << std::endl;
+            b = new ComponentSearchRouteNSW(final_index_);
+        } else if (route_type == ROUTER_HNSW) {
+            std::cout << "__ROUTER : NSW__" << std::endl;
+            b = new ComponentSearchRouteHNSW(final_index_);
         } else {
             std::cerr << "__ROUTER : WRONG TYPE__" << std::endl;
             exit(-1);

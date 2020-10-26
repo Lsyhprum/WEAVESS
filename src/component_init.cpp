@@ -24,7 +24,7 @@ namespace weavess {
 
             std::sort(index->graph_[i].pool.begin(), index->graph_[i].pool.end());
 
-            for (auto & j : index->graph_[i].pool)
+            for (auto &j : index->graph_[i].pool)
                 tmp.push_back(Index::SimpleNeighbor(j.id, j.distance));
 
             index->getFinalGraph()[i] = tmp;
@@ -125,7 +125,7 @@ namespace weavess {
         for (unsigned n = 0; n < index->getBaseLen(); ++n) {
             auto &nn = index->graph_[n];
             std::sort(nn.pool.begin(), nn.pool.end());
-            if(nn.pool.size()>index->L)nn.pool.resize(index->L);
+            if (nn.pool.size() > index->L)nn.pool.resize(index->L);
             nn.pool.reserve(index->L);
             unsigned maxl = std::min(nn.M + index->S, (unsigned) nn.pool.size());
             unsigned c = 0;
@@ -153,8 +153,8 @@ namespace weavess {
                     nn_new.push_back(nn.id);
                     if (nn.distance > nhood_o.pool.back().distance) {
                         Index::LockGuard guard(nhood_o.lock);
-                        if(nhood_o.rnn_new.size() < index->R)nhood_o.rnn_new.push_back(n);
-                        else{
+                        if (nhood_o.rnn_new.size() < index->R)nhood_o.rnn_new.push_back(n);
+                        else {
                             unsigned int pos = rand() % index->R;
                             nhood_o.rnn_new[pos] = n;
                         }
@@ -164,8 +164,8 @@ namespace weavess {
                     nn_old.push_back(nn.id);
                     if (nn.distance > nhood_o.pool.back().distance) {
                         Index::LockGuard guard(nhood_o.lock);
-                        if(nhood_o.rnn_old.size() < index->R)nhood_o.rnn_old.push_back(n);
-                        else{
+                        if (nhood_o.rnn_old.size() < index->R)nhood_o.rnn_old.push_back(n);
+                        else {
                             unsigned int pos = rand() % index->R;
                             nhood_o.rnn_old[pos] = n;
                         }
@@ -192,7 +192,10 @@ namespace weavess {
                 rnn_old.resize(index->R);
             }
             nn_old.insert(nn_old.end(), rnn_old.begin(), rnn_old.end());
-            if(nn_old.size() > index->R * 2){nn_old.resize(index->R * 2);nn_old.reserve(index->R*2);}
+            if (nn_old.size() > index->R * 2) {
+                nn_old.resize(index->R * 2);
+                nn_old.reserve(index->R * 2);
+            }
             std::vector<unsigned>().swap(index->graph_[i].rnn_new);
             std::vector<unsigned>().swap(index->graph_[i].rnn_old);
         }
@@ -232,7 +235,7 @@ namespace weavess {
 
             std::sort(index->graph_[i].pool.begin(), index->graph_[i].pool.end());
 
-            for (auto & j : index->graph_[i].pool){
+            for (auto &j : index->graph_[i].pool) {
                 tmp.push_back(Index::SimpleNeighbor(j.id, j.distance));
             }
 
@@ -693,30 +696,31 @@ namespace weavess {
         int UpperBits = 8;
         int LowerBits = 8; //change with code length:code length = up + low;
         Index::HashTable tb;
-        BuildHashTable(UpperBits,LowerBits,basecode,tb);
-        std::cout<<"build hash table complete"<<std::endl;
+        BuildHashTable(UpperBits, LowerBits, basecode, tb);
+        std::cout << "build hash table complete" << std::endl;
 
         QueryToCode(test, func, querycode);
-        std::cout<<"convert query code complete"<<std::endl;
+        std::cout << "convert query code complete" << std::endl;
         std::vector<std::vector<int> > hashcands;
         HashTest(UpperBits, LowerBits, querycode, tb, hashcands);
-        std::cout<<"hash candidates ready"<<std::endl;
+        std::cout << "hash candidates ready" << std::endl;
 
-        std::cout<<"initial finish : "<<std::endl;
+        std::cout << "initial finish : " << std::endl;
 
-        std::vector<Index::CandidateHeap2 > knntable;
-        LoadKnnTable(&knntable_argv[0],knntable);
-        std::cout<<"load knn graph complete"<<std::endl;
+        std::vector<Index::CandidateHeap2> knntable;
+        LoadKnnTable(&knntable_argv[0], knntable);
+        std::cout << "load knn graph complete" << std::endl;
 
         //GNNS
-        std::vector<Index::CandidateHeap2 > res;
-        for(size_t i = 0; i < hashcands.size(); i++){
+        std::vector<Index::CandidateHeap2> res;
+        for (size_t i = 0; i < hashcands.size(); i++) {
             Index::CandidateHeap2 cands;
-            for(size_t j = 0; j < hashcands[i].size(); j++){
+            for (size_t j = 0; j < hashcands[i].size(); j++) {
                 int neighbor = hashcands[i][j];
-                Index::Candidate2<float> c(neighbor, index->getDist()->compare(&test[i][0], &train[neighbor][0], test[i].size()));
+                Index::Candidate2<float> c(neighbor,
+                                           index->getDist()->compare(&test[i][0], &train[neighbor][0], test[i].size()));
                 cands.insert(c);
-                if(cands.size() > POOL_SIZE)cands.erase(cands.begin());
+                if (cands.size() > POOL_SIZE)cands.erase(cands.begin());
             }
             res.push_back(cands);
         }
@@ -724,54 +728,55 @@ namespace weavess {
         //iteration
         auto expand = index->getParam().get<unsigned>("expand");
         auto iterlimit = index->getParam().get<unsigned>("iterlimit");
-        for(size_t i = 0; i < res.size(); i++){
+        for (size_t i = 0; i < res.size(); i++) {
             int niter = 0;
-            while(niter++ < iterlimit){
+            while (niter++ < iterlimit) {
                 Index::CandidateHeap2::reverse_iterator it = res[i].rbegin();
                 std::vector<int> ids;
-                for(int j = 0; it != res[i].rend() && j < expand; it++, j++){
+                for (int j = 0; it != res[i].rend() && j < expand; it++, j++) {
                     int neighbor = it->row_id;
                     Index::CandidateHeap2::reverse_iterator nnit = knntable[neighbor].rbegin();
-                    for(int k = 0; nnit != knntable[neighbor].rend() && k < expand; nnit++, k++){
+                    for (int k = 0; nnit != knntable[neighbor].rend() && k < expand; nnit++, k++) {
                         int nn = nnit->row_id;
                         ids.push_back(nn);
                     }
                 }
-                for(size_t j = 0; j < ids.size(); j++){
-                    Index::Candidate2<float> c(ids[j], index->getDist()->compare(&test[i][0], &train[ids[j]][0], test[i].size()));
+                for (size_t j = 0; j < ids.size(); j++) {
+                    Index::Candidate2<float> c(ids[j], index->getDist()->compare(&test[i][0], &train[ids[j]][0],
+                                                                                 test[i].size()));
                     res[i].insert(c);
-                    if(res[i].size() > POOL_SIZE)res[i].erase(res[i].begin());
+                    if (res[i].size() > POOL_SIZE)res[i].erase(res[i].begin());
                 }
             }//cout<<i<<endl;
         }
-        std::cout<<"GNNS complete "<<std::endl;
+        std::cout << "GNNS complete " << std::endl;
     }
 
-    void StringSplit(std::string src, std::vector<std::string>& des){
+    void StringSplit(std::string src, std::vector<std::string> &des) {
         int start = 0;
         int end = 0;
-        for(size_t i = 0; i < src.length(); i++){
-            if(src[i]==' '){
+        for (size_t i = 0; i < src.length(); i++) {
+            if (src[i] == ' ') {
                 end = i;
                 //if(end>start)cout<<start<<" "<<end<<" "<<src.substr(start,end-start)<<endl;
-                des.push_back(src.substr(start,end-start));
-                start = i+1;
+                des.push_back(src.substr(start, end - start));
+                start = i + 1;
             }
         }
     }
 
-    void ComponentInitIEH::LoadHashFunc(char* filename, Index::Matrix& func){
+    void ComponentInitIEH::LoadHashFunc(char *filename, Index::Matrix &func) {
         std::ifstream in(filename);
         char buf[MAX_ROWSIZE];
 
-        while(!in.eof()){
-            in.getline(buf,MAX_ROWSIZE);
+        while (!in.eof()) {
+            in.getline(buf, MAX_ROWSIZE);
             std::string strtmp(buf);
             std::vector<std::string> strs;
-            StringSplit(strtmp,strs);
-            if(strs.size()<2)continue;
+            StringSplit(strtmp, strs);
+            if (strs.size() < 2)continue;
             std::vector<float> ftmp;
-            for(size_t i = 0; i < strs.size(); i++){
+            for (size_t i = 0; i < strs.size(); i++) {
                 float f = atof(strs[i].c_str());
                 ftmp.push_back(f);
                 //cout<<f<<" ";
@@ -782,18 +787,18 @@ namespace weavess {
         in.close();
     }
 
-    void ComponentInitIEH::LoadBaseCode(char* filename, Index::Codes& base){
+    void ComponentInitIEH::LoadBaseCode(char *filename, Index::Codes &base) {
         std::ifstream in(filename);
         char buf[MAX_ROWSIZE];
         //int cnt = 0;
-        while(!in.eof()){
-            in.getline(buf,MAX_ROWSIZE);
+        while (!in.eof()) {
+            in.getline(buf, MAX_ROWSIZE);
             std::string strtmp(buf);
-            std::vector< std::string> strs;
-            StringSplit(strtmp,strs);
-            if(strs.size()<2)continue;
+            std::vector<std::string> strs;
+            StringSplit(strtmp, strs);
+            if (strs.size() < 2)continue;
             unsigned int codetmp = 0;
-            for(size_t i = 0; i < strs.size(); i++){
+            for (size_t i = 0; i < strs.size(); i++) {
                 unsigned int c = atoi(strs[i].c_str());
                 codetmp = codetmp << 1;
                 codetmp += c;
@@ -804,38 +809,41 @@ namespace weavess {
         in.close();
     }
 
-    void ComponentInitIEH::BuildHashTable(int upbits, int lowbits, Index::Codes base ,Index::HashTable& tb){
+    void ComponentInitIEH::BuildHashTable(int upbits, int lowbits, Index::Codes base, Index::HashTable &tb) {
         tb.clear();
-        for(int i = 0; i < (1 << upbits); i++){
+        for (int i = 0; i < (1 << upbits); i++) {
             Index::HashBucket emptyBucket;
             tb.push_back(emptyBucket);
         }
-        for(size_t i = 0; i < base.size(); i ++){
+        for (size_t i = 0; i < base.size(); i++) {
             unsigned int idx1 = base[i] >> lowbits;
             unsigned int idx2 = base[i] - (idx1 << lowbits);
-            if(tb[idx1].find(idx2) != tb[idx1].end()){
+            if (tb[idx1].find(idx2) != tb[idx1].end()) {
                 tb[idx1][idx2].push_back(i);
-            }else{
+            } else {
                 std::vector<unsigned int> v;
                 v.push_back(i);
-                tb[idx1].insert(make_pair(idx2,v));
+                tb[idx1].insert(make_pair(idx2, v));
             }
         }
     }
 
-    bool MatrixMultiply(Index::Matrix A, Index::Matrix B, Index::Matrix& C){
-        if(A.size() == 0 || B.size() == 0){std::cout<<"matrix a or b size 0"<<std::endl;return false;}
-        else if(A[0].size() != B.size()){
-            std::cout<<"--error: matrix a, b dimension not agree"<<std::endl;
-            std::cout<<"A"<<A.size()<<" * "<<A[0].size()<<std::endl;
-            std::cout<<"B"<<B.size()<<" * "<<B[0].size()<<std::endl;
+    bool MatrixMultiply(Index::Matrix A, Index::Matrix B, Index::Matrix &C) {
+        if (A.size() == 0 || B.size() == 0) {
+            std::cout << "matrix a or b size 0" << std::endl;
             return false;
         }
-        for(size_t i = 0; i < A.size(); i++){
+        else if (A[0].size() != B.size()) {
+            std::cout << "--error: matrix a, b dimension not agree" << std::endl;
+            std::cout << "A" << A.size() << " * " << A[0].size() << std::endl;
+            std::cout << "B" << B.size() << " * " << B[0].size() << std::endl;
+            return false;
+        }
+        for (size_t i = 0; i < A.size(); i++) {
             std::vector<float> tmp;
-            for(size_t j = 0; j < B[0].size(); j++){
+            for (size_t j = 0; j < B[0].size(); j++) {
                 float fnum = 0;
-                for(size_t k=0; k < B.size(); k++)fnum += A[i][k] * B[k][j];
+                for (size_t k = 0; k < B.size(); k++)fnum += A[i][k] * B[k][j];
                 tmp.push_back(fnum);
             }
             C.push_back(tmp);
@@ -843,48 +851,55 @@ namespace weavess {
         return true;
     }
 
-    void ComponentInitIEH::QueryToCode(Index::Matrix query, Index::Matrix func, Index::Codes& querycode){
+    void ComponentInitIEH::QueryToCode(Index::Matrix query, Index::Matrix func, Index::Codes &querycode) {
         Index::Matrix Z;
-        if(!MatrixMultiply(query, func, Z)){return;}
-        for(size_t i = 0; i < Z.size(); i++){
+        if (!MatrixMultiply(query, func, Z)) { return; }
+        for (size_t i = 0; i < Z.size(); i++) {
             unsigned int codetmp = 0;
-            for(size_t j = 0; j < Z[0].size(); j++){
-                if(Z[i][j]>0){codetmp = codetmp << 1;codetmp += 1;}
-                else {codetmp = codetmp << 1;codetmp += 0;}
+            for (size_t j = 0; j < Z[0].size(); j++) {
+                if (Z[i][j] > 0) {
+                    codetmp = codetmp << 1;
+                    codetmp += 1;
+                }
+                else {
+                    codetmp = codetmp << 1;
+                    codetmp += 0;
+                }
             }
             //if(i<3)cout<<codetmp<<endl;
             querycode.push_back(codetmp);
         }//cout<<querycode.size()<<endl;
     }
 
-    void ComponentInitIEH::HashTest(int upbits,int lowbits, Index::Codes querycode, Index::HashTable tb, std::vector<std::vector<int> >& cands){
-        for(size_t i = 0; i < querycode.size(); i++){
+    void ComponentInitIEH::HashTest(int upbits, int lowbits, Index::Codes querycode, Index::HashTable tb,
+                                    std::vector<std::vector<int> > &cands) {
+        for (size_t i = 0; i < querycode.size(); i++) {
 
             unsigned int idx1 = querycode[i] >> lowbits;
             unsigned int idx2 = querycode[i] - (idx1 << lowbits);
-            Index::HashBucket::iterator bucket= tb[idx1].find(idx2);
+            Index::HashBucket::iterator bucket = tb[idx1].find(idx2);
             std::vector<int> canstmp;
-            if(bucket != tb[idx1].end()){
+            if (bucket != tb[idx1].end()) {
                 std::vector<unsigned int> vp = bucket->second;
                 //cout<<i<<":"<<vp.size()<<endl;
-                for(size_t j = 0; j < vp.size() && canstmp.size() < INIT_NUM; j++){
+                for (size_t j = 0; j < vp.size() && canstmp.size() < INIT_NUM; j++) {
                     canstmp.push_back(vp[j]);
                 }
             }
 
 
-            if(HASH_RADIUS == 0){
+            if (HASH_RADIUS == 0) {
                 cands.push_back(canstmp);
                 continue;
             }
-            for(size_t j = 0; j < DEPTH; j++){
-                unsigned int searchcode = querycode[i] ^ (1 << j);
+            for (size_t j = 0; j < DEPTH; j++) {
+                unsigned int searchcode = querycode[i] ^(1 << j);
                 unsigned int idx1 = searchcode >> lowbits;
                 unsigned int idx2 = searchcode - (idx1 << lowbits);
-                Index::HashBucket::iterator bucket= tb[idx1].find(idx2);
-                if(bucket != tb[idx1].end()){
+                Index::HashBucket::iterator bucket = tb[idx1].find(idx2);
+                if (bucket != tb[idx1].end()) {
                     std::vector<unsigned int> vp = bucket->second;
-                    for(size_t k = 0; k < vp.size() && canstmp.size() < INIT_NUM; k++){
+                    for (size_t k = 0; k < vp.size() && canstmp.size() < INIT_NUM; k++) {
                         canstmp.push_back(vp[k]);
                     }
                 }
@@ -893,24 +908,24 @@ namespace weavess {
         }
     }
 
-    void ComponentInitIEH::LoadKnnTable(char* filename, std::vector<Index::CandidateHeap2 >& tb){
-        std::ifstream in(filename,std::ios::binary);
-        in.seekg(0,std::ios::end);
+    void ComponentInitIEH::LoadKnnTable(char *filename, std::vector<Index::CandidateHeap2> &tb) {
+        std::ifstream in(filename, std::ios::binary);
+        in.seekg(0, std::ios::end);
         std::ios::pos_type ss = in.tellg();
-        size_t fsize = (size_t)ss;
+        size_t fsize = (size_t) ss;
         int dim;
-        in.seekg(0,std::ios::beg);
-        in.read((char*)&dim, sizeof(int));
-        size_t num = fsize / (dim+1) / 4;
-        std::cout<<"load graph "<<num<<" "<<dim<< std::endl;
-        in.seekg(0,std::ios::beg);
+        in.seekg(0, std::ios::beg);
+        in.read((char *) &dim, sizeof(int));
+        size_t num = fsize / (dim + 1) / 4;
+        std::cout << "load graph " << num << " " << dim << std::endl;
+        in.seekg(0, std::ios::beg);
         tb.clear();
-        for(size_t i = 0; i < num; i++){
+        for (size_t i = 0; i < num; i++) {
             Index::CandidateHeap2 heap;
-            in.read((char*)&dim, sizeof(int));
-            for(int j =0; j < dim; j++){
+            in.read((char *) &dim, sizeof(int));
+            for (int j = 0; j < dim; j++) {
                 int id;
-                in.read((char*)&id, sizeof(int));
+                in.read((char *) &id, sizeof(int));
                 Index::Candidate2<float> can(id, -1);
                 heap.insert(can);
             }
@@ -920,111 +935,667 @@ namespace weavess {
         in.close();
     }
 
+
     // NSW
-//    void ComponentInitNSW::InitInner() {
-//        SetConfigs();
+    void ComponentInitNSW::InitInner() {
+        SetConfigs();
+
+        index->nodes_.resize(index->getBaseLen());
+        Index::HnswNode *first = new Index::HnswNode(0, 0, index->NN_, index->NN_);
+        index->nodes_[0] = first;
+        index->enterpoint_ = first;
+#pragma omp parallel num_threads(index->n_threads_)
+        {
+            auto *visited_list = new Index::VisitedList(index->getBaseLen());
+#pragma omp for schedule(dynamic, 128)
+            for (size_t i = 1; i < index->getBaseLen(); ++i) {
+                auto *qnode = new Index::HnswNode(i, 0, index->NN_, index->NN_);
+                index->nodes_[i] = qnode;
+                InsertNode(qnode, visited_list);
+            }
+            delete visited_list;
+        }
+    }
+
+    void ComponentInitNSW::SetConfigs() {
+        index->NN_ = index->getParam().get<unsigned>("NN");
+        index->ef_construction_ = index->getParam().get<unsigned>("ef_construction");
+        index->n_threads_ = index->getParam().get<unsigned>("n_threads_");
+    }
+
+    void ComponentInitNSW::InsertNode(Index::HnswNode *qnode, Index::VisitedList *visited_list) {
+        Index::HnswNode *enterpoint = index->enterpoint_;
+
+        std::priority_queue<Index::FurtherFirst> result;
+        std::priority_queue<Index::CloserFirst> tmp;
+
+        // CANDIDATE
+        SearchAtLayer(qnode, enterpoint, 0, visited_list, result);
+
+        while (!result.empty()) {
+            tmp.push(Index::CloserFirst(result.top().GetNode(), result.top().GetDistance()));
+            result.pop();
+        }
+
+        int pos = 0;
+        while (!tmp.empty() && pos < index->NN_) {
+            auto *top_node = tmp.top().GetNode();
+            tmp.pop();
+            Link(top_node, qnode, 0);
+            pos++;
+        }
+    }
+
+    void ComponentInitNSW::SearchAtLayer(Index::HnswNode *qnode, Index::HnswNode *enterpoint, int level,
+                                         Index::VisitedList *visited_list,
+                                         std::priority_queue<Index::FurtherFirst> &result) {
+        // TODO: check Node 12bytes => 8bytes
+        std::priority_queue<Index::CloserFirst> candidates;
+        float d = index->getDist()->compare(index->getBaseData() + qnode->GetId() * index->getBaseDim(),
+                                            index->getBaseData() + enterpoint->GetId() * index->getBaseDim(),
+                                            index->getBaseDim());
+        result.emplace(enterpoint, d);
+        candidates.emplace(enterpoint, d);
+
+        visited_list->Reset();
+        visited_list->MarkAsVisited(enterpoint->GetId());
+
+        while (!candidates.empty()) {
+            const Index::CloserFirst &candidate = candidates.top();
+            float lower_bound = result.top().GetDistance();
+            if (candidate.GetDistance() > lower_bound)
+                break;
+
+            Index::HnswNode *candidate_node = candidate.GetNode();
+            std::unique_lock<std::mutex> lock(candidate_node->GetAccessGuard());
+            const std::vector<Index::HnswNode *> &neighbors = candidate_node->GetFriends(level);
+            candidates.pop();
+            for (const auto &neighbor : neighbors) {
+                int id = neighbor->GetId();
+                if (visited_list->NotVisited(id)) {
+                    visited_list->MarkAsVisited(id);
+                    d = index->getDist()->compare(index->getBaseData() + qnode->GetId() * index->getBaseDim(),
+                                                  index->getBaseData() + neighbor->GetId() * index->getBaseDim(),
+                                                  index->getBaseDim());
+                    if (result.size() < index->ef_construction_ || result.top().GetDistance() > d) {
+                        result.emplace(neighbor, d);
+                        candidates.emplace(neighbor, d);
+                        if (result.size() > index->ef_construction_)
+                            result.pop();
+                    }
+                }
+            }
+        }
+    }
+
+    void ComponentInitNSW::Link(Index::HnswNode *source, Index::HnswNode *target, int level) {
+        source->AddFriends(target, true);
+        target->AddFriends(source, true);
+    }
+
+
+    // HNSW
+    void ComponentInitHNSW::InitInner() {
+        SetConfigs();
+
+        Build(false);
+    }
+
+    void ComponentInitHNSW::SetConfigs() {
+        index->max_m_ = index->getParam().get<unsigned>("max_m");
+        index->m_ = index->max_m_;
+        index->max_m0_ = index->getParam().get<unsigned>("max_m0");
+        index->ef_construction_ = index->getParam().get<unsigned>("ef_construction");
+        index->n_threads_ = index->getParam().get<unsigned>("n_threads");
+        index->mult = index->getParam().get<unsigned>("mult");
+        index->level_mult_ = index->mult > 0 ? index->mult : 1 / log(1.0 * index->m_);
+    }
+
+    void ComponentInitHNSW::Build(bool reverse) {
+        index->nodes_.resize(index->getBaseLen());
+
+        int level = GetRandomNodeLevel();
+        auto *first = new Index::HnswNode(0, level, index->max_m_, index->max_m0_);
+        index->nodes_[0] = first;
+        index->max_level_ = level;
+        index->enterpoint_ = first;
+#pragma omp parallel num_threads(index->n_threads_)
+        {
+            Index::VisitedList *visited_list = new Index::VisitedList(index->getBaseLen());
+            if (reverse) {
+#pragma omp for schedule(dynamic, 128)
+                for (size_t i = index->getBaseLen() - 1; i >= 1; --i) {
+                    int level = GetRandomNodeLevel();
+                    Index::HnswNode *qnode = new Index::HnswNode(i, level, index->max_m_, index->max_m0_);
+                    index->nodes_[i] = qnode;
+                    InsertNode(qnode, visited_list);
+                }
+            } else {
+#pragma omp for schedule(dynamic, 128)
+                for (size_t i = 1; i < index->getBaseLen(); ++i) {
+                    int level = GetRandomNodeLevel();
+                    auto *qnode = new Index::HnswNode(i, level, index->max_m_, index->max_m0_);
+                    index->nodes_[i] = qnode;
+                    InsertNode(qnode, visited_list);
+                }
+            }
+            delete visited_list;
+        }
+    }
+
+    int ComponentInitHNSW::GetRandomSeedPerThread() {
+        int tid = omp_get_thread_num();
+        int g_seed = 17;
+        for (int i = 0; i <= tid; ++i)
+            g_seed = 214013 * g_seed + 2531011;
+        return (g_seed >> 16) & 0x7FFF;
+    }
+
+    int ComponentInitHNSW::GetRandomNodeLevel() {
+        static thread_local std::mt19937 rng(GetRandomSeedPerThread());
+        static thread_local std::uniform_real_distribution<double> uniform_distribution(0.0, 1.0);
+        double r = uniform_distribution(rng);
+
+        if (r < std::numeric_limits<double>::epsilon())
+            r = 1.0;
+        return (int) (-log(r) * index->level_mult_);
+    }
+
+    void ComponentInitHNSW::InsertNode(Index::HnswNode *qnode, Index::VisitedList *visited_list) {
+        int cur_level = qnode->GetLevel();
+        std::unique_lock<std::mutex> max_level_lock(index->max_level_guard_, std::defer_lock);
+        if (cur_level > index->max_level_)
+            max_level_lock.lock();
+
+        int max_level_copy = index->max_level_;
+        Index::HnswNode *enterpoint = index->enterpoint_;
+
+        if (cur_level < max_level_copy) {
+            Index::HnswNode *cur_node = enterpoint;
+
+            float d = index->getDist()->compare(index->getBaseData() + qnode->GetId() * index->getBaseDim(),
+                                                index->getBaseData() + cur_node->GetId() * index->getBaseDim(),
+                                                index->getBaseDim());
+            float cur_dist = d;
+            for (auto i = max_level_copy; i > cur_level; --i) {
+                bool changed = true;
+                while (changed) {
+                    changed = false;
+                    std::unique_lock<std::mutex> local_lock(cur_node->GetAccessGuard());
+                    const std::vector<Index::HnswNode *> &neighbors = cur_node->GetFriends(i);
+
+                    for (auto iter = neighbors.begin(); iter != neighbors.end(); ++iter) {
+                        d = index->getDist()->compare(index->getBaseData() + qnode->GetId() * index->getBaseDim(),
+                                                      index->getBaseData() + (*iter)->GetId() * index->getBaseDim(),
+                                                      index->getBaseDim());
+
+                        if (d < cur_dist) {
+                            cur_dist = d;
+                            cur_node = *iter;
+                            changed = true;
+                        }
+                    }
+                }
+            }
+            enterpoint = cur_node;
+        }
+
+        // PRUNE
+        ComponentPrune *a = new ComponentPruneHeuristic(index);
+
+        for (auto i = std::min(max_level_copy, cur_level); i >= 0; --i) {
+            std::priority_queue<Index::FurtherFirst> result;
+            SearchAtLayer(qnode, enterpoint, i, visited_list, result);
+
+            a->Hnsw2Neighbor(index->m_, result);
+
+            while (!result.empty()) {
+                auto *top_node = result.top().GetNode();
+                result.pop();
+                Link(top_node, qnode, i);
+                Link(qnode, top_node, i);
+            }
+        }
+        if (cur_level > index->enterpoint_->GetLevel()) {
+            index->enterpoint_ = qnode;
+            index->max_level_ = cur_level;
+        }
+    }
+
+    void ComponentInitHNSW::SearchAtLayer(Index::HnswNode *qnode, Index::HnswNode *enterpoint, int level,
+                                          Index::VisitedList *visited_list,
+                                          std::priority_queue<Index::FurtherFirst> &result) {
+        // TODO: check Node 12bytes => 8bytes
+        std::priority_queue<Index::CloserFirst> candidates;
+        float d = index->getDist()->compare(index->getBaseData() + qnode->GetId() * index->getBaseDim(),
+                                            index->getBaseData() + enterpoint->GetId() * index->getBaseDim(),
+                                            index->getBaseDim());
+        result.emplace(enterpoint, d);
+        candidates.emplace(enterpoint, d);
+
+        visited_list->Reset();
+        visited_list->MarkAsVisited(enterpoint->GetId());
+
+        while (!candidates.empty()) {
+            const Index::CloserFirst &candidate = candidates.top();
+            float lower_bound = result.top().GetDistance();
+            if (candidate.GetDistance() > lower_bound)
+                break;
+
+            Index::HnswNode *candidate_node = candidate.GetNode();
+            std::unique_lock<std::mutex> lock(candidate_node->GetAccessGuard());
+            const std::vector<Index::HnswNode *> &neighbors = candidate_node->GetFriends(level);
+            candidates.pop();
+
+            for (const auto &neighbor : neighbors) {
+                int id = neighbor->GetId();
+                if (visited_list->NotVisited(id)) {
+                    visited_list->MarkAsVisited(id);
+                    d = index->getDist()->compare(index->getBaseData() + qnode->GetId() * index->getBaseDim(),
+                                                  index->getBaseData() + neighbor->GetId() * index->getBaseDim(),
+                                                  index->getBaseDim());
+                    if (result.size() < index->ef_construction_ || result.top().GetDistance() > d) {
+                        result.emplace(neighbor, d);
+                        candidates.emplace(neighbor, d);
+                        if (result.size() > index->ef_construction_)
+                            result.pop();
+                    }
+                }
+            }
+        }
+    }
+
+    void ComponentInitHNSW::Link(Index::HnswNode *source, Index::HnswNode *target, int level) {
+        std::unique_lock<std::mutex> lock(source->GetAccessGuard());
+        std::vector<Index::HnswNode *> &neighbors = source->GetFriends(level);
+        neighbors.push_back(target);
+        bool shrink = (level > 0 && neighbors.size() > source->GetMaxM()) ||
+                      (level <= 0 && neighbors.size() > source->GetMaxM0());
+        //std::cout << "shrink : " << shrink << std::endl;
+        if (!shrink) return;
+
+//        float max = index->getDist()->compare(index->getBaseData() + source->GetId() * index->getBaseDim(),
+//                                              index->getBaseData() + neighbors[0]->GetId() * index->getBaseDim(),
+//                                              index->getBaseDim());
+//        int maxi = 0;
+//        for(size_t i = 1; i < neighbors.size(); i ++) {
+//            float curd = index->getDist()->compare(index->getBaseData() + source->GetId() * index->getBaseDim(),
+//                                                   index->getBaseData() + neighbors[i]->GetId() * index->getBaseDim(),
+//                                                   index->getBaseDim());
 //
-//        Build(false);
-//
-//        for (size_t i = 0; i < index->nodes_.size(); ++i) {
-//            delete index->nodes_[i];
-//        }
-//        index->nodes_.clear();
-//    }
-//
-//    void ComponentInitNSW::SetConfigs() {
-//        index->NN_ = index->getParam().get<unsigned>("NN");
-//        index->ef_construction_ = index->getParam().get<unsigned>("ef_construction");
-//        index->n_threads_ = index->getParam().get<unsigned>("n_threads_");
-//    }
-//
-//    void ComponentInitNSW::Build(bool reverse) {
-//        index->nodes_.resize(index->getBaseLen());
-//        Index::HnswNode *first = new Index::HnswNode(0, 0, index->NN_, index->NN_);
-//        index->nodes_[0] = first;
-//        index->enterpoint_ = first;
-//#pragma omp parallel num_threads(index->n_threads_)
-//        {
-//            auto *visited_list = new Index::VisitedList(index->getBaseLen());
-//            if (reverse) {
-//#pragma omp for schedule(dynamic, 128)
-//                for (size_t i = index->getBaseLen() - 1; i >= 1; --i) {
-//                    auto *qnode = new Index::HnswNode(i, 0, index->NN_, index->NN_);
-//                    index->nodes_[i] = qnode;
-//                    InsertNode(qnode, visited_list);
-//                }
-//            } else {
-//#pragma omp for schedule(dynamic, 128)
-//                for (size_t i = 1; i < index->getBaseLen(); ++i) {
-//                    std::cout << i << std::endl;
-//                    auto *qnode = new Index::HnswNode(i, 0, index->NN_, index->NN_);
-//                    index->nodes_[i] = qnode;
-//                    InsertNode(qnode, visited_list);
-//                }
+//            if(curd > max) {
+//                max = curd;
+//                maxi = i;
 //            }
-//            delete visited_list;
 //        }
-//    }
+//        neighbors.erase(neighbors.begin() + maxi);
+
+        std::priority_queue<Index::FurtherFirst> tempres;
+//            for (const auto& neighbor : neighbors) {
+//                _mm_prefetch(neighbor->GetData(), _MM_HINT_T0);
+//            }
+        //std::cout << neighbors.size() << std::endl;
+        for (const auto &neighbor : neighbors) {
+            //std::cout << "neighbors : " << neighbor->GetId() << std::endl;
+            float tmp = index->getDist()->compare(index->getBaseData() + source->GetId() * index->getBaseDim(),
+                                                  index->getBaseData() + neighbor->GetId() * index->getBaseDim(),
+                                                  index->getBaseDim());
+//            std::cout << tmp << std::endl;
+//            std::cout << neighbor->GetId() << std::endl;
+//            std::cout << tempres.size() << std::endl;
+//            if(!tempres.empty())
+//                std::cout << tempres.top().GetNode()->GetId() << std::endl;
+            tempres.push(Index::FurtherFirst(neighbors[0], tmp));
+//            std::cout << "mm" << std::endl;
+        }
+//        std::cout << "tempres : " << tempres.size() << std::endl;
+
+        // PRUNE
+        ComponentPrune *a = new ComponentPruneHeuristic(index);
+        a->Hnsw2Neighbor(tempres.size() - 1, tempres);
+
+        //std::cout << "ff" << tempres.size() << std::endl;
+        neighbors.clear();
+        while (tempres.size()) {
+            neighbors.emplace_back(tempres.top().GetNode());
+            tempres.pop();
+        }
+        std::priority_queue<Index::FurtherFirst>().swap(tempres);
+    }
+
+
+    // ANNG
+    void ComponentInitANNG::InitInner() {
+        SetConfigs();
+
+        Build();
+    }
+
+    void ComponentInitANNG::SetConfigs() {
+        index->edgeSizeForCreation = index->getParam().get<unsigned>("edgeSizeForCreation");
+        index->truncationThreshold = index->getParam().get<unsigned>("truncationThreshold");
+        index->edgeSizeForSearch = index->getParam().get<unsigned>("edgeSizeForSearch");
+
+        index->size = index->getParam().get<unsigned>("size");
+    }
+
+    void ComponentInitANNG::Build() {
+        index->getFinalGraph().resize(index->getBaseLen());
+
+        // 为插入操作提前计算距离
+        for (unsigned idxi = 0; idxi < index->getBaseLen(); idxi++) {
+            std::vector<Index::SimpleNeighbor> tmp;
+            for (unsigned idxj = 0; idxj < idxi; idxj++) {
+                float d = index->getDist()->compare(index->getBaseData() + idxi * index->getBaseDim(),
+                                                    index->getBaseData() + idxj * index->getBaseDim(),
+                                                    index->getBaseDim());
+                tmp.emplace_back(idxj, d);
+            }
+            std::sort(tmp.begin(), tmp.end());
+            if (tmp.size() > index->edgeSizeForCreation) {
+                tmp.resize(index->edgeSizeForCreation);
+            }
+
+            index->getFinalGraph()[idxi] = tmp;
+        }
+
+        // 逐个进行插入操作
+        for (unsigned i = 0; i < index->getBaseLen(); i++) {
+            InsertNode(i);
+        }
+    }
+
+    void ComponentInitANNG::InsertNode(unsigned id) {
+        std::queue<unsigned> truncateQueue;
+
+        for (unsigned i = 0; i < index->getFinalGraph()[id].size(); i++) {
+            assert(index->getFinalGraph()[id][i].id != id);
+
+            if (addEdge(index->getFinalGraph()[id][i].id, id, index->getFinalGraph()[id][i].distance)) {
+                truncateQueue.push(index->getFinalGraph()[id][i].id);
+            }
+        }
+
+        while (!truncateQueue.empty()) {
+            unsigned tid = truncateQueue.front();
+            truncateEdgesOptimally(tid, index->edgeSizeForCreation);
+            truncateQueue.pop();
+        }
+    }
+
+    bool ComponentInitANNG::addEdge(unsigned target, unsigned addID, float dist) {
+        Index::SimpleNeighbor obj(addID, dist);
+
+        auto ni = std::lower_bound(index->getFinalGraph()[target].begin(), index->getFinalGraph()[target].end(), obj);
+        if ((ni != index->getFinalGraph()[target].end()) && (ni->id == addID)) {
+            std::cout << "NGT::addEdge: already existed! " << ni->id << ":" << addID << std::endl;
+        } else {
+            index->getFinalGraph()[target].insert(ni, obj);
+        }
+
+        if (index->truncationThreshold != 0 && index->getFinalGraph()[target].size() > index->truncationThreshold) {
+            return true;
+        }
+        return false;
+    }
+
+    void ComponentInitANNG::truncateEdgesOptimally(unsigned id, size_t truncationSize) {
+        std::vector<Index::SimpleNeighbor> delNodes;
+        size_t osize = index->getFinalGraph()[id].size();
+
+        for (size_t i = truncationSize; i < osize; i++) {
+            if (id == index->getFinalGraph()[id][i].id) {
+                continue;
+            }
+            delNodes.push_back(index->getFinalGraph()[id][i]);
+        }
+
+        auto ri = index->getFinalGraph()[id].begin();
+        ri += truncationSize;
+        index->getFinalGraph()[id].erase(ri, index->getFinalGraph()[id].end());
+
+        for (size_t i = 0; i < delNodes.size(); i++) {
+            for (auto j = index->getFinalGraph()[delNodes[i].id].begin();
+                 j != index->getFinalGraph()[delNodes[i].id].end(); j++) {
+                if ((*j).id == id) {
+                    index->getFinalGraph()[delNodes[i].id].erase(j);
+                    break;
+                }
+            }
+        }
+
+        for (unsigned i = 0; i < delNodes.size(); i++) {
+            std::vector<Index::SimpleNeighbor> pool;
+            Search(id, delNodes[i].id, pool);
+
+            Index::SimpleNeighbor nearest = pool.front();
+            if (nearest.id != delNodes[i].id) {
+                unsigned tid = delNodes[i].id;
+                auto iter = std::lower_bound(index->getFinalGraph()[tid].begin(), index->getFinalGraph()[tid].end(),
+                                             nearest);
+                if ((*iter).id != nearest.id) {
+                    index->getFinalGraph()[tid].insert(iter, nearest);
+                }
+
+                Index::SimpleNeighbor obj(tid, delNodes[i].distance);
+                index->getFinalGraph()[nearest.id].push_back(obj);
+                std::sort(index->getFinalGraph()[nearest.id].begin(), index->getFinalGraph()[nearest.id].end());
+            }
+        }
+    }
+
+    void ComponentInitANNG::Search(unsigned startId, unsigned query, std::vector<Index::SimpleNeighbor> &pool) {
+        unsigned edgeSize = index->edgeSizeForSearch;
+        float radius = 3.402823466e+38F;
+        float explorationRadius = index->explorationCoefficient * radius;
+
+        // 大顶堆
+        std::priority_queue<Index::SimpleNeighbor, std::vector<Index::SimpleNeighbor>, std::less<Index::SimpleNeighbor>> result;
+        std::priority_queue<Index::SimpleNeighbor, std::vector<Index::SimpleNeighbor>, std::greater<Index::SimpleNeighbor>> unchecked;
+        std::unordered_set<unsigned> distanceChecked;
+
+        float d = index->getDist()->compare(index->getBaseData() + index->getBaseDim() * startId,
+                                            index->getBaseData() + index->getBaseDim() * query,
+                                            index->getBaseDim());
+        Index::SimpleNeighbor obj(startId, d);
+//        unchecked.push(obj);      //bug here
+//        result.push(obj);
+//        distanceChecked.insert(startId);
 //
-//    void ComponentInitNSW::InsertNode(Index::HnswNode *qnode, Index::VisitedList *visited_list) {
-//        Index::HnswNode *enterpoint = index->enterpoint_;
+//        while (!unchecked.empty()) {
+//            Index::SimpleNeighbor target = unchecked.top();
+//            unchecked.pop();
 //
-//        std::priority_queue<Index::FurtherFirst> result;
-//
-//        // CANDIDATE
-//        SearchAtLayer(qnode, enterpoint, 0, visited_list, result);
-//
-//        while (result.size() > 0) {
-//            auto *top_node = result.top().GetNode();
-//            result.pop();
-//            Link(top_node, qnode, 0);
-//        }
-//    }
-//
-//    void ComponentInitNSW::SearchAtLayer(Index::HnswNode *qnode, Index::HnswNode *enterpoint, int level,
-//                                           Index::VisitedList *visited_list,
-//                                           std::priority_queue<Index::FurtherFirst> &result) {
-//        // TODO: check Node 12bytes => 8bytes
-//        std::priority_queue<Index::CloserFirst> candidates;
-//        float d = index->getDist()->compare(index->getBaseData() + qnode->GetId() * index->getBaseDim(),
-//                                            index->getBaseData() + enterpoint->GetId() * index->getBaseDim(),
-//                                            index->getBaseDim());
-//        result.emplace(enterpoint, d);
-//        candidates.emplace(enterpoint, d);
-//
-//        visited_list->Reset();
-//        visited_list->MarkAsVisited(enterpoint->GetId());
-//
-//        while (!candidates.empty()) {
-//            const Index::CloserFirst &candidate = candidates.top();
-//            float lower_bound = result.top().GetDistance();
-//            if (candidate.GetDistance() > lower_bound)
+//            if (target.distance > explorationRadius) {
 //                break;
+//            }
 //
-//            Index::HnswNode *candidate_node = candidate.GetNode();
-//            std::unique_lock<std::mutex> lock(candidate_node->GetAccessGuard());
-//            const std::vector<Index::HnswNode *> &neighbors = candidate_node->GetFriends(level);
-//            candidates.pop();
-//            for (const auto &neighbor : neighbors) {
-//                int id = neighbor->GetId();
-//                if (visited_list->NotVisited(id)) {
-//                    visited_list->MarkAsVisited(id);
-//                    d = index->getDist()->compare(index->getBaseData() + qnode->GetId() * index->getBaseDim(),
-//                                                  index->getBaseData() + neighbor->GetId() * index->getBaseDim(),
-//                                                  index->getBaseDim());
-//                    if (result.size() < index->ef_construction_ || result.top().GetDistance() > d) {
-//                        result.emplace(neighbor, d);
-//                        candidates.emplace(neighbor, d);
-//                        if (result.size() > index->ef_construction_)
-//                            result.pop();
+//            if (index->getFinalGraph()[target.id].empty()) continue;
+//            unsigned neighborSize = index->getFinalGraph()[target.id].size() < edgeSize ?
+//                                    index->getFinalGraph()[target.id].size() : edgeSize;
+//
+//            for (int i = 0; i < neighborSize; i++) {
+//                if (distanceChecked.find(index->getFinalGraph()[target.id][i].id) != distanceChecked.end())
+//                    continue;
+//
+//                distanceChecked.insert(index->getFinalGraph()[target.id][i].id);
+//                float dist = index->getDist()->compare(
+//                        index->getBaseData() + index->getBaseDim() * index->getFinalGraph()[target.id][i].id,
+//                        index->getBaseData() + index->getBaseDim() * query,
+//                        index->getBaseDim());
+//                if (dist <= explorationRadius) {
+//                    unchecked.push(Index::SimpleNeighbor(index->getFinalGraph()[target.id][i].id, dist));
+//                    if (dist <= radius) {
+//                        result.push(Index::SimpleNeighbor(index->getFinalGraph()[target.id][i].id, dist));
+//                        if (result.size() > index->size) {
+//                            if (result.top().distance >= dist) {
+//                                if (result.size() > index->size) {
+//                                    result.pop();
+//                                }
+//                                radius = result.top().distance;
+//                                explorationRadius = index->explorationCoefficient * radius;
+//                            }
+//                        }
 //                    }
 //                }
 //            }
 //        }
-//    }
 //
-//    void ComponentInitNSW::Link(Index::HnswNode *source, Index::HnswNode *target, int level) {
-//        source->AddFriends(target, true);
-//        target->AddFriends(source, true);
-//    }
+//        for (int i = 0; i < result.size(); i++) {
+//            pool.push_back(result.top());
+//            result.pop();
+//        }
+//        std::sort(pool.begin(), pool.end());
+    }
+
+
+    // SPTAG KDT
+    void ComponentInitSPTAG_KDT::InitInner() {
+        SetConfigs();
+
+        std::vector<unsigned> localindices;
+        localindices.resize(index->getBaseLen());
+        for (unsigned i = 0; i < localindices.size(); i++) localindices[i] = i;
+
+        // KDT 个数
+        unsigned m_iTreeNumber = 2;
+
+        // 记录 KDT 结构
+        index->m_pTreeRoots.resize(m_iTreeNumber * localindices.size());
+        // 记录树根
+        index->m_pTreeStart.resize(m_iTreeNumber, 0);
+
+#pragma omp parallel for num_threads(index->numOfThreads)
+        for (int i = 0; i < m_iTreeNumber; i++) {
+            // 非多线程 -> 删除 ！！！
+            Sleep(i * 100);
+            std::srand(clock());
+
+            std::vector<unsigned> pindices(localindices.begin(), localindices.end());
+            std::random_shuffle(pindices.begin(), pindices.end());
+
+            index->m_pTreeStart[i] = i * pindices.size();
+            std::cout << "Start to build KDTree " << i + 1 << std::endl;
+            unsigned iTreeSize = index->m_pTreeStart[i];
+            DivideTree(pindices, 0, pindices.size() - 1, index->m_pTreeStart[i], iTreeSize);
+            std::cout << i + 1 << " KDTree built, " << iTreeSize - index->m_pTreeStart[i] << " " << pindices.size()
+                      << std::endl;
+        }
+    }
+
+    void ComponentInitSPTAG_KDT::SetConfigs() {
+        index->numOfThreads = index->getParam().get<unsigned>("numOfThreads");
+    }
+
+    // 注意 index 重复
+    void ComponentInitSPTAG_KDT::DivideTree(std::vector<unsigned> &indices, unsigned first, unsigned last,
+                                            unsigned tree_index, unsigned &iTreeSize) {
+        // 选择分离维度
+        ChooseDivision(index->m_pTreeRoots[tree_index], indices, first, last);
+        unsigned i = Subdivide(index->m_pTreeRoots[tree_index], indices, first, last);
+        if (i - 1 <= first) {
+            index->m_pTreeRoots[tree_index].left = -indices[first] - 1;
+        } else {
+            iTreeSize++;
+            index->m_pTreeRoots[tree_index].left = iTreeSize;
+            DivideTree(indices, first, i - 1, iTreeSize, iTreeSize);
+        }
+        if (last == i) {
+            index->m_pTreeRoots[tree_index].right = -indices[last] - 1;
+        } else {
+            iTreeSize++;
+            index->m_pTreeRoots[tree_index].right = iTreeSize;
+            DivideTree(indices, i, last, iTreeSize, iTreeSize);
+        }
+    }
+
+    void ComponentInitSPTAG_KDT::ChooseDivision(Index::KDTNode &node, const std::vector<unsigned> &indices,
+                                                const unsigned first, const unsigned last) {
+        // 抽样选取数量
+        unsigned m_iSamples = 1000;
+
+        std::vector<float> meanValues(index->getBaseDim(), 0);
+        std::vector<float> varianceValues(index->getBaseDim(), 0);
+        unsigned end = std::min(first + m_iSamples, last);
+        unsigned count = end - first + 1;
+        // calculate the mean of each dimension
+        for (unsigned j = first; j <= end; j++) {
+            float *v = index->getBaseData() + index->getBaseDim() * indices[j];
+            for (unsigned k = 0; k < index->getBaseDim(); k++) {
+                meanValues[k] += v[k];
+            }
+        }
+        for (unsigned k = 0; k < index->getBaseDim(); k++) {
+            meanValues[k] /= count;
+        }
+        // calculate the variance of each dimension
+        for (unsigned j = first; j <= end; j++) {
+            const float *v = index->getBaseData() + index->getBaseDim() * indices[j];
+            for (unsigned k = 0; k < index->getBaseDim(); k++) {
+                float dist = v[k] - meanValues[k];
+                varianceValues[k] += dist * dist;
+            }
+        }
+        // choose the split dimension as one of the dimension inside TOP_DIM maximum variance
+        node.split_dim = SelectDivisionDimension(varianceValues);
+        // determine the threshold
+        node.split_value = meanValues[node.split_dim];
+    }
+
+    unsigned rand(unsigned high, unsigned low = 0)   // Generates a random int value.
+    {
+        return low + (unsigned) (float(high - low) * (std::rand() / (RAND_MAX + 1.0)));
+    }
+
+    unsigned ComponentInitSPTAG_KDT::SelectDivisionDimension(const std::vector<float> &varianceValues) {
+        unsigned m_numTopDimensionKDTSplit = 5;
+
+        // Record the top maximum variances
+        std::vector<unsigned> topind(m_numTopDimensionKDTSplit);
+        int num = 0;
+        // order the variances
+        for (unsigned i = 0; i < varianceValues.size(); i++) {
+            if (num < m_numTopDimensionKDTSplit || varianceValues[i] > varianceValues[topind[num - 1]]) {
+                if (num < m_numTopDimensionKDTSplit) {
+                    topind[num++] = i;
+                } else {
+                    topind[num - 1] = i;
+                }
+                int j = num - 1;
+                // order the TOP_DIM variances
+                while (j > 0 && varianceValues[topind[j]] > varianceValues[topind[j - 1]]) {
+                    std::swap(topind[j], topind[j - 1]);
+                    j--;
+                }
+            }
+        }
+        // randomly choose a dimension from TOP_DIM
+        return topind[rand(num)];
+    }
+
+    unsigned
+    ComponentInitSPTAG_KDT::Subdivide(const Index::KDTNode &node, std::vector<unsigned> &indices, const unsigned first,
+                                      const unsigned last) {
+        unsigned i = first;
+        unsigned j = last;
+        // decide which child one point belongs
+        while (i <= j) {
+            unsigned ind = indices[i];
+            const float *v = index->getBaseData() + index->getBaseDim() * ind;
+            float val = v[node.split_dim];
+            if (val < node.split_value) {
+                i++;
+            } else {
+                std::swap(indices[i], indices[j]);
+                j--;
+            }
+        }
+        // if all the points in the node are equal,equally split the node into 2
+        if ((i == first) || (i == last + 1)) {
+            i = (first + last + 1) / 2;
+        }
+        return i;
+    }
+
+
 }
