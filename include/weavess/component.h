@@ -182,6 +182,10 @@ namespace weavess {
     private:
         void SetConfigs();
 
+        void BuildTrees();
+
+        void BuildGraph();
+
         void DivideTree(std::vector<unsigned>& indices, unsigned first, unsigned last, unsigned index, unsigned &iTreeSize);
 
         void ChooseDivision(Index::KDTNode& node, const std::vector<unsigned>& indices, const unsigned first, const unsigned last);
@@ -189,6 +193,13 @@ namespace weavess {
         unsigned SelectDivisionDimension(const std::vector<float>& varianceValues);
 
         unsigned Subdivide(const Index::KDTNode& node, std::vector<unsigned>& indices, const unsigned first, const unsigned last);
+
+        void PartitionByTptree(std::vector<unsigned> &indices, const unsigned first, const unsigned last,
+                                                       std::vector<std::pair<unsigned, unsigned>> &leaves);
+
+        static inline bool Compare(const Index::SimpleNeighbor& lhs, const Index::SimpleNeighbor& rhs);
+
+        void AddNeighbor(unsigned idx, float dist, unsigned origin, unsigned size);
     };
 
 
@@ -293,6 +304,13 @@ namespace weavess {
     class ComponentRefineONNG : public ComponentRefine {
     public:
         explicit ComponentRefineONNG(Index *index) : ComponentRefine(index) {}
+
+        void RefineInner() override;
+    };
+
+    class ComponentRefineSPTAG : public ComponentRefine {
+    public:
+        explicit ComponentRefineSPTAG(Index *index) : ComponentRefine(index) {}
 
         void RefineInner() override;
     };

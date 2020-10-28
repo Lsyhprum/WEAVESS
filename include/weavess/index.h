@@ -474,10 +474,29 @@ namespace weavess {
             float split_value;
         };
 
+//        struct BasicResult
+//        {
+//            unsigned VID;
+//            float Dist;
+//            ByteArray Meta;
+//
+//            BasicResult() : VID(-1), Dist(MaxDist) {}
+//
+//            BasicResult(unsigned p_vid, float p_dist) : VID(p_vid), Dist(p_dist) {}
+//
+//            BasicResult(unsigned p_vid, float p_dist, ByteArray p_meta) : VID(p_vid), Dist(p_dist), Meta(p_meta) {}
+//        };
+
         std::vector<unsigned> m_pTreeStart;
         std::vector<KDTNode> m_pTreeRoots;
 
         unsigned numOfThreads;
+
+        // 抽样选取数量
+        unsigned m_iSamples = 1000;
+        unsigned m_iTPTNumber = 32;
+        unsigned m_iNeighborhoodSize = 32;
+        unsigned m_iNeighborhoodScale = 2;
     };
 
     class Index : public NNDescent, public NSG, public SSG, public DPG, public VAMANA, public EFANNA, public IEH,

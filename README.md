@@ -4,18 +4,19 @@
 
 ## Algorithms
 
-|  Algo  |             TYPE             |        Init         |     Entry      |   Candidate   |        Prune         |     Conn     |    Search Entry    |    Search Route    |
-|:------:|:----------------------------:| :------------------:| :------------: | :-----------: | :-------------------:| :-----------:| :-----------------:|:------------------:|
-| KGraph |                              |     NN-Descent      |     Query      | PROPAGATION 1 |        Naive         |              |      Random        |       Greedy       |
-| NSG    |          Refinement          |     NN-Descent      |    Centroid    |     Greedy    |        NSG           | Reverse+DFS  |     Centroid       |       Greedy       |
-| SSG    |          Refinement          |     NN-Descent      |     Query      | PROPAGATION 2 |        SSG           | Reverse+DFS  |    Sub Centroid    |       Greedy       |
-| DPG    |          Refinement          |     NN-Descent      |     Query      | PROPAGATION 1 |        DPG           |    Reverse   |      Random        |       Greedy       |
-| VAMANA |          Refinement          |       Random        |    Centroid    |     Greedy    |  HEURISTIC + VAMANA  |    Reverse   |     Centroid       |       Greedy       |
-| EFANNA | Divide&Conquer + Refinement  |                     |    KD-tree     |   NN-Descent  |                      |              |      KD-tree       |       Greedy       |
-| IEH    |      Hash + Refinement       |                     |      LSH       |               |                      |              |                    |                    |
-| NSW    |          Increment           |                     |                |               |                      |              |                    |                    |
-| HNSW   |          Increment           |                     |                |               |      HEURISTIC       |              |                    |                    |
-| NGT    |          Increment           |       ANNG          |                |               |    ONNG     |              |      DVPTree       |Greedy(Range Search)|
+|  Algo  |             TYPE             |        Init         |       Entry       |   Candidate   |        Prune         |     Conn     |    Search Entry    |    Search Route    |
+|:------:|:----------------------------:| :------------------:| :---------------: | :-----------: | :-------------------:| :-----------:| :-----------------:|:------------------:|
+| KGraph |                              |     NN-Descent      |       Query       | PROPAGATION 1 |        Naive         |              |      Random        |       Greedy       |
+| NSG    |          Refinement          |     NN-Descent      |      Centroid     |     Greedy    |        NSG           | Reverse+DFS  |     Centroid       |       Greedy       |
+| SSG    |          Refinement          |     NN-Descent      |       Query       | PROPAGATION 2 |        SSG           | Reverse+DFS  |    Sub Centroid    |       Greedy       |
+| DPG    |          Refinement          |     NN-Descent      |       Query       | PROPAGATION 1 |        DPG           |    Reverse   |      Random        |       Greedy       |
+| VAMANA |          Refinement          |       Random        |      Centroid     |     Greedy    |  HEURISTIC + VAMANA  |    Reverse   |     Centroid       |       Greedy       |
+| EFANNA | Divide&Conquer + Refinement  |                     |      KD-tree      |   NN-Descent  |                      |              |      KD-tree       |       Greedy       |
+| IEH    |      Hash + Refinement       |                     |        LSH        |               |                      |              |                    |                    |
+| NSW    |          Increment           |                     |                   |               |                      |              |                    |                    |
+| HNSW   |          Increment           |                     |                   |               |      HEURISTIC       |              |                    |                    |
+| NGT    |          Increment           |       ANNG          |                   |               |        ONNG          |              |      DVPTree       |Greedy(Range Search)|
+| SPTAG  |        Divide&Conquer        |                     | KD-tree / BK-tree |               |        RNG           |              |                    |                    |
 
 ### KGraph
                                                                       not need sort   need sort

@@ -813,4 +813,38 @@ namespace weavess {
     void ComponentRefineONNG::RefineInner() {
 
     }
+
+
+    /**
+     * SPTAG Refine :
+     *
+     */
+    void ComponentRefineSPTAG::RefineInner() {
+        unsigned m_iRefineIter = 2;
+
+        for (int iter = 0; iter < m_iRefineIter - 1; iter++)
+        {
+            auto t1 = std::chrono::high_resolution_clock::now();
+#pragma omp parallel for schedule(dynamic)
+            for (unsigned i = 0; i < index->getBaseLen(); i++)
+            {
+                RefineNode<T>(index, i, false, false, m_iCEF * m_iCEFScale);
+            }
+            auto t2 = std::chrono::high_resolution_clock::now();
+            std::cout << "Refine RNG time (s): " << std::chrono::duration_cast<std::chrono::seconds>(t2 - t1).count() << std::endl;
+        }
+
+        index->m_iNeighborhoodSize /= index->m_iNeighborhoodScale;  //K
+
+        if (m_iRefineIter > 0) {
+            auto t1 = std::chrono::high_resolution_clock::now();
+#pragma omp parallel for schedule(dynamic)
+            for (unsigned i = 0; i < index->getBaseLen(); i++)
+            {
+                RefineNode<T>(index, i, false, false, m_iCEF);
+            }
+            auto t2 = std::chrono::high_resolution_clock::now();
+            std::cout << "Refine RNG time (s): " << std::chrono::duration_cast<std::chrono::seconds>(t2 - t1).count() << std::endl;
+        }
+    }
 }

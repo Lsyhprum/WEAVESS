@@ -197,7 +197,8 @@ void SPTAG(std::string base_path, std::string query_path, std::string ground_pat
 
     auto *builder = new weavess::IndexBuilder();
     builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
-            -> init(weavess::INIT_SPTAG_KDT);
+            -> init(weavess::INIT_SPTAG_KDT)
+            -> refine(weavess::REFINE_SPTAG, true);
 
     std::cout << "Time cost: " << builder->GetBuildTime().count() << std::endl;
 }
