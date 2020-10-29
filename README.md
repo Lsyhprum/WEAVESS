@@ -75,4 +75,5 @@ dataset -> load(float*) ->
 * 增量式 search_L, search_K ？
 * HNSW 召回率
 * SPTAG init(KDT) -> refine(PBT ? )
+* _mm_malloc SPTAG 
 

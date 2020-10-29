@@ -69,7 +69,11 @@ namespace weavess {
             std::cout << "__INIT : ANNG__" << std::endl;
             a = new ComponentInitANNG(final_index_);
         } else if (type == INIT_SPTAG_KDT) {
-            final_index_->t.wtf();
+            std::cout << "__INIT : SPTAG_KDT__" << std::endl;
+            a = new ComponentInitSPTAG_KDT(final_index_);
+        } else if (type == INIT_SPTAG_BKT) {
+            std::cout << "__INIT : SPTAG_BKT__" << std::endl;
+            a = new ComponentInitSPTAG_BKT(final_index_);
         }
 
         else {
@@ -113,7 +117,12 @@ namespace weavess {
         } else if (type == REFINE_EFANNA) {
             std::cout << "__REFINE : EFANNA__" << std::endl;
             a = new ComponentRefineEFANNA(final_index_);
-        } else {
+        } else if (type == REFINE_RNG) {
+            std::cout << "__REFINE : RNG__" << std::endl;
+            a = new ComponentRefineRNG(final_index_);
+        }
+
+        else {
             std::cerr << "__REFINE : WRONG TYPE__" << std::endl;
         }
 

@@ -15,6 +15,10 @@
 #define INIT_NUM 5500
 #define POOL_SIZE 1100
 
+// SPTAG
+#define ALIGN 32
+#define aligned_malloc(a, b) _mm_malloc(a, b)
+
 #include <omp.h>
 #include <mutex>
 #include <queue>
@@ -474,21 +478,102 @@ namespace weavess {
             float split_value;
         };
 
-//        struct BasicResult
-//        {
-//            unsigned VID;
-//            float Dist;
-//            ByteArray Meta;
-//
-//            BasicResult() : VID(-1), Dist(MaxDist) {}
-//
-//            BasicResult(unsigned p_vid, float p_dist) : VID(p_vid), Dist(p_dist) {}
-//
-//            BasicResult(unsigned p_vid, float p_dist, ByteArray p_meta) : VID(p_vid), Dist(p_dist), Meta(p_meta) {}
-//        };
+        // node type for storing BKT
+        struct BKTNode
+        {
+            unsigned centerid;
+            unsigned childStart;
+            unsigned childEnd;
+
+            BKTNode(unsigned cid = -1) : centerid(cid), childStart(-1), childEnd(-1) {}
+        };
+
+        template <typename T>
+        struct KmeansArgs {
+            int _K;
+            int _DK;
+            unsigned _D;
+            int _T;
+            T* centers;
+            T* newTCenters;
+            unsigned* counts;
+            float* newCenters;
+            unsigned* newCounts;
+            int* label;
+            unsigned* clusterIdx;
+            float* clusterDist;
+            float* weightedCounts;
+            float* newWeightedCounts;
+            float(*fComputeDistance)(const T* pX, const T* pY, unsigned length);
+
+            KmeansArgs(int k, unsigned dim, unsigned datasize, int threadnum) : _K(k), _DK(k), _D(dim), _T(threadnum) {
+                centers = (T*)aligned_malloc(sizeof(T) * k * dim, ALIGN);
+                newTCenters = (T*)aligned_malloc(sizeof(T) * k * dim, ALIGN);
+                counts = new unsigned[k];
+                newCenters = new float[threadnum * k * dim];
+                newCounts = new unsigned[threadnum * k];
+                label = new int[datasize];
+                clusterIdx = new unsigned[threadnum * k];
+                clusterDist = new float[threadnum * k];
+                weightedCounts = new float[k];
+                newWeightedCounts = new float[threadnum * k];
+            }
+
+            ~KmeansArgs() {
+                aligned_free(centers);
+                aligned_free(newTCenters);
+                delete[] counts;
+                delete[] newCenters;
+                delete[] newCounts;
+                delete[] label;
+                delete[] clusterIdx;
+                delete[] clusterDist;
+                delete[] weightedCounts;
+                delete[] newWeightedCounts;
+            }
+
+            inline void ClearCounts() {
+                memset(newCounts, 0, sizeof(unsigned) * _T * _K);
+                memset(newWeightedCounts, 0, sizeof(float) * _T * _K);
+            }
+
+            inline void ClearCenters() {
+                memset(newCenters, 0, sizeof(float) * _T * _K * _D);
+            }
+
+            inline void ClearDists(float dist) {
+                for (int i = 0; i < _T * _K; i++) {
+                    clusterIdx[i] = -1;
+                    clusterDist[i] = dist;
+                }
+            }
+
+            void Shuffle(std::vector<unsigned>& indices, unsigned first, unsigned last) {
+                unsigned* pos = new unsigned[_K];
+                pos[0] = first;
+                for (int k = 1; k < _K; k++) pos[k] = pos[k - 1] + newCounts[k - 1];
+
+                for (int k = 0; k < _K; k++) {
+                    if (newCounts[k] == 0) continue;
+                    unsigned i = pos[k];
+                    while (newCounts[k] > 0) {
+                        unsigned swapid = pos[label[i]] + newCounts[label[i]] - 1;
+                        newCounts[label[i]]--;
+                        std::swap(indices[i], indices[swapid]);
+                        std::swap(label[i], label[swapid]);
+                    }
+                    while (indices[i] != clusterIdx[k]) i++;
+                    std::swap(indices[i], indices[pos[k] + counts[k] - 1]);
+                }
+                delete[] pos;
+            }
+        };
+
+        std::unordered_map<unsigned, unsigned> m_pSampleCenterMap;
 
         std::vector<unsigned> m_pTreeStart;
-        std::vector<KDTNode> m_pTreeRoots;
+        std::vector<KDTNode> m_pKDTreeRoots;
+        std::vector<BKTNode> m_pBKTreeRoots;
 
         unsigned numOfThreads;
 
@@ -497,6 +582,9 @@ namespace weavess {
         unsigned m_iTPTNumber = 32;
         unsigned m_iNeighborhoodSize = 32;
         unsigned m_iNeighborhoodScale = 2;
+        unsigned m_iCEF = 1000;
+        unsigned m_iCEFScale = 2;
+        unsigned m_iBKTKmeansK = 32;
     };
 
     class Index : public NNDescent, public NSG, public SSG, public DPG, public VAMANA, public EFANNA, public IEH,
