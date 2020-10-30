@@ -8,7 +8,17 @@
 #define PARALLEL
 #define FLT_EPSILON 1.19209290E-07F
 
-#include <set>
+// IEH
+#define MAX_ROWSIZE 1024
+#define HASH_RADIUS 1
+#define DEPTH 16 //smaller than code length
+#define INIT_NUM 5500
+#define POOL_SIZE 1100
+
+// SPTAG
+#define ALIGN 32
+#define aligned_malloc(a, b) _mm_malloc(a, b)
+
 #include <omp.h>
 #include <mutex>
 #include <queue>
@@ -16,9 +26,11 @@
 #include <thread>
 #include <vector>
 #include <chrono>
+#include <cstring>
 #include <fstream>
 #include <cassert>
 #include <iostream>
+#include <windows.h>
 #include <algorithm>
 #include <unordered_set>
 #include <boost/dynamic_bitset.hpp>
@@ -249,14 +261,47 @@ namespace weavess {
         unsigned nTrees;
     };
 
+    class IEH {
+    public:
+        template<typename T>
+        struct Candidate2 {
+            size_t row_id;
+            T distance;
+            Candidate2(const size_t row_id, const T distance): row_id(row_id), distance(distance) { }
+
+            bool operator >(const Candidate2& rhs) const {
+                if (this->distance == rhs.distance) {
+                    return this->row_id > rhs.row_id;
+                }
+                return this->distance > rhs.distance;
+            }
+        };
+
+        typedef std::vector<std::vector<float> > Matrix;
+        typedef std::vector<unsigned int> Codes;
+        typedef std::unordered_map<unsigned int, std::vector<unsigned int> > HashBucket;
+        typedef std::vector<HashBucket> HashTable;
+        typedef std::set<Candidate2<float>, std::greater<Candidate2<float> > > CandidateHeap2;
+    };
+
     class NSW {
     public:
         unsigned NN_ ;
-        unsigned ef_construction_;
+        unsigned ef_construction_ = 150;    //l
+        unsigned n_threads_ = 1;
     };
 
     class HNSW {
     public:
+        unsigned m_ = 12;       // k
+        unsigned max_m_ = 12;
+        unsigned max_m0_ = 24;
+        unsigned mult;
+        float level_mult_ = 1 / log(1.0*m_);
+
+        int max_level_ = 0;
+        mutable std::mutex max_level_guard_;
+
         template <typename KeyType, typename DataType>
         class MinHeap {
         public:
@@ -410,9 +455,381 @@ namespace weavess {
             unsigned int mark_;
         };
 
+        HnswNode* enterpoint_ = nullptr;
+        std::vector<HnswNode*> nodes_;
     };
 
-    class Index : public NNDescent, public NSG, public SSG, public DPG, public VAMANA, public EFANNA, public HNSW{
+    class NGT {
+    public :
+        unsigned truncationThreshold;
+        unsigned edgeSizeForCreation;
+        unsigned edgeSizeForSearch;
+        unsigned size;
+        float explorationCoefficient = 1.1;
+    };
+
+    class SPTAG {
+    public:
+        struct KDTNode
+        {
+            unsigned left;
+            unsigned right;
+            unsigned split_dim;
+            float split_value;
+        };
+
+        // node type for storing BKT
+        struct BKTNode
+        {
+            unsigned centerid;
+            unsigned childStart;
+            unsigned childEnd;
+
+            BKTNode(unsigned cid = -1) : centerid(cid), childStart(-1), childEnd(-1) {}
+        };
+
+        template <typename T>
+        struct KmeansArgs {
+            int _K;
+            int _DK;
+            unsigned _D;
+            int _T;
+            T* centers;
+            T* newTCenters;
+            unsigned* counts;
+            float* newCenters;
+            unsigned* newCounts;
+            int* label;
+            unsigned* clusterIdx;
+            float* clusterDist;
+            float* weightedCounts;
+            float* newWeightedCounts;
+            float(*fComputeDistance)(const T* pX, const T* pY, unsigned length);
+
+            KmeansArgs(int k, unsigned dim, unsigned datasize, int threadnum) : _K(k), _DK(k), _D(dim), _T(threadnum) {
+                centers = (T*)aligned_malloc(sizeof(T) * k * dim, ALIGN);
+                newTCenters = (T*)aligned_malloc(sizeof(T) * k * dim, ALIGN);
+                counts = new unsigned[k];
+                newCenters = new float[threadnum * k * dim];
+                newCounts = new unsigned[threadnum * k];
+                label = new int[datasize];
+                clusterIdx = new unsigned[threadnum * k];
+                clusterDist = new float[threadnum * k];
+                weightedCounts = new float[k];
+                newWeightedCounts = new float[threadnum * k];
+            }
+
+            ~KmeansArgs() {
+                aligned_free(centers);
+                aligned_free(newTCenters);
+                delete[] counts;
+                delete[] newCenters;
+                delete[] newCounts;
+                delete[] label;
+                delete[] clusterIdx;
+                delete[] clusterDist;
+                delete[] weightedCounts;
+                delete[] newWeightedCounts;
+            }
+
+            inline void ClearCounts() {
+                memset(newCounts, 0, sizeof(unsigned) * _T * _K);
+                memset(newWeightedCounts, 0, sizeof(float) * _T * _K);
+            }
+
+            inline void ClearCenters() {
+                memset(newCenters, 0, sizeof(float) * _T * _K * _D);
+            }
+
+            inline void ClearDists(float dist) {
+                for (int i = 0; i < _T * _K; i++) {
+                    clusterIdx[i] = -1;
+                    clusterDist[i] = dist;
+                }
+            }
+
+            void Shuffle(std::vector<unsigned>& indices, unsigned first, unsigned last) {
+                unsigned* pos = new unsigned[_K];
+                pos[0] = first;
+                for (int k = 1; k < _K; k++) pos[k] = pos[k - 1] + newCounts[k - 1];
+
+                for (int k = 0; k < _K; k++) {
+                    if (newCounts[k] == 0) continue;
+                    unsigned i = pos[k];
+                    while (newCounts[k] > 0) {
+                        unsigned swapid = pos[label[i]] + newCounts[label[i]] - 1;
+                        newCounts[label[i]]--;
+                        std::swap(indices[i], indices[swapid]);
+                        std::swap(label[i], label[swapid]);
+                    }
+                    while (indices[i] != clusterIdx[k]) i++;
+                    std::swap(indices[i], indices[pos[k] + counts[k] - 1]);
+                }
+                delete[] pos;
+            }
+        };
+
+        struct HeapCell
+        {
+            unsigned node;
+            float distance;
+
+            HeapCell(unsigned _node = -1, float _distance = (std::numeric_limits<float>::max)()) : node(_node), distance(_distance) {}
+
+            inline bool operator < (const HeapCell& rhs) const
+            {
+                return distance < rhs.distance;
+            }
+
+            inline bool operator > (const HeapCell& rhs) const
+            {
+                return distance > rhs.distance;
+            }
+        };
+
+        class Heap {
+        public:
+            Heap() : heap(nullptr), length(0), count(0) {}
+
+            Heap(int size) { Resize(size); }
+
+            void Resize(int size)
+            {
+                length = size;
+                heap.reset(new HeapCell[length + 1]);  // heap uses 1-based indexing
+                count = 0;
+                lastlevel = int(pow(2.0, floor(log2((float)size))));
+            }
+            ~Heap() {}
+            inline int size() { return count; }
+            inline bool empty() { return count == 0; }
+            inline void clear() { count = 0; }
+            inline HeapCell& Top() { if (count == 0) return heap[0]; else return heap[1]; }
+
+            // Insert a new element in the heap.
+            void insert(const HeapCell& value)
+            {
+                /* If heap is full, then return without adding this element. */
+                int loc;
+                if (count == length) {
+                    int maxi = lastlevel;
+                    for (int i = lastlevel + 1; i <= length; i++)
+                        if (heap[maxi] < heap[i]) maxi = i;
+                    if (value > heap[maxi]) return;
+                    loc = maxi;
+                }
+                else {
+                    loc = ++(count);   /* Remember 1-based indexing. */
+                }
+                /* Keep moving parents down until a place is found for this node. */
+                int par = (loc >> 1);                 /* Location of parent. */
+                while (par > 0 && value < heap[par]) {
+                    heap[loc] = heap[par];     /* Move parent down to loc. */
+                    loc = par;
+                    par >>= 1;
+                }
+                /* Insert the element at the determined location. */
+                heap[loc] = value;
+            }
+            // Returns the node of minimum value from the heap (top of the heap).
+            bool pop(HeapCell& value)
+            {
+                if (count == 0) return false;
+                /* Switch first node with last. */
+                value = heap[1];
+                std::swap(heap[1], heap[count]);
+                count--;
+                heapify();      /* Move new node 1 to right position. */
+                return true;  /* Return old last node. */
+            }
+            HeapCell& pop()
+            {
+                if (count == 0) return heap[0];
+                /* Switch first node with last. */
+                std::swap(heap[1], heap[count]);
+                count--;
+                heapify();      /* Move new node 1 to right position. */
+                return heap[count + 1];  /* Return old last node. */
+            }
+        private:
+            // Storage array for the heap.
+            // Type T must be comparable.
+            std::unique_ptr<HeapCell[]> heap;
+            int length;
+            int count; // Number of element in the heap
+            int lastlevel;
+            // Reorganizes the heap (a parent is smaller than its children) starting with a node.
+
+            void heapify()
+            {
+                int parent = 1, next = 2;
+                while (next < count) {
+                    if (heap[next] > heap[next + 1]) next++;
+                    if (heap[next] < heap[parent]) {
+                        std::swap(heap[parent], heap[next]);
+                        parent = next;
+                        next <<= 1;
+                    }
+                    else break;
+                }
+                if (next == count && heap[next] < heap[parent]) std::swap(heap[parent], heap[next]);
+            }
+        };
+
+        class OptHashPosVector
+        {
+        protected:
+            // Max loop number in one hash block.
+            static const int m_maxLoop = 8;
+
+            // Could we use the second hash block.
+            bool m_secondHash;
+
+            // Max pool size.
+            int m_poolSize;
+
+            // Record 2 hash tables.
+            // [0~m_poolSize + 1) is the first block.
+            // [m_poolSize + 1, 2*(m_poolSize + 1)) is the second block;
+            std::unique_ptr<unsigned[]> m_hashTable;
+
+
+            inline unsigned hash_func2(unsigned idx, int loop)
+            {
+                return (idx + loop) & m_poolSize;
+            }
+
+
+            inline unsigned hash_func(unsigned idx)
+            {
+                return ((unsigned)(idx * 99991) + _rotl(idx, 2) + 101) & m_poolSize;
+            }
+
+        public:
+            OptHashPosVector() {}
+
+            ~OptHashPosVector() {}
+
+
+            void Init(unsigned size, int exp)
+            {
+                int ex = 0;
+                while (size != 0) {
+                    ex++;
+                    size >>= 1;
+                }
+                m_secondHash = true;
+                m_poolSize = (1 << (ex + exp)) - 1;
+                m_hashTable.reset(new unsigned[(m_poolSize + 1) * 2]);
+                clear();
+            }
+
+            void clear()
+            {
+                if (!m_secondHash)
+                {
+                    // Clear first block.
+                    memset(m_hashTable.get(), 0, sizeof(unsigned) * (m_poolSize + 1));
+                }
+                else
+                {
+                    // Clear all blocks.
+                    m_secondHash = false;
+                    memset(m_hashTable.get(), 0, 2 * sizeof(unsigned) * (m_poolSize + 1));
+                }
+            }
+
+
+            inline bool CheckAndSet(unsigned idx)
+            {
+                // Inner Index is begin from 1
+                return _CheckAndSet(m_hashTable.get(), idx + 1) == 0;
+            }
+
+
+            inline int _CheckAndSet(unsigned* hashTable, unsigned idx)
+            {
+                unsigned index = hash_func((unsigned)idx);
+                for (int loop = 0; loop < m_maxLoop; ++loop)
+                {
+                    if (!hashTable[index])
+                    {
+                        // index first match and record it.
+                        hashTable[index] = idx;
+                        return 1;
+                    }
+                    if (hashTable[index] == idx)
+                    {
+                        // Hit this item in hash table.
+                        return 0;
+                    }
+                    // Get next hash position.
+                    index = hash_func2(index, loop);
+                }
+
+                if (hashTable == m_hashTable.get())
+                {
+                    // Use second hash block.
+                    m_secondHash = true;
+                    return _CheckAndSet(m_hashTable.get() + m_poolSize + 1, idx);
+                }
+
+                // Do not include this item.
+                std::cout << "Hash table is full!" << std::endl;
+                return -1;
+            }
+        };
+
+        class SPTAGFurtherFirst {
+        public:
+            SPTAGFurtherFirst(unsigned node, float distance) : node_(node), distance_(distance) {}
+            inline float GetDistance() const { return distance_; }
+            inline unsigned GetNode() const { return node_; }
+            bool operator< (const SPTAGFurtherFirst& n) const {
+                return (distance_ < n.GetDistance());
+            }
+        private:
+            unsigned node_;
+            float distance_;
+        };
+
+        class SPTAGCloserFirst {
+        public:
+            SPTAGCloserFirst(unsigned node, float distance) : node_(node), distance_(distance) {}
+            inline float GetDistance() const { return distance_; }
+            inline unsigned GetNode() const { return node_; }
+            bool operator< (const SPTAGCloserFirst& n) const {
+                return (distance_ > n.GetDistance());
+            }
+        private:
+            unsigned node_;
+            float distance_;
+        };
+
+        std::unordered_map<unsigned, unsigned> m_pSampleCenterMap;
+
+        std::vector<unsigned> m_pTreeStart;
+        std::vector<KDTNode> m_pKDTreeRoots;
+        std::vector<BKTNode> m_pBKTreeRoots;
+
+        unsigned numOfThreads;
+        unsigned m_iTreeNumber;
+
+        // 抽样选取数量
+        unsigned m_iSamples = 1000;
+        unsigned m_iTPTNumber = 32;
+        unsigned m_iNeighborhoodSize = 32;
+        unsigned m_iNeighborhoodScale = 2;
+        unsigned m_iCEF = 1000;
+        unsigned m_iCEFScale = 2;
+        unsigned m_iBKTKmeansK = 32;
+        unsigned m_iNumberOfInitialDynamicPivots = 50;
+        unsigned m_iMaxCheckForRefineGraph = 10000;
+        unsigned m_iMaxCheck = 8192L;
+    };
+
+    class Index : public NNDescent, public NSG, public SSG, public DPG, public VAMANA, public EFANNA, public IEH,
+            public NSW, public HNSW, public NGT, public SPTAG {
     public:
         explicit Index() {
             dist_ = new Distance();
@@ -581,6 +998,7 @@ namespace weavess {
 
         Distance *dist_;
 
+        // 迭代式
         FinalGraph final_graph_;
 
         TYPE entry_type;

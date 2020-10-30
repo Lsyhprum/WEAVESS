@@ -64,24 +64,6 @@ namespace weavess {
         in.close();
     }
 
-//    void ComponentLoad::LoadInner(char *data_file, char *query_file, char *ground_file,
-//                                  Parameters &parameters) {
-//        // base_data
-//        float *data = nullptr;
-//        load_data_txt(data_file, data);
-//        index->setBaseData(data);
-//        index->setBaseLen(150);
-//        index->setBaseDim(2);
-//
-////        for(int id = 0; id < 150; id ++)
-////            std::cout << (index->getBaseData() + index->getBaseDim() * id)[0] << "|" << (index->getBaseData() + index->getBaseDim() * id)[1] << " ";
-////        std::cout << std::endl;
-//
-//        assert(index->getBaseData() != nullptr && index->getBaseLen() != 0 && index->getBaseDim() != 0);
-//
-//        index->setParam(parameters);
-//    }
-
     void ComponentLoad::LoadInner(char *data_file, char *query_file, char *ground_file,
                                   Parameters &parameters) {
         // base_data
