@@ -127,16 +127,19 @@ void EFANNA(std::string base_path, std::string query_path, std::string ground_pa
 
 void IEH(std::string base_path, std::string query_path, std::string ground_path) {
     weavess::Parameters parameters;
-    parameters.set<std::string>("func", "");
-    parameters.set<std::string>("basecode", "");
+    parameters.set<std::string>("train", "F:\\ANNS\\DATASET\\sift1M\\sift_base.fvecs");
+    parameters.set<std::string>("test", "F:\\ANNS\\DATASET\\sift1M\\sift_query.fvecs");
+    parameters.set<std::string>("func", "F:\\ANNS\\DATASET\\sift1M\\LSHfuncSift.txt");
+    parameters.set<std::string>("basecode", "F:\\ANNS\\DATASET\\sift1M\\LSHtableSift.txt");
+    parameters.set<std::string>("knntable", "F:\\ANNS\\DATASET\\sift1M\\sift_bf.index");
 
     parameters.set<unsigned>("expand", 8);
     parameters.set<unsigned>("iterlimit", 8);
 
     auto *builder = new weavess::IndexBuilder();
-    builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
-            -> init(weavess::INIT_IEH);
-            //-> search(weavess::SEARCH_ENTRY_KDT, weavess::ROUTER_GREEDY);
+    builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters) // useless
+            -> init(weavess::INIT_IEH)
+            -> search(weavess::SEARCH_ENTRY_HASH, weavess::ROUTER_IEH);
 
     std::cout << "Time cost: " << builder->GetBuildTime().count() << std::endl;
 }
@@ -210,9 +213,9 @@ void FANNG(std::string base_path, std::string query_path, std::string ground_pat
 
 
 int main() {
-    std::string base_path = R"(G:\ANNS\dataset\siftsmall\siftsmall_base.fvecs)";
-    std::string query_path = R"(G:\ANNS\dataset\siftsmall\siftsmall_query.fvecs)";
-    std::string ground_path = R"(G:\ANNS\dataset\siftsmall\siftsmall_groundtruth.ivecs)";
+    std::string base_path = R"(F:\ANNS\DATASET\siftsmall\siftsmall_base.fvecs)";
+    std::string query_path = R"(F:\ANNS\DATASET\siftsmall\siftsmall_query.fvecs)";
+    std::string ground_path = R"(F:\ANNS\DATASET\siftsmall\siftsmall_groundtruth.ivecs)";
 
     //KGraph(base_path, query_path, ground_path);
     //NSG(base_path, query_path, ground_path);
@@ -220,14 +223,14 @@ int main() {
     //DPG(base_path, query_path, ground_path);
     //VAMANA(base_path, query_path, ground_path);
     //EFANNA(base_path, query_path, ground_path);
+    //IEH(base_path, query_path, ground_path);
     //NSW(base_path, query_path, ground_path);
 
     //HNSW(base_path, query_path, ground_path);
-    //IEH(base_path, query_path, ground_path);
-
+    //SPTAG(base_path, query_path, ground_path);
     //NGT(base_path, query_path, ground_path);
+
     //HCNNG(base_path, query_path, ground_path);
-    SPTAG(base_path, query_path, ground_path);
     //FANNG(base_path, query_path, ground_path);
 
 

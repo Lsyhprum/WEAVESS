@@ -32,6 +32,7 @@ namespace weavess {
         std::sort(pool.begin(), pool.begin() + L);
     }
 
+
     /**
      * 质心入口点
      * @param query 查询点
@@ -72,6 +73,7 @@ namespace weavess {
         std::sort(pool.begin(), pool.begin() + L);
     }
 
+
     /**
      * 子图质心入口点
      * @param query 查询点
@@ -106,6 +108,7 @@ namespace weavess {
 
         std::sort(pool.begin(), pool.begin() + L);
     }
+
 
     /**
      * KDT获取入口点
@@ -181,5 +184,46 @@ namespace weavess {
             vn.push_back(node);
     }
 
+
+    /**
+     * Hash 获取入口点
+     * @param query 查询点
+     * @param pool 候选池
+     */
+    void ComponentSearchEntryHash::SearchEntryInner(unsigned int query, std::vector<Index::Neighbor> &pool) {
+        unsigned int idx1 = index->querycode[query] >> index->LowerBits;
+        unsigned int idx2 = index->querycode[query] - (idx1 << index->LowerBits);
+        auto bucket = index->tb[idx1].find(idx2);
+        //std::vector<int> canstmp;
+        if (bucket != index->tb[idx1].end()) {
+            std::vector<unsigned int> vp = bucket->second;
+            //cout<<i<<":"<<vp.size()<<endl;
+            for (size_t j = 0; j < vp.size() && pool.size() < INIT_NUM; j++) {
+                pool.emplace_back(vp[j], -1, true);
+            }
+        }
+
+        for (size_t j = 0; j < DEPTH; j++) {
+            unsigned int searchcode = index->querycode[query] ^(1 << j);
+            unsigned int idx1 = searchcode >> index->LowerBits;
+            unsigned int idx2 = searchcode - (idx1 << index->LowerBits);
+            auto bucket = index->tb[idx1].find(idx2);
+            if (bucket != index->tb[idx1].end()) {
+                std::vector<unsigned int> vp = bucket->second;
+                for (size_t k = 0; k < vp.size() && pool.size() < INIT_NUM; k++) {
+                    pool.push_back(Index::Neighbor(vp[k], -1, true));
+                }
+            }
+        }
+    }
+
+
+    /**
+     * 获取入口点空方法
+     * @param query
+     * @param pool
+     */
     void ComponentSearchEntryNone::SearchEntryInner(unsigned int query, std::vector<Index::Neighbor> &pool) { }
+
+
 }

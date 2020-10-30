@@ -242,4 +242,59 @@ namespace weavess {
             }
         }
     }
+
+
+    /**
+     * IEH 搜索
+     * @param query
+     * @param pool
+     * @param res
+     */
+    void ComponentSearchRouteIEH::RouteInner(unsigned int query, std::vector<Index::Neighbor> &pool,
+                                             std::vector<unsigned int> &result) {
+
+        const auto L = index->getParam().get<unsigned>("L_search");
+        const auto K = index->getParam().get<unsigned>("K_search");
+
+        //GNNS
+        Index::CandidateHeap2 cands;
+        for (size_t j = 0; j < pool.size(); j++) {
+            int neighbor = pool[j].id;
+            Index::Candidate2<float> c(neighbor,
+                                       index->getDist()->compare(&index->test[query][0], &index->train[neighbor][0], index->test[query].size()));
+            cands.insert(c);
+            if (cands.size() > L)cands.erase(cands.begin());
+        }
+
+        //iteration
+        auto expand = index->getParam().get<unsigned>("expand");
+        auto iterlimit = index->getParam().get<unsigned>("iterlimit");
+
+        int niter = 0;
+        while (niter++ < iterlimit) {
+            auto it = cands.rbegin();
+            std::vector<int> ids;
+            for (int j = 0; it != cands.rend() && j < expand; it++, j++) {
+                int neighbor = it->row_id;
+                auto nnit = index->knntable[neighbor].rbegin();
+                for (int k = 0; nnit != index->knntable[neighbor].rend() && k < expand; nnit++, k++) {
+                    int nn = nnit->row_id;
+                    ids.push_back(nn);
+                }
+            }
+            for (size_t j = 0; j < ids.size(); j++) {
+                Index::Candidate2<float> c(ids[j], index->getDist()->compare(&index->test[query][0], &index->train[ids[j]][0],
+                                                                             index->test[query].size()));
+                cands.insert(c);
+                if (cands.size() > L)cands.erase(cands.begin());
+            }
+        }//cout<<i<<endl;
+
+        auto it = cands.rbegin();
+        for(int j = 0; it != cands.rend() && j < K; it++, j++){
+            result.push_back(it->row_id);
+        }
+    }
+
+
 }
