@@ -22,43 +22,26 @@
                                                                       not need sort   need sort
 load(dataset -> float*) -> init(graph_ -> final_graph_) -> entry() -> candidate() -> prune(final_graph_ -> cut_graph_) -> conn() -> final_graph_ -> search
 
-#### Parameters
-
-|  Dataset  |  K  |  L  | Iter |  S |  R  |
-|:---------:|:---:|:---:|:----:|:--:|:---:|
-| SIFT1M    | 50  | 70  |  10  | 10 | 50  |
-| GIST1M    | 100 | 120 |  10  | 15 | 100 |
-| Crawl     |  |  |    |  |  |
-| GloVe-100 |  |  |    |  |  |
-| uqv       |  |  |    |  |  |
-| enron     |  |  |    |  |  |
-| Crawl     |  |  |    |  |  |
-| GloVe-100 |  |  |    |  |  |
-
-### NSG
-
-dataset -> load(float*) ->
-
 
 ## TODO
 
 编译通过，验证图出度入度、连通分量，验证recall-qps
 
--[ x ] KGraph
+-[x] KGraph
 
--[ x ] NSG
+-[x] NSG
 
--[ x ] NSSG
+-[x] NSSG
 
--[ x ] DPG
+-[x] DPG
 
--[ x ] VAMANA
+-[x] VAMANA
 
--[ x ] EFANNA
+-[x] EFANNA
 
 -[ ] IEH
 
--[ x ] NSW
+-[x] NSW
 
 -[ ] HNSW
 
@@ -77,4 +60,7 @@ dataset -> load(float*) ->
 * SPTAG init(KDT) -> refine(PBT ? )
 * _mm_malloc SPTAG 
 * ParameterDefinitionList SPTAG 相关参数
+* SPTAG BKT refine 后还存在代码
+* SPTAG AddPoint 修改
+* SPTAG numResults prune
 

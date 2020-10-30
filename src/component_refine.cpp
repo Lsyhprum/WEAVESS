@@ -816,78 +816,71 @@ namespace weavess {
 
 
     /**
-     * SPTAG Refine :
+     * SPTAG_BKT Refine :
      *
      */
-    void ComponentRefineRNG::RefineInner() {
+    void ComponentRefineSPTAG_BKT::RefineInner() {
 
-        auto *cut_graph_ = new Index::SimpleNeighbor[index->getBaseLen() * (size_t) index->R_refine];
-        Link(cut_graph_);
-
+        // cut_graph_ 内存近邻数量 ？
+        auto *cut_graph_ = new Index::SimpleNeighbor[index->getBaseLen() * (size_t) index->m_iNeighborhoodSize];
         index->getFinalGraph().resize(index->getBaseLen());
 
-        for (size_t i = 0; i < index->getBaseLen(); i++) {
-            Index::SimpleNeighbor *pool = cut_graph_ + i * (size_t) index->R_refine;
-            unsigned pool_size = 0;
-            for (unsigned j = 0; j < index->R_refine; j++) {
-                if (pool[j].distance == -1) break;
-                pool_size = j;
-            }
-            pool_size++;
-            index->getFinalGraph()[i].resize(pool_size);
-            for (unsigned j = 0; j < pool_size; j++) {
-                Index::SimpleNeighbor nn(pool[j].id, pool[j].distance);
-                index->getFinalGraph()[i][j] = nn;
-            }
-        }
-
-        // CONN
-        std::cout << "__CONN : DFS__" << std::endl;
-        auto *c = new ComponentConnSSGDFS(index);
-
-        c->ConnInner();
-
-
-
-
         unsigned m_iRefineIter = 2;
-
         for (int iter = 0; iter < m_iRefineIter - 1; iter++)
         {
-            auto t1 = std::chrono::high_resolution_clock::now();
-#pragma omp parallel for schedule(dynamic)
-            for (unsigned i = 0; i < index->getBaseLen(); i++)
-            {
-                RefineNode<T>(index, i, false, false, index->m_iCEF * index->m_iCEFScale);
+            Link(cut_graph_);
+
+            for (size_t i = 0; i < index->getBaseLen(); i++) {
+                Index::SimpleNeighbor *pool = cut_graph_ + i * (size_t) index->m_iNeighborhoodSize;
+                unsigned pool_size = 0;
+                for (unsigned j = 0; j < index->m_iNeighborhoodSize; j++) {
+                    if (pool[j].distance == -1) break;
+                    pool_size = j;
+                }
+                pool_size++;
+                index->getFinalGraph()[i].resize(pool_size);
+                for (unsigned j = 0; j < pool_size; j++) {
+                    Index::SimpleNeighbor nn(pool[j].id, pool[j].distance);
+                    index->getFinalGraph()[i][j] = nn;
+                }
             }
-            auto t2 = std::chrono::high_resolution_clock::now();
-            std::cout << "Refine RNG time (s): " << std::chrono::duration_cast<std::chrono::seconds>(t2 - t1).count() << std::endl;
         }
+
 
         index->m_iNeighborhoodSize /= index->m_iNeighborhoodScale;  //K
+        auto *cut_graph2_ = new Index::SimpleNeighbor[index->getBaseLen() * index->m_iNeighborhoodSize];
 
         if (m_iRefineIter > 0) {
-            auto t1 = std::chrono::high_resolution_clock::now();
-#pragma omp parallel for schedule(dynamic)
-            for (unsigned i = 0; i < index->getBaseLen(); i++)
-            {
-                RefineNode<T>(index, i, false, false, index->m_iCEF);
+            Link(cut_graph2_);
+
+            for (size_t i = 0; i < index->getBaseLen(); i++) {
+                Index::SimpleNeighbor *pool = cut_graph2_ + i * (size_t) index->m_iNeighborhoodSize;
+                unsigned pool_size = 0;
+                for (unsigned j = 0; j < index->m_iNeighborhoodSize; j++) {
+                    if (pool[j].distance == -1) break;
+                    pool_size = j;
+                }
+                pool_size++;
+                index->getFinalGraph()[i].resize(pool_size);
+                for (unsigned j = 0; j < pool_size; j++) {
+                    Index::SimpleNeighbor nn(pool[j].id, pool[j].distance);
+                    index->getFinalGraph()[i][j] = nn;
+                }
             }
-            auto t2 = std::chrono::high_resolution_clock::now();
-            std::cout << "Refine RNG time (s): " << std::chrono::duration_cast<std::chrono::seconds>(t2 - t1).count() << std::endl;
         }
+
     }
 
-    void ComponentRefineRNG::Link(Index::SimpleNeighbor *cut_graph_) {
+    void ComponentRefineSPTAG_BKT::Link(Index::SimpleNeighbor *cut_graph_) {
         std::vector<std::mutex> locks(index->getBaseLen());
 
         // CANDIDATE
-        std::cout << "__CANDIDATE : GREEDY(NSG)__" << std::endl;
-        auto *a = new ComponentCandidateNSG(index);
+        std::cout << "__CANDIDATE : SPTAG_BKT__" << std::endl;
+        auto *a = new ComponentCandidateSPTAG_BKT(index);
 
         // PRUNE
         std::cout << "__PRUNE : NSG__" << std::endl;
-        auto *b = new ComponentPruneNSG(index);
+        auto *b = new ComponentPruneRNG(index);
 
 #pragma omp parallel
         {
@@ -907,10 +900,90 @@ namespace weavess {
 
             std::vector<Index::SimpleNeighbor>().swap(pool);
         }
+    }
+
+
+    /**
+     * SPTAG_KDT Refine :
+     */
+    void ComponentRefineSPTAG_KDT::RefineInner() {
+        // cut_graph_ 内存近邻数量 ？
+        auto *cut_graph_ = new Index::SimpleNeighbor[index->getBaseLen() * (size_t) index->m_iNeighborhoodSize];
+        index->getFinalGraph().resize(index->getBaseLen());
+
+        unsigned m_iRefineIter = 2;
+        for (int iter = 0; iter < m_iRefineIter - 1; iter++)
+        {
+            Link(cut_graph_);
+
+            for (size_t i = 0; i < index->getBaseLen(); i++) {
+                Index::SimpleNeighbor *pool = cut_graph_ + i * (size_t) index->m_iNeighborhoodSize;
+                unsigned pool_size = 0;
+                for (unsigned j = 0; j < index->m_iNeighborhoodSize; j++) {
+                    if (pool[j].distance == -1) break;
+                    pool_size = j;
+                }
+                pool_size++;
+                index->getFinalGraph()[i].resize(pool_size);
+                for (unsigned j = 0; j < pool_size; j++) {
+                    Index::SimpleNeighbor nn(pool[j].id, pool[j].distance);
+                    index->getFinalGraph()[i][j] = nn;
+                }
+            }
+        }
+
+
+        index->m_iNeighborhoodSize /= index->m_iNeighborhoodScale;  //K
+        auto *cut_graph2_ = new Index::SimpleNeighbor[index->getBaseLen() * index->m_iNeighborhoodSize];
+
+        if (m_iRefineIter > 0) {
+            Link(cut_graph2_);
+
+            for (size_t i = 0; i < index->getBaseLen(); i++) {
+                Index::SimpleNeighbor *pool = cut_graph2_ + i * (size_t) index->m_iNeighborhoodSize;
+                unsigned pool_size = 0;
+                for (unsigned j = 0; j < index->m_iNeighborhoodSize; j++) {
+                    if (pool[j].distance == -1) break;
+                    pool_size = j;
+                }
+                pool_size++;
+                index->getFinalGraph()[i].resize(pool_size);
+                for (unsigned j = 0; j < pool_size; j++) {
+                    Index::SimpleNeighbor nn(pool[j].id, pool[j].distance);
+                    index->getFinalGraph()[i][j] = nn;
+                }
+            }
+        }
+    }
+
+    void ComponentRefineSPTAG_KDT::Link(Index::SimpleNeighbor *cut_graph_) {
+        std::vector<std::mutex> locks(index->getBaseLen());
+
+        // CANDIDATE
+        std::cout << "__CANDIDATE : SPTAG_BKT__" << std::endl;
+        auto *a = new ComponentCandidateSPTAG_KDT(index);
+
+        // PRUNE
+        std::cout << "__PRUNE : NSG__" << std::endl;
+        auto *b = new ComponentPruneRNG(index);
+
+#pragma omp parallel
+        {
+            std::vector<Index::SimpleNeighbor> pool;
+            boost::dynamic_bitset<> flags{index->getBaseLen(), 0};
 
 #pragma omp for schedule(dynamic, 100)
-        for (unsigned n = 0; n < index->getBaseLen(); ++n) {
-            InterInsert(n, index->R_refine, locks, cut_graph_);
+            for (unsigned n = 0; n < index->getBaseLen(); ++n) {
+                pool.clear();
+                flags.reset();
+
+                a->CandidateInner(n, index->ep_, flags, pool);
+                //std::cout << n << " candidate : " << pool.size() << std::endl;
+                b->PruneInner(n, index->R_refine, flags, pool, cut_graph_);
+                //std::cout << n << " prune : " << pool.size() << std::endl;
+            }
+
+            std::vector<Index::SimpleNeighbor>().swap(pool);
         }
     }
 }

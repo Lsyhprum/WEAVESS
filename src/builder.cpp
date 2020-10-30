@@ -119,7 +119,7 @@ namespace weavess {
             a = new ComponentRefineEFANNA(final_index_);
         } else if (type == REFINE_RNG) {
             std::cout << "__REFINE : RNG__" << std::endl;
-            a = new ComponentRefineRNG(final_index_);
+            a = new ComponentRefineSPTAG_BKT(final_index_);
         }
 
         else {

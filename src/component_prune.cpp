@@ -288,4 +288,40 @@ namespace weavess {
         }
     }
 
+    void ComponentPruneRNG::PruneInner(unsigned int query, unsigned int range, boost::dynamic_bitset<> flags,
+                                       std::vector<Index::SimpleNeighbor> &pool, Index::SimpleNeighbor *cut_graph_) {
+        unsigned count = 0;
+
+        Index::SimpleNeighbor *des_pool = cut_graph_ + (size_t) query * (size_t) range;
+
+        for(int j = 0; j < index->getFinalGraph()[query].size() && j < range; j ++) {
+            des_pool[j].id = index->getFinalGraph()[query][j].id;
+            des_pool[j].distance = index->getFinalGraph()[query][j].distance;
+        }
+
+        for(int j = 0; j < pool.size() && count < range; j ++) {
+            const Index::SimpleNeighbor item = pool[j];
+            if(item.id < 0) break;
+            if(item.id == query) continue;
+
+            bool good = true;
+            for(unsigned k = 0; k < count; k ++) {
+                float dist = index->getDist()->compare(index->getBaseData() + index->getBaseDim() * (index->getFinalGraph()[query][k]).id,
+                                                       index->getBaseData() + index->getBaseDim() * item.id,
+                                                       index->getBaseDim());
+                if(dist <= item.distance) {
+                    good = false;
+                    break;
+                }
+            }
+            if(good) {
+                des_pool[count].id = item.id;
+                des_pool[count].distance = item.distance;
+                count ++;
+            }
+        }
+        for(unsigned j = count; j < range; j ++) {
+            des_pool[j].distance = -1;
+        }
+    }
 }

@@ -260,4 +260,139 @@ namespace weavess {
             res.pop();
         }
     }
+
+    // SPTAG_KDT
+    void ComponentCandidateSPTAG_KDT::CandidateInner(unsigned int query, unsigned int enter,
+                                                     boost::dynamic_bitset<> flags,
+                                                     std::vector<Index::SimpleNeighbor> &result) {
+
+        // Prioriy queue used for neighborhood graph
+        Index::Heap m_NGQueue;
+
+        // Priority queue Used for Tree
+        Index::Heap m_SPTQueue;
+
+        // Priority queue used for result
+        std::priority_queue<Index::SPTAGFurtherFirst> tmp;
+        std::priority_queue<Index::SPTAGCloserFirst> res;
+
+        unsigned m_iNumberOfCheckedLeaves = 0;
+        unsigned m_iNumberOfTreeCheckedLeaves = 0;
+        unsigned m_iNumberOfInitialDynamicPivots = 50;
+        unsigned m_iMaxCheck = 8192L;
+        unsigned m_iNumOfContinuousNoBetterPropagation = 0;
+        unsigned m_iThresholdOfNumberOfContinuousNoBetterPropagation = 3;
+
+        Index::OptHashPosVector nodeCheckStatus;
+
+        for(int i = 0; i < index->m_iTreeNumber; i ++) {
+            unsigned node = index->m_pTreeStart[i];
+
+            KDTSearch(query, node, m_NGQueue, m_SPTQueue, nodeCheckStatus, m_iNumberOfCheckedLeaves, m_iNumberOfTreeCheckedLeaves);
+        }
+
+        unsigned p_limits = m_iNumberOfInitialDynamicPivots;
+        while (!m_SPTQueue.empty() && m_iNumberOfCheckedLeaves < p_limits)
+        {
+            auto& tcell = m_SPTQueue.pop();
+            KDTSearch(query, tcell.node, m_NGQueue, m_SPTQueue, nodeCheckStatus, m_iNumberOfCheckedLeaves, m_iNumberOfTreeCheckedLeaves);
+        }
+
+        while (!m_NGQueue.empty()) {
+            Index::HeapCell gnode = m_NGQueue.pop();
+            std::vector<Index::SimpleNeighbor> node = index->getFinalGraph()[gnode.node];
+
+            // 待修改
+            if(tmp.top().GetDistance() > gnode.distance || (tmp.top().GetDistance() == gnode.distance && tmp.top().GetNode() > gnode.node)) {
+                tmp.push(Index::SPTAGFurtherFirst(gnode.node, gnode.distance));
+                if(m_iNumberOfCheckedLeaves > m_iMaxCheck) {
+                    while (!tmp.empty()) {
+                        res.push(Index::SPTAGCloserFirst(tmp.top().GetNode(), tmp.top().GetDistance()));
+                        tmp.pop();
+                    }
+
+                    while (!res.empty()) {
+                        auto top_node = res.top();
+                        result.emplace_back(top_node.GetNode(), top_node.GetDistance());
+                        res.pop();
+                    }
+                    return;
+                }
+            }
+
+            float upperBound = std::max(tmp.top().GetDistance(), gnode.distance);
+            bool bLocalOpt = true;
+            for (unsigned i = 0; i < index->m_iNeighborhoodSize; i++) {
+                unsigned nn_index = node[i].id;
+                if (nn_index < 0) break;
+                if (nodeCheckStatus.CheckAndSet(nn_index)) continue;
+                float distance2leaf = index->getDist()->compare(index->getBaseData() + index->getBaseDim() * query,
+                                                                index->getBaseData() + index->getBaseDim() * nn_index,
+                                                                index->getBaseDim());
+                if (distance2leaf <= upperBound) bLocalOpt = false;
+                m_iNumberOfCheckedLeaves++;
+                m_NGQueue.insert(Index::HeapCell(nn_index, distance2leaf));
+            }
+            if (bLocalOpt) m_iNumOfContinuousNoBetterPropagation++;
+            else m_iNumOfContinuousNoBetterPropagation = 0;
+            if (m_iNumOfContinuousNoBetterPropagation > m_iThresholdOfNumberOfContinuousNoBetterPropagation) {
+                if (m_iNumberOfTreeCheckedLeaves <= m_iNumberOfCheckedLeaves / 10) {
+                    while(!m_SPTQueue.empty() && m_iNumberOfTreeCheckedLeaves < p_limits) {
+                        auto& tcell = m_SPTQueue.pop();
+                        KDTSearch(query, tcell.node, m_NGQueue, m_SPTQueue, nodeCheckStatus, m_iNumberOfCheckedLeaves, m_iNumberOfTreeCheckedLeaves);
+                    }
+                } else if (gnode.distance > tmp.top().GetDistance()) {
+                    break;
+                }
+            }
+        }
+
+        while (!tmp.empty()) {
+            res.push(Index::SPTAGCloserFirst(tmp.top().GetNode(), tmp.top().GetDistance()));
+            tmp.pop();
+        }
+
+        while (!res.empty()) {
+            auto top_node = res.top();
+            result.emplace_back(top_node.GetNode(), top_node.GetDistance());
+            res.pop();
+        }
+    }
+
+    void ComponentCandidateSPTAG_KDT::KDTSearch(unsigned query, unsigned node, Index::Heap &m_NGQueue, Index::Heap &m_SPTQueue, Index::OptHashPosVector &nodeCheckStatus,
+                                                unsigned &m_iNumberOfCheckedLeaves, unsigned &m_iNumberOfTreeCheckedLeaves) {
+        if(node < 0) {
+            unsigned tmp = -node - 1;
+            if(tmp > index->getBaseLen()) return;
+
+            if(nodeCheckStatus.CheckAndSet(tmp)) return;
+
+            ++m_iNumberOfCheckedLeaves;
+            ++m_iNumberOfTreeCheckedLeaves;
+
+            m_NGQueue.insert(Index::HeapCell(tmp, index->getDist()->compare(index->getBaseData() + index->getBaseDim() * query,
+                                                                            index->getBaseData() + index->getBaseDim() * tmp,
+                                                                            index->getBaseDim())));
+            return;
+        }
+        auto& tnode = index->m_pKDTreeRoots[node];
+
+        float distBound = 0;
+        float diff = (index->getBaseData() + index->getBaseDim() * query)[tnode.split_dim] - tnode.split_value;
+        float distanceBound = distBound + diff * diff;
+        unsigned otherChild, bestChild;
+        if (diff < 0)
+        {
+            bestChild = tnode.left;
+            otherChild = tnode.right;
+        }
+        else
+        {
+            otherChild = tnode.left;
+            bestChild = tnode.right;
+        }
+
+        m_SPTQueue.insert(Index::HeapCell(otherChild, distanceBound));
+        KDTSearch(query, bestChild, m_NGQueue, m_SPTQueue, nodeCheckStatus, m_iNumberOfCheckedLeaves, m_iNumberOfTreeCheckedLeaves);
+    }
 }

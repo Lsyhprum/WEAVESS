@@ -345,9 +345,19 @@ namespace weavess {
         void RefineInner() override;
     };
 
-    class ComponentRefineRNG : public ComponentRefine {
+    class ComponentRefineSPTAG_BKT : public ComponentRefine {
     public:
-        explicit ComponentRefineRNG(Index *index) : ComponentRefine(index) {}
+        explicit ComponentRefineSPTAG_BKT(Index *index) : ComponentRefine(index) {}
+
+        void RefineInner() override;
+
+    private:
+        void Link(Index::SimpleNeighbor *cut_graph_);
+    };
+
+    class ComponentRefineSPTAG_KDT : public ComponentRefine {
+    public:
+        explicit ComponentRefineSPTAG_KDT(Index *index) : ComponentRefine(index) {}
 
         void RefineInner() override;
 
@@ -372,13 +382,6 @@ namespace weavess {
 
     private:
         void get_neighbors(const float *query, std::vector<Index::Neighbor> &retSet, std::vector<Index::Neighbor> &fullset);
-    };
-
-    class ComponentRefineEntryBKT : public ComponentRefineEntry {
-    public:
-        explicit ComponentRefineEntryBKT(Index *index) : ComponentRefineEntry(index) {}
-
-        void EntryInner() override;
     };
 
 
@@ -413,6 +416,18 @@ namespace weavess {
 
         void CandidateInner(unsigned query, unsigned enter, boost::dynamic_bitset<> flags,
                             std::vector<Index::SimpleNeighbor> &result) override;
+    };
+
+    class ComponentCandidateSPTAG_KDT : public ComponentCandidate {
+    public:
+        explicit ComponentCandidateSPTAG_KDT(Index *index) : ComponentCandidate(index) {}
+
+        void CandidateInner(unsigned query, unsigned enter, boost::dynamic_bitset<> flags,
+                            std::vector<Index::SimpleNeighbor> &result) override;
+
+    private:
+        void KDTSearch(unsigned query, unsigned node, Index::Heap &m_NGQueue, Index::Heap &m_SPTQueue, Index::OptHashPosVector &nodeCheckStatus,
+                                                    unsigned &m_iNumberOfCheckedLeaves, unsigned &m_iNumberOfTreeCheckedLeaves);
     };
 
 
@@ -499,6 +514,14 @@ namespace weavess {
     class ComponentPruneHeuristic : public ComponentPrune {
     public:
         explicit ComponentPruneHeuristic(Index *index) : ComponentPrune(index) {}
+
+        void PruneInner(unsigned q, unsigned range, boost::dynamic_bitset<> flags,
+                        std::vector<Index::SimpleNeighbor> &pool, Index::SimpleNeighbor *cut_graph_) override;
+    };
+
+    class ComponentPruneRNG : public ComponentPrune {
+    public:
+        explicit ComponentPruneRNG(Index *index) : ComponentPrune(index) {}
 
         void PruneInner(unsigned q, unsigned range, boost::dynamic_bitset<> flags,
                         std::vector<Index::SimpleNeighbor> &pool, Index::SimpleNeighbor *cut_graph_) override;
