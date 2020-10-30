@@ -1670,23 +1670,22 @@ namespace weavess {
 
     void ComponentInitSPTAG_KDT::SetConfigs() {
         index->numOfThreads = index->getParam().get<unsigned>("numOfThreads");
+
+        index->m_iTreeNumber = 2;
     }
 
     void ComponentInitSPTAG_KDT::BuildTrees() {
-        // 初始化树结构个数
-        unsigned m_iTreeNumber = 2;
-
         std::vector<unsigned> localindices;
         localindices.resize(index->getBaseLen());
         for (unsigned i = 0; i < localindices.size(); i++) localindices[i] = i;
 
         // 记录 KDT 结构
-        index->m_pKDTreeRoots.resize(m_iTreeNumber * localindices.size());
+        index->m_pKDTreeRoots.resize(index->m_iTreeNumber * localindices.size());
         // 记录树根
-        index->m_pTreeStart.resize(m_iTreeNumber, 0);
+        index->m_pTreeStart.resize(index->m_iTreeNumber, 0);
 
 #pragma omp parallel for num_threads(index->numOfThreads)
-        for (int i = 0; i < m_iTreeNumber; i++) {
+        for (int i = 0; i < index->m_iTreeNumber; i++) {
             // 非多线程 -> 删除 ！！！
             Sleep(i * 100);
             std::srand(clock());
@@ -1817,6 +1816,8 @@ namespace weavess {
 
     void ComponentInitSPTAG_BKT::SetConfigs() {
         index->numOfThreads = index->getParam().get<unsigned>("numOfThreads");
+
+        index->m_iTreeNumber = 1;
     }
 
     void ComponentInitSPTAG_BKT::BuildTrees() {
@@ -1837,9 +1838,8 @@ namespace weavess {
 
         index->m_pSampleCenterMap.clear();
 
-        unsigned m_iTreeNumber = 1;
         unsigned m_iBKTLeafSize = 8;
-        for (char i = 0; i < m_iTreeNumber; i++) {
+        for (char i = 0; i < index->m_iTreeNumber; i++) {
             std::random_shuffle(localindices.begin(), localindices.end());
 
             index->m_pTreeStart.push_back(index->m_pBKTreeRoots.size());

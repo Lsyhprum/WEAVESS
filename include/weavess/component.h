@@ -374,6 +374,13 @@ namespace weavess {
         void get_neighbors(const float *query, std::vector<Index::Neighbor> &retSet, std::vector<Index::Neighbor> &fullset);
     };
 
+    class ComponentRefineEntryBKT : public ComponentRefineEntry {
+    public:
+        explicit ComponentRefineEntryBKT(Index *index) : ComponentRefineEntry(index) {}
+
+        void EntryInner() override;
+    };
+
 
     // select candidate
     class ComponentCandidate : public Component {
@@ -398,6 +405,14 @@ namespace weavess {
 
         void CandidateInner(const unsigned query, const unsigned enter, boost::dynamic_bitset<> flags,
                             std::vector<Index::SimpleNeighbor> &pool) override;
+    };
+
+    class ComponentCandidateSPTAG_BKT : public ComponentCandidate {
+    public:
+        explicit ComponentCandidateSPTAG_BKT(Index *index) : ComponentCandidate(index) {}
+
+        void CandidateInner(unsigned query, unsigned enter, boost::dynamic_bitset<> flags,
+                            std::vector<Index::SimpleNeighbor> &result) override;
     };
 
 
