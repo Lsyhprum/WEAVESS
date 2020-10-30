@@ -90,8 +90,4 @@ namespace weavess {
                 ++k;
         }
     }
-
-    void ComponentRefineEntryBKT::EntryInner() {
-
-    }
 }

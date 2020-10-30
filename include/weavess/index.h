@@ -13,7 +13,6 @@
 #define HASH_RADIUS 1
 #define DEPTH 16 //smaller than code length
 #define INIT_NUM 5500
-#define POOL_SIZE 1100
 
 // SPTAG
 #define ALIGN 32
@@ -282,6 +281,16 @@ namespace weavess {
         typedef std::unordered_map<unsigned int, std::vector<unsigned int> > HashBucket;
         typedef std::vector<HashBucket> HashTable;
         typedef std::set<Candidate2<float>, std::greater<Candidate2<float> > > CandidateHeap2;
+
+        Matrix func;
+        Matrix train;
+        Matrix test;
+        Codes querycode;
+        int UpperBits = 8;
+        int LowerBits = 8; //change with code length:code length = up + low;
+        HashTable tb;
+
+        std::vector<CandidateHeap2> knntable;
     };
 
     class NSW {
@@ -520,8 +529,10 @@ namespace weavess {
             }
 
             ~KmeansArgs() {
-                aligned_free(centers);
-                aligned_free(newTCenters);
+                delete[] centers;
+                delete[] newTCenters;
+//                aligned_free(centers);
+//                aligned_free(newTCenters);
                 delete[] counts;
                 delete[] newCenters;
                 delete[] newCounts;

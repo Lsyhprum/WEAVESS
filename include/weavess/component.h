@@ -96,17 +96,17 @@ namespace weavess {
         void InitInner() override;
 
     private:
+        void LoadData(char* filename, Index::Matrix& dataset);
+
         void LoadHashFunc(char* filename, Index::Matrix& func);
 
         void LoadBaseCode(char* filename, Index::Codes& base);
 
         void BuildHashTable(int upbits, int lowbits, Index::Codes base ,Index::HashTable& tb);
 
-        void QueryToCode(Index::Matrix query, Index::Matrix func, Index::Codes& querycode);
-
-        void HashTest(int upbits,int lowbits, Index::Codes querycode, Index::HashTable tb, std::vector<std::vector<int> >& cands);
-
         void LoadKnnTable(char* filename, std::vector<Index::CandidateHeap2 >& tb);
+
+        void QueryToCode(Index::Matrix query, Index::Matrix func, Index::Codes& querycode);
     };
 
     class ComponentInitNSW : public ComponentInit {
@@ -178,7 +178,7 @@ namespace weavess {
         explicit ComponentInitSPTAG(Index *index) : ComponentInit(index) {}
 
     protected:
-        virtual void BuildTrees();
+        virtual void BuildTrees() = 0;
 
         void BuildGraph();
 
@@ -201,9 +201,9 @@ namespace weavess {
     private:
         void SetConfigs();
 
-        void BuildTrees();
+        void BuildTrees() override;
 
-        void BuildGraph();
+        //void BuildGraph();
 
         void DivideTree(std::vector<unsigned>& indices, unsigned first, unsigned last, unsigned index, unsigned &iTreeSize);
 
@@ -613,6 +613,13 @@ namespace weavess {
         void SearchEntryInner(unsigned query, std::vector<Index::Neighbor> &pool) override;
     };
 
+    class ComponentSearchEntryHash : public ComponentSearchEntry {
+    public:
+        explicit ComponentSearchEntryHash(Index *index) : ComponentSearchEntry(index) {}
+
+        void SearchEntryInner(unsigned query, std::vector<Index::Neighbor> &pool) override;
+    };
+
 
     // search route
     class ComponentSearchRoute : public Component {
@@ -651,6 +658,16 @@ namespace weavess {
         void SearchAtLayer(unsigned qnode, Index::HnswNode *enterpoint, int level,
                            Index::VisitedList *visited_list,
                            std::priority_queue<Index::FurtherFirst> &result);
+    };
+
+    class ComponentSearchRouteIEH : public ComponentSearchRoute {
+    public:
+        explicit ComponentSearchRouteIEH(Index *index) : ComponentSearchRoute(index) {}
+
+        void RouteInner(unsigned query, std::vector<Index::Neighbor> &pool, std::vector<unsigned> &res) override;
+
+    private:
+        void HashTest(int upbits,int lowbits, Index::Codes querycode, Index::HashTable tb, std::vector<std::vector<int> >& cands);
     };
 }
 

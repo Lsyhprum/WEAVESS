@@ -680,76 +680,60 @@ namespace weavess {
 
     // IEH
     void ComponentInitIEH::InitInner() {
+        std::string train_argv = index->getParam().get<std::string>("train");
+        std::string test_argv = index->getParam().get<std::string>("test");
         std::string func_argv = index->getParam().get<std::string>("func");
         std::string basecode_argv = index->getParam().get<std::string>("basecode");
         std::string knntable_argv = index->getParam().get<std::string>("knntable");
 
-        Index::Matrix func;
         Index::Codes basecode;
-        Index::Codes querycode;
-        Index::Matrix train;
-        Index::Matrix test;
 
-        LoadHashFunc(&func_argv[0], func);
+        std::cout<<"max support code length 32 and search hamming radius no greater than 1"<<std::endl;
+        LoadHashFunc(&func_argv[0], index->func);
+        std::cout<<"load hash function complete"<<std::endl;
         LoadBaseCode(&basecode_argv[0], basecode);
+        std::cout<<"load base data code complete"<<std::endl;
+        LoadData(&train_argv[0], index->train);
+        std::cout<<"load base data complete"<<std::endl;
+        LoadData(&test_argv[0], index->test);
+        std::cout<<"load query data complete"<<std::endl;
 
-        int UpperBits = 8;
-        int LowerBits = 8; //change with code length:code length = up + low;
-        Index::HashTable tb;
-        BuildHashTable(UpperBits, LowerBits, basecode, tb);
+        // init hash
+        BuildHashTable(index->UpperBits, index->LowerBits, basecode, index->tb);
         std::cout << "build hash table complete" << std::endl;
 
-        QueryToCode(test, func, querycode);
-        std::cout << "convert query code complete" << std::endl;
-        std::vector<std::vector<int> > hashcands;
-        HashTest(UpperBits, LowerBits, querycode, tb, hashcands);
-        std::cout << "hash candidates ready" << std::endl;
-
-        std::cout << "initial finish : " << std::endl;
-
-        std::vector<Index::CandidateHeap2> knntable;
-        LoadKnnTable(&knntable_argv[0], knntable);
+        // init knn graph
+        LoadKnnTable(&knntable_argv[0], index->knntable);
         std::cout << "load knn graph complete" << std::endl;
 
-        //GNNS
-        std::vector<Index::CandidateHeap2> res;
-        for (size_t i = 0; i < hashcands.size(); i++) {
-            Index::CandidateHeap2 cands;
-            for (size_t j = 0; j < hashcands[i].size(); j++) {
-                int neighbor = hashcands[i][j];
-                Index::Candidate2<float> c(neighbor,
-                                           index->getDist()->compare(&test[i][0], &train[neighbor][0], test[i].size()));
-                cands.insert(c);
-                if (cands.size() > POOL_SIZE)cands.erase(cands.begin());
-            }
-            res.push_back(cands);
-        }
+        // init test
+        QueryToCode(index->test, index->func, index->querycode);
+        std::cout << "convert query code complete" << std::endl;
+    }
 
-        //iteration
-        auto expand = index->getParam().get<unsigned>("expand");
-        auto iterlimit = index->getParam().get<unsigned>("iterlimit");
-        for (size_t i = 0; i < res.size(); i++) {
-            int niter = 0;
-            while (niter++ < iterlimit) {
-                Index::CandidateHeap2::reverse_iterator it = res[i].rbegin();
-                std::vector<int> ids;
-                for (int j = 0; it != res[i].rend() && j < expand; it++, j++) {
-                    int neighbor = it->row_id;
-                    Index::CandidateHeap2::reverse_iterator nnit = knntable[neighbor].rbegin();
-                    for (int k = 0; nnit != knntable[neighbor].rend() && k < expand; nnit++, k++) {
-                        int nn = nnit->row_id;
-                        ids.push_back(nn);
-                    }
-                }
-                for (size_t j = 0; j < ids.size(); j++) {
-                    Index::Candidate2<float> c(ids[j], index->getDist()->compare(&test[i][0], &train[ids[j]][0],
-                                                                                 test[i].size()));
-                    res[i].insert(c);
-                    if (res[i].size() > POOL_SIZE)res[i].erase(res[i].begin());
-                }
-            }//cout<<i<<endl;
-        }
-        std::cout << "GNNS complete " << std::endl;
+    void ComponentInitIEH::LoadData(char* filename, Index::Matrix& dataset){
+        std::ifstream in(filename, std::ios::binary);
+        if(!in.is_open()){std::cout<<"open file error"<<std::endl;exit(-1);}
+        unsigned int dim;
+        in.read((char*)&dim,4);
+        std::cout<<"data dimension: "<<dim<<std::endl;
+        in.seekg(0,std::ios::end);
+        std::ios::pos_type ss = in.tellg();
+        size_t fsize = (size_t)ss;
+        unsigned int num = fsize / (dim+1) / 4;
+        in.seekg(0,std::ios::beg);
+        for(size_t i = 0; i < num; i++){
+            in.seekg(4,std::ios::cur);
+            std::vector<float> vtmp(dim);
+            vtmp.clear();
+            for(size_t j = 0; j < dim; j++){
+                float tmp;
+                in.read((char*)&tmp,4);
+                vtmp.push_back(tmp);
+            }
+            dataset.push_back(vtmp);
+        }//cout<<dataset.size()<<endl;
+        in.close();
     }
 
     void StringSplit(std::string src, std::vector<std::string> &des) {
@@ -828,6 +812,33 @@ namespace weavess {
         }
     }
 
+    void ComponentInitIEH::LoadKnnTable(char *filename, std::vector<Index::CandidateHeap2> &tb) {
+        std::ifstream in(filename, std::ios::binary);
+        in.seekg(0, std::ios::end);
+        std::ios::pos_type ss = in.tellg();
+        size_t fsize = (size_t) ss;
+        int dim;
+        in.seekg(0, std::ios::beg);
+        in.read((char *) &dim, sizeof(int));
+        size_t num = fsize / (dim + 1) / 4;
+        std::cout << "load graph " << num << " " << dim << std::endl;
+        in.seekg(0, std::ios::beg);
+        tb.clear();
+        for (size_t i = 0; i < num; i++) {
+            Index::CandidateHeap2 heap;
+            in.read((char *) &dim, sizeof(int));
+            for (int j = 0; j < dim; j++) {
+                int id;
+                in.read((char *) &id, sizeof(int));
+                Index::Candidate2<float> can(id, -1);
+                heap.insert(can);
+            }
+            tb.push_back(heap);
+
+        }
+        in.close();
+    }
+
     bool MatrixMultiply(Index::Matrix A, Index::Matrix B, Index::Matrix &C) {
         if (A.size() == 0 || B.size() == 0) {
             std::cout << "matrix a or b size 0" << std::endl;
@@ -867,70 +878,6 @@ namespace weavess {
             //if(i<3)cout<<codetmp<<endl;
             querycode.push_back(codetmp);
         }//cout<<querycode.size()<<endl;
-    }
-
-    void ComponentInitIEH::HashTest(int upbits, int lowbits, Index::Codes querycode, Index::HashTable tb,
-                                    std::vector<std::vector<int> > &cands) {
-        for (size_t i = 0; i < querycode.size(); i++) {
-
-            unsigned int idx1 = querycode[i] >> lowbits;
-            unsigned int idx2 = querycode[i] - (idx1 << lowbits);
-            Index::HashBucket::iterator bucket = tb[idx1].find(idx2);
-            std::vector<int> canstmp;
-            if (bucket != tb[idx1].end()) {
-                std::vector<unsigned int> vp = bucket->second;
-                //cout<<i<<":"<<vp.size()<<endl;
-                for (size_t j = 0; j < vp.size() && canstmp.size() < INIT_NUM; j++) {
-                    canstmp.push_back(vp[j]);
-                }
-            }
-
-
-            if (HASH_RADIUS == 0) {
-                cands.push_back(canstmp);
-                continue;
-            }
-            for (size_t j = 0; j < DEPTH; j++) {
-                unsigned int searchcode = querycode[i] ^(1 << j);
-                unsigned int idx1 = searchcode >> lowbits;
-                unsigned int idx2 = searchcode - (idx1 << lowbits);
-                Index::HashBucket::iterator bucket = tb[idx1].find(idx2);
-                if (bucket != tb[idx1].end()) {
-                    std::vector<unsigned int> vp = bucket->second;
-                    for (size_t k = 0; k < vp.size() && canstmp.size() < INIT_NUM; k++) {
-                        canstmp.push_back(vp[k]);
-                    }
-                }
-            }
-            cands.push_back(canstmp);
-        }
-    }
-
-    void ComponentInitIEH::LoadKnnTable(char *filename, std::vector<Index::CandidateHeap2> &tb) {
-        std::ifstream in(filename, std::ios::binary);
-        in.seekg(0, std::ios::end);
-        std::ios::pos_type ss = in.tellg();
-        size_t fsize = (size_t) ss;
-        int dim;
-        in.seekg(0, std::ios::beg);
-        in.read((char *) &dim, sizeof(int));
-        size_t num = fsize / (dim + 1) / 4;
-        std::cout << "load graph " << num << " " << dim << std::endl;
-        in.seekg(0, std::ios::beg);
-        tb.clear();
-        for (size_t i = 0; i < num; i++) {
-            Index::CandidateHeap2 heap;
-            in.read((char *) &dim, sizeof(int));
-            for (int j = 0; j < dim; j++) {
-                int id;
-                in.read((char *) &id, sizeof(int));
-                Index::Candidate2<float> can(id, -1);
-                heap.insert(can);
-            }
-            tb.push_back(heap);
-
-        }
-        in.close();
     }
 
 

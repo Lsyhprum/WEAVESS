@@ -74,6 +74,9 @@ namespace weavess {
         } else if (type == INIT_SPTAG_BKT) {
             std::cout << "__INIT : SPTAG_BKT__" << std::endl;
             a = new ComponentInitSPTAG_BKT(final_index_);
+        } else if (type == INIT_IEH) {
+            std::cout << "__INIT : IEH__" << std::endl;
+            a = new ComponentInitIEH(final_index_);
         }
 
         else {
@@ -117,9 +120,12 @@ namespace weavess {
         } else if (type == REFINE_EFANNA) {
             std::cout << "__REFINE : EFANNA__" << std::endl;
             a = new ComponentRefineEFANNA(final_index_);
-        } else if (type == REFINE_RNG) {
-            std::cout << "__REFINE : RNG__" << std::endl;
+        } else if (type == REFINE_SPTAG_BKT) {
+            std::cout << "__REFINE : SPTAG_BKT__" << std::endl;
             a = new ComponentRefineSPTAG_BKT(final_index_);
+        } else if (type == REFINE_SPTAG_KDT) {
+            std::cout << "__REFINE : SPTAG_KDT__" << std::endl;
+            a = new ComponentRefineSPTAG_KDT(final_index_);
         }
 
         else {
@@ -182,6 +188,9 @@ namespace weavess {
         } else if (entry_type == SEARCH_ENTRY_NONE) {
             std::cout << "__SEARCH ENTRY : NONE__" << std::endl;
             a = new ComponentSearchEntryNone(final_index_);
+        } else if (entry_type == SEARCH_ENTRY_HASH) {
+            std::cout << "__SEARCH ENTRY : HASH__" << std::endl;
+            a = new ComponentSearchEntryHash(final_index_);
         } else {
             std::cerr << "__SEARCH ENTRY : WRONG TYPE__" << std::endl;
             exit(-1);
@@ -198,7 +207,11 @@ namespace weavess {
         } else if (route_type == ROUTER_HNSW) {
             std::cout << "__ROUTER : NSW__" << std::endl;
             b = new ComponentSearchRouteHNSW(final_index_);
-        } else {
+        } else if (route_type == ROUTER_IEH) {
+            std::cout << "__ROUTER : IEH__" << std::endl;
+            b = new ComponentSearchRouteIEH(final_index_);
+        }
+        else {
             std::cerr << "__ROUTER : WRONG TYPE__" << std::endl;
             exit(-1);
         }
