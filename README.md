@@ -7,7 +7,8 @@
 |  Algo  |       TYPE       |      Init     |       Entry       |   Candidate   |     Prune    |     Conn     |    Search Entry    |    Search Route    |
 |:------:|:----------------:| :------------:| :---------------: | :-----------: | :-----------:| :-----------:| :-----------------:|:------------------:|
 | KGraph |    Refinement    |   NN-Descent  |       Query       | PROPAGATION 1 |    Naive     |              |      Random        |       Greedy       |
-| NSG    |    Refinement    |   NN-Descent  |      Centroid     |     Greedy    |     NSG      | Reverse+DFS  |     Centroid       |       Greedy       |
+| FANNG  |    Refinement    |     KNNG      |       Query       | PROPAGATION 1 |     RNG      |              |      Random        |      Backtrack     |
+| NSG    |    Refinement    |   NN-Descent  |      Centroid     |     Greedy    |     RNG      | Reverse+DFS  |     Centroid       |       Greedy       |
 | SSG    |    Refinement    |   NN-Descent  |       Query       | PROPAGATION 2 |     SSG      | Reverse+DFS  |    Sub Centroid    |       Greedy       |
 | DPG    |    Refinement    |   NN-Descent  |       Query       | PROPAGATION 1 |     DPG      |    Reverse   |      Random        |       Greedy       |
 | VAMANA |    Refinement    |     Random    |      Centroid     |     Greedy    |    VAMANA    |    Reverse   |     Centroid       |       Greedy       |
@@ -18,35 +19,36 @@
 | NGT    |    Increment     |     ANNG      |                   |               |     ONNG     |              |      DVPTree       |       Greedy       |
 | SPTAG  |  Divide&Conquer  |               | KD-tree / BK-tree |               |     RNG      |              |                    |                    |
 | HCNNG  |  Divide&Conquer  |               |                   |               |              |              |                    |                    |
-| FANNG  |  Divide&Conquer  |               |                   |               |              |              |                    |                    |
+
 
 ## TODO
 
-编译通过，验证图出度入度、连通分量，验证recall-qps
+- [x] KGraph
 
--[x] KGraph
+- [x] NSG
 
--[x] NSG
+- [x] NSSG
 
--[x] NSSG
+- [x] DPG
 
--[x] DPG
+- [x] VAMANA
 
--[x] VAMANA
+- [x] EFANNA
 
--[x] EFANNA
+- [x] IEH
 
--[x] IEH
+- [x] NSW
 
--[x] NSW
+- [x] HNSW
 
--[ ] HNSW
+- [ ] NGT
 
--[ ] NGT
+- [ ] HCNNG
 
--[ ] HCNNG
+- [ ] SPTAG
 
--[ ] SPTAG
+- [x] FANNG
 
--[ ] FANNG
+回收内存
+SPTAG RNG -> KNNG
 

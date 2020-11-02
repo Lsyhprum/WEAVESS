@@ -21,6 +21,22 @@ void KGraph(std::string base_path, std::string query_path, std::string ground_pa
     std::cout << "Time cost: " << builder->GetBuildTime().count() << std::endl;
 }
 
+void FANNG(std::string base_path, std::string query_path, std::string ground_path) {
+    std::string graph_file = R"(fanng.graph)";
+
+    weavess::Parameters parameters;
+    parameters.set<unsigned>("R_refine", 25);
+    parameters.set<unsigned>("M", 30);
+
+    auto *builder = new weavess::IndexBuilder();
+    builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
+            -> init(weavess::TYPE::INIT_NN_DESCENT)
+            -> refine(weavess::TYPE::REFINE_FANNG, false)
+            -> search(weavess::TYPE::SEARCH_ENTRY_RAND, weavess::TYPE::ROUTER_BACKTRACK);
+
+    std::cout << "Time cost: " << builder->GetBuildTime().count() << std::endl;
+}
+
 void NSG(std::string base_path, std::string query_path, std::string ground_path) {
     std::string graph_file = R"(nsg.graph)";
 
@@ -160,11 +176,11 @@ void NSW(std::string base_path, std::string query_path, std::string ground_path)
 
 void HNSW(std::string base_path, std::string query_path, std::string ground_path) {
     weavess::Parameters parameters;
-    parameters.set<unsigned>("max_m", 50);
-    parameters.set<unsigned>("max_m0", 100);
+    parameters.set<unsigned>("max_m", 5);
+    parameters.set<unsigned>("max_m0", 10);
     parameters.set<unsigned>("ef_construction", 150);
-    parameters.set<unsigned>("n_threads", 10);
-    parameters.set<unsigned>("mult", 5);
+    parameters.set<unsigned>("n_threads", 1);
+    parameters.set<int>("mult", -1);
 
     auto *builder = new weavess::IndexBuilder();
     builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
@@ -201,14 +217,11 @@ void SPTAG(std::string base_path, std::string query_path, std::string ground_pat
     auto *builder = new weavess::IndexBuilder();
     builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
             //-> init(weavess::INIT_SPTAG_KDT)
-            -> init(weavess::INIT_SPTAG_BKT)
-            -> refine(weavess::INIT_SPTAG_BKT, false);
+            -> init(weavess::INIT_SPTAG_BKT);
+            //-> refine(weavess::INIT_SPTAG_KDT, false)
+            //-> refine(weavess::INIT_SPTAG_BKT, false);
 
     std::cout << "Time cost: " << builder->GetBuildTime().count() << std::endl;
-}
-
-void FANNG(std::string base_path, std::string query_path, std::string ground_path) {
-
 }
 
 
@@ -225,14 +238,12 @@ int main() {
     //EFANNA(base_path, query_path, ground_path);
     //IEH(base_path, query_path, ground_path);
     //NSW(base_path, query_path, ground_path);
-
     //HNSW(base_path, query_path, ground_path);
+
+    //FANNG(base_path, query_path, ground_path);
     //SPTAG(base_path, query_path, ground_path);
     //NGT(base_path, query_path, ground_path);
-
     //HCNNG(base_path, query_path, ground_path);
-    //FANNG(base_path, query_path, ground_path);
-
 
     return 0;
 }

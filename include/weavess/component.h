@@ -60,7 +60,7 @@ namespace weavess {
         void InitInner() override;
 
     private:
-        void SetConfigs() ;
+        void SetConfigs();
     };
 
     class ComponentInitKDT : public ComponentInit {
@@ -72,21 +72,23 @@ namespace weavess {
     private:
         void SetConfigs();
 
-        void meanSplit(std::mt19937& rng, unsigned* indices, unsigned count, unsigned& index, unsigned& cutdim, float& cutval);
+        void meanSplit(std::mt19937 &rng, unsigned *indices, unsigned count, unsigned &index, unsigned &cutdim,
+                       float &cutval);
 
-        void planeSplit(unsigned* indices, unsigned count, unsigned cutdim, float cutval, unsigned& lim1, unsigned& lim2);
+        void
+        planeSplit(unsigned *indices, unsigned count, unsigned cutdim, float cutval, unsigned &lim1, unsigned &lim2);
 
-        int selectDivision(std::mt19937& rng, float* v);
+        int selectDivision(std::mt19937 &rng, float *v);
 
-        void DFSbuild(Index::EFANNA::Node* node, std::mt19937& rng, unsigned* indices, unsigned count, unsigned offset);
+        void DFSbuild(Index::EFANNA::Node *node, std::mt19937 &rng, unsigned *indices, unsigned count, unsigned offset);
 
-        void DFStest(unsigned level, unsigned dim, Index::EFANNA::Node* node);
+        void DFStest(unsigned level, unsigned dim, Index::EFANNA::Node *node);
 
-        void getMergeLevelNodeList(Index::EFANNA::Node* node, size_t treeid, unsigned deepth);
+        void getMergeLevelNodeList(Index::EFANNA::Node *node, size_t treeid, unsigned deepth);
 
-        Index::EFANNA::Node* SearchToLeaf(Index::EFANNA::Node* node, size_t id);
+        Index::EFANNA::Node *SearchToLeaf(Index::EFANNA::Node *node, size_t id);
 
-        void mergeSubGraphs(size_t treeid, Index::EFANNA::Node* node);
+        void mergeSubGraphs(size_t treeid, Index::EFANNA::Node *node);
     };
 
     class ComponentInitIEH : public ComponentInit {
@@ -96,17 +98,17 @@ namespace weavess {
         void InitInner() override;
 
     private:
-        void LoadData(char* filename, Index::Matrix& dataset);
+        void LoadData(char *filename, Index::Matrix &dataset);
 
-        void LoadHashFunc(char* filename, Index::Matrix& func);
+        void LoadHashFunc(char *filename, Index::Matrix &func);
 
-        void LoadBaseCode(char* filename, Index::Codes& base);
+        void LoadBaseCode(char *filename, Index::Codes &base);
 
-        void BuildHashTable(int upbits, int lowbits, Index::Codes base ,Index::HashTable& tb);
+        void BuildHashTable(int upbits, int lowbits, Index::Codes base, Index::HashTable &tb);
 
-        void LoadKnnTable(char* filename, std::vector<Index::CandidateHeap2 >& tb);
+        void LoadKnnTable(char *filename, std::vector<Index::CandidateHeap2> &tb);
 
-        void QueryToCode(Index::Matrix query, Index::Matrix func, Index::Codes& querycode);
+        void QueryToCode(Index::Matrix query, Index::Matrix func, Index::Codes &querycode);
     };
 
     class ComponentInitNSW : public ComponentInit {
@@ -122,12 +124,12 @@ namespace weavess {
 
         int GetRandomNodeLevel();
 
-        void InsertNode(Index::HnswNode* qnode, Index::VisitedList* visited_list);
+        void InsertNode(Index::HnswNode *qnode, Index::VisitedList *visited_list);
 
-        void SearchAtLayer(Index::HnswNode* qnode, Index::HnswNode* enterpoint, int level,
-                           Index::VisitedList* visited_list, std::priority_queue<Index::FurtherFirst>& result);
+        void SearchAtLayer(Index::HnswNode *qnode, Index::HnswNode *enterpoint, int level,
+                           Index::VisitedList *visited_list, std::priority_queue<Index::FurtherFirst> &result);
 
-        void Link(Index::HnswNode* source, Index::HnswNode* target, int level);
+        void Link(Index::HnswNode *source, Index::HnswNode *target, int level);
     };
 
     class ComponentInitHNSW : public ComponentInit {
@@ -145,12 +147,12 @@ namespace weavess {
 
         int GetRandomNodeLevel();
 
-        void InsertNode(Index::HnswNode* qnode, Index::VisitedList* visited_list);
+        void InsertNode(Index::HnswNode *qnode, Index::VisitedList *visited_list);
 
-        void SearchAtLayer(Index::HnswNode* qnode, Index::HnswNode* enterpoint, int level,
-                           Index::VisitedList* visited_list, std::priority_queue<Index::FurtherFirst>& result);
+        void SearchAtLayer(Index::HnswNode *qnode, Index::HnswNode *enterpoint, int level,
+                           Index::VisitedList *visited_list, std::priority_queue<Index::FurtherFirst> &result);
 
-        void Link(Index::HnswNode* source, Index::HnswNode* target, int level);
+        void Link(Index::HnswNode *source, Index::HnswNode *target, int level);
     };
 
     class ComponentInitANNG : public ComponentInit {
@@ -189,7 +191,7 @@ namespace weavess {
 
         void AddNeighbor(unsigned idx, float dist, unsigned origin, unsigned size);
 
-        static inline bool Compare(const Index::SimpleNeighbor& lhs, const Index::SimpleNeighbor& rhs);
+        static inline bool Compare(const Index::SimpleNeighbor &lhs, const Index::SimpleNeighbor &rhs);
     };
 
     class ComponentInitSPTAG_KDT : public ComponentInitSPTAG {
@@ -205,13 +207,16 @@ namespace weavess {
 
         //void BuildGraph();
 
-        void DivideTree(std::vector<unsigned>& indices, unsigned first, unsigned last, unsigned index, unsigned &iTreeSize);
+        void
+        DivideTree(std::vector<unsigned> &indices, unsigned first, unsigned last, unsigned index, unsigned &iTreeSize);
 
-        void ChooseDivision(Index::KDTNode& node, const std::vector<unsigned>& indices, const unsigned first, const unsigned last);
+        void ChooseDivision(Index::KDTNode &node, const std::vector<unsigned> &indices, const unsigned first,
+                            const unsigned last);
 
-        unsigned SelectDivisionDimension(const std::vector<float>& varianceValues);
+        unsigned SelectDivisionDimension(const std::vector<float> &varianceValues);
 
-        unsigned Subdivide(const Index::KDTNode& node, std::vector<unsigned>& indices, const unsigned first, const unsigned last);
+        unsigned Subdivide(const Index::KDTNode &node, std::vector<unsigned> &indices, const unsigned first,
+                           const unsigned last);
     };
 
     class ComponentInitSPTAG_BKT : public ComponentInitSPTAG {
@@ -226,17 +231,29 @@ namespace weavess {
     private:
         void SetConfigs();
 
-        int KmeansClustering(std::vector<unsigned>& indices, const unsigned first, const unsigned last,
-                                                     Index::KmeansArgs<float>& args, int samples = 1000);
+        int KmeansClustering(std::vector<unsigned> &indices, const unsigned first, const unsigned last,
+                             Index::KmeansArgs<float> &args, int samples = 1000);
 
-        inline void InitCenters(std::vector<unsigned>& indices, const unsigned first, const unsigned last,
-                                                        Index::KmeansArgs<float>& args, int samples, int tryIters);
+        inline void InitCenters(std::vector<unsigned> &indices, const unsigned first, const unsigned last,
+                                Index::KmeansArgs<float> &args, int samples, int tryIters);
 
-        inline float KmeansAssign(std::vector<unsigned>& indices,
-                                  const unsigned first, const unsigned last, Index::KmeansArgs<float>& args,
+        inline float KmeansAssign(std::vector<unsigned> &indices,
+                                  const unsigned first, const unsigned last, Index::KmeansArgs<float> &args,
                                   const bool updateCenters, float lambda);
 
-        float RefineCenters(Index::KmeansArgs<float>& args);
+        float RefineCenters(Index::KmeansArgs<float> &args);
+    };
+
+    class ComponentInitFANNG : public ComponentInit {
+    public:
+        explicit ComponentInitFANNG(Index *index) : ComponentInit(index) {}
+
+        void InitInner() override;
+
+    private:
+        void SetConfigs();
+
+        void init();
     };
 
 
@@ -313,7 +330,7 @@ namespace weavess {
         void Link(Index::SimpleNeighbor *cut_graph_);
 
         void InterInsert(unsigned n, unsigned range, std::vector<std::mutex> &locks,
-                                             Index::SimpleNeighbor *cut_graph_);
+                         Index::SimpleNeighbor *cut_graph_);
     };
 
     class ComponentRefineEFANNA : public ComponentRefine {
@@ -365,6 +382,18 @@ namespace weavess {
         void Link(Index::SimpleNeighbor *cut_graph_);
     };
 
+    class ComponentRefineFANNG : public ComponentRefine {
+    public:
+        explicit ComponentRefineFANNG(Index *index) : ComponentRefine(index) {}
+
+        void RefineInner() override;
+
+    private:
+        void Link(Index::SimpleNeighbor *cut_graph_);
+
+        void SetConfigs();
+    };
+
 
     // entry
     class ComponentRefineEntry : public Component {
@@ -381,7 +410,8 @@ namespace weavess {
         void EntryInner() override;
 
     private:
-        void get_neighbors(const float *query, std::vector<Index::Neighbor> &retSet, std::vector<Index::Neighbor> &fullset);
+        void
+        get_neighbors(const float *query, std::vector<Index::Neighbor> &retSet, std::vector<Index::Neighbor> &fullset);
     };
 
 
@@ -426,8 +456,9 @@ namespace weavess {
                             std::vector<Index::SimpleNeighbor> &result) override;
 
     private:
-        void KDTSearch(unsigned query, unsigned node, Index::Heap &m_NGQueue, Index::Heap &m_SPTQueue, Index::OptHashPosVector &nodeCheckStatus,
-                                                    unsigned &m_iNumberOfCheckedLeaves, unsigned &m_iNumberOfTreeCheckedLeaves);
+        void KDTSearch(unsigned query, unsigned node, Index::Heap &m_NGQueue, Index::Heap &m_SPTQueue,
+                       Index::OptHashPosVector &nodeCheckStatus,
+                       unsigned &m_iNumberOfCheckedLeaves, unsigned &m_iNumberOfTreeCheckedLeaves);
     };
 
 
@@ -440,34 +471,32 @@ namespace weavess {
                                 std::vector<Index::SimpleNeighbor> &pool,
                                 Index::SimpleNeighbor *cut_graph_) = 0;
 
-        void Hnsw2Neighbor(unsigned range, std::priority_queue<Index::FurtherFirst> &result) {
+        void Hnsw2Neighbor(unsigned query, unsigned range, std::priority_queue<Index::FurtherFirst> &result) {
             int n = result.size();
             std::vector<Index::SimpleNeighbor> pool(n);
-            std::unordered_map<int, Index::HnswNode*> tmp;
+            std::unordered_map<int, Index::HnswNode *> tmp;
 
-            for(int i = n - 1; i >= 0; i --) {
+            for (int i = n - 1; i >= 0; i--) {
                 Index::FurtherFirst f = result.top();
                 pool[i] = Index::SimpleNeighbor(f.GetNode()->GetId(), f.GetDistance());
                 tmp[f.GetNode()->GetId()] = f.GetNode();
                 result.pop();
             }
 
-            while(!result.empty()) result.pop();
-
             boost::dynamic_bitset<> flags;
 
             auto *cut_graph_ = new Index::SimpleNeighbor[range];
 
-            PruneInner(0, range, flags, pool, cut_graph_);
+            PruneInner(query, range, flags, pool, cut_graph_);
 
-            for(unsigned j = 0; j < range; j ++) {
-                if(cut_graph_[j].distance == -1) break;
+            for (unsigned j = 0; j < range; j++) {
+                if (cut_graph_[j].distance == -1) break;
 
                 result.push(Index::FurtherFirst(tmp[cut_graph_[j].id], cut_graph_[j].distance));
             }
 
             std::vector<Index::SimpleNeighbor>().swap(pool);
-            std::unordered_map<int, Index::HnswNode*>().swap(tmp);
+            std::unordered_map<int, Index::HnswNode *>().swap(tmp);
         }
     };
 
@@ -549,7 +578,8 @@ namespace weavess {
 
         void findroot(boost::dynamic_bitset<> &flag, unsigned &root);
 
-        void get_neighbors(const float *query, std::vector<Index::Neighbor> &retset, std::vector<Index::Neighbor> &fullset);
+        void
+        get_neighbors(const float *query, std::vector<Index::Neighbor> &retset, std::vector<Index::Neighbor> &fullset);
     };
 
     class ComponentConnSSGDFS : ComponentConn {
@@ -603,7 +633,7 @@ namespace weavess {
         void SearchEntryInner(unsigned query, std::vector<Index::Neighbor> &pool) override;
 
     private:
-        void getSearchNodeList(Index::Node* node, const float *q, unsigned int lsize, std::vector<Index::Node*>& vn);
+        void getSearchNodeList(Index::Node *node, const float *q, unsigned int lsize, std::vector<Index::Node *> &vn);
     };
 
     class ComponentSearchEntryNone : public ComponentSearchEntry {
@@ -644,8 +674,8 @@ namespace weavess {
 
     private:
         void SearchAtLayer(unsigned qnode, Index::HnswNode *enterpoint, int level,
-                                                    Index::VisitedList *visited_list,
-                                                    std::priority_queue<Index::FurtherFirst> &result);
+                           Index::VisitedList *visited_list,
+                           std::priority_queue<Index::FurtherFirst> &result);
     };
 
     class ComponentSearchRouteHNSW : public ComponentSearchRoute {
@@ -655,9 +685,8 @@ namespace weavess {
         void RouteInner(unsigned query, std::vector<Index::Neighbor> &pool, std::vector<unsigned> &res) override;
 
     private:
-        void SearchAtLayer(unsigned qnode, Index::HnswNode *enterpoint, int level,
-                           Index::VisitedList *visited_list,
-                           std::priority_queue<Index::FurtherFirst> &result);
+        void SearchById_(unsigned query, Index::HnswNode* cur_node, float cur_dist, size_t k,
+                         size_t ef_search, std::vector<std::pair<Index::HnswNode*, float>> &result);
     };
 
     class ComponentSearchRouteIEH : public ComponentSearchRoute {
@@ -667,8 +696,17 @@ namespace weavess {
         void RouteInner(unsigned query, std::vector<Index::Neighbor> &pool, std::vector<unsigned> &res) override;
 
     private:
-        void HashTest(int upbits,int lowbits, Index::Codes querycode, Index::HashTable tb, std::vector<std::vector<int> >& cands);
+        void HashTest(int upbits, int lowbits, Index::Codes querycode, Index::HashTable tb,
+                      std::vector<std::vector<int> > &cands);
     };
+
+    class ComponentSearchRouteBacktrack : public ComponentSearchRoute {
+    public:
+        explicit ComponentSearchRouteBacktrack(Index *index) : ComponentSearchRoute(index) {}
+
+        void RouteInner(unsigned query, std::vector<Index::Neighbor> &pool, std::vector<unsigned> &res) override;
+    };
+
 }
 
 #endif //WEAVESS_COMPONENT_H

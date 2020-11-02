@@ -33,6 +33,7 @@
 #include <algorithm>
 #include <unordered_set>
 #include <boost/dynamic_bitset.hpp>
+#include <boost/heap/d_ary_heap.hpp>
 #include "util.h"
 #include "policy.h"
 #include "distance.h"
@@ -305,7 +306,7 @@ namespace weavess {
         unsigned m_ = 12;       // k
         unsigned max_m_ = 12;
         unsigned max_m0_ = 24;
-        unsigned mult;
+        int mult;
         float level_mult_ = 1 / log(1.0*m_);
 
         int max_level_ = 0;
@@ -361,9 +362,9 @@ namespace weavess {
         public:
             explicit HnswNode(int id, int level, size_t max_m, size_t max_m0)
                     : id_(id), level_(level), max_m_(max_m), max_m0_(max_m0), friends_at_layer_(level+1) {
-                for (int i = 1; i <= level; ++i) {
+                for (int i = 1; i <= level; ++i)
                     friends_at_layer_[i].reserve(max_m_ + 1);
-                }
+
                 friends_at_layer_[0].reserve(max_m0_ + 1);
             }
 
@@ -392,9 +393,6 @@ namespace weavess {
                     friends_at_layer_[0].push_back(element);
                 }
             }
-
-        private:
-            void CopyLinksToOptIndex(char* mem_offset, int level) const;
 
         private:
             int id_;
@@ -464,6 +462,14 @@ namespace weavess {
             unsigned int mark_;
         };
 
+        typedef typename std::pair<HnswNode*, float> IdDistancePair;
+        struct IdDistancePairMinHeapComparer {
+            bool operator()(const IdDistancePair& p1, const IdDistancePair& p2) const {
+                return p1.second > p2.second;
+            }
+        };
+        typedef typename boost::heap::d_ary_heap<IdDistancePair, boost::heap::arity<4>, boost::heap::compare<IdDistancePairMinHeapComparer>> IdDistancePairMinHeap;
+
         HnswNode* enterpoint_ = nullptr;
         std::vector<HnswNode*> nodes_;
     };
@@ -513,7 +519,6 @@ namespace weavess {
             float* clusterDist;
             float* weightedCounts;
             float* newWeightedCounts;
-            float(*fComputeDistance)(const T* pX, const T* pY, unsigned length);
 
             KmeansArgs(int k, unsigned dim, unsigned datasize, int threadnum) : _K(k), _DK(k), _D(dim), _T(threadnum) {
                 centers = (T*)aligned_malloc(sizeof(T) * k * dim, ALIGN);
@@ -839,8 +844,26 @@ namespace weavess {
         unsigned m_iMaxCheck = 8192L;
     };
 
+    class FANNG {
+    public:
+        unsigned M;
+
+        class FANNGCloserFirst {
+        public:
+            FANNGCloserFirst(unsigned node, float distance) : node_(node), distance_(distance) {}
+            inline float GetDistance() const { return distance_; }
+            inline unsigned GetNode() const { return node_; }
+            bool operator< (const FANNGCloserFirst& n) const {
+                return (distance_ > n.GetDistance());
+            }
+        private:
+            unsigned node_;
+            float distance_;
+        };
+    };
+
     class Index : public NNDescent, public NSG, public SSG, public DPG, public VAMANA, public EFANNA, public IEH,
-            public NSW, public HNSW, public NGT, public SPTAG {
+            public NSW, public HNSW, public NGT, public SPTAG, public FANNG {
     public:
         explicit Index() {
             dist_ = new Distance();
