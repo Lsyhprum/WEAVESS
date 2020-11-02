@@ -55,6 +55,57 @@ namespace weavess {
         index->K = index->getParam().get<unsigned>("K");
     }
 
+
+    /**
+     * FANNG Refine :
+     *  PRUNE       : RNG
+     */
+    void ComponentRefineFANNG::RefineInner() {
+        unsigned range = index->R_refine;
+
+        auto *cut_graph_ = new Index::SimpleNeighbor[index->getBaseLen() * range];
+
+        // PRUNE
+        std::cout << "__PRUNE : RNG__" << std::endl;
+        auto *b = new ComponentPruneNaive(index);
+
+#ifdef PARALLEL
+#pragma omp parallel
+#endif
+        {
+            boost::dynamic_bitset<> flags{index->getBaseLen(), 0};
+#ifdef PARALLEL
+#pragma omp for schedule(dynamic, 100)
+#endif
+            for (unsigned n = 0; n < index->getBaseLen(); ++n) {
+
+                b->PruneInner(n, range, flags, index->getFinalGraph()[n], cut_graph_);
+            }
+        }
+
+#ifdef PARALLEL
+#pragma omp for schedule(dynamic, 100)
+#endif
+        for (unsigned n = 0; n < index->getBaseLen(); ++n) {
+            Index::SimpleNeighbor *src_pool = cut_graph_ + n * range;
+            int len = 0;
+            for (unsigned i = 0; i < range; i++) {
+                if (src_pool[i].distance == -1) break;
+                len++;
+                index->getFinalGraph()[n][i] = src_pool[i];
+            }
+            index->getFinalGraph()[n].resize(len);
+        }
+
+        delete[] cut_graph_;
+    }
+
+    void ComponentRefineFANNG::SetConfigs() {
+        index->R_refine = index->getParam().get<unsigned>("R_refine");
+        index->X = index->getParam().get<unsigned>("M");
+    }
+
+
     /**
     * NSG Refine :
     *  Entry     : Centroid

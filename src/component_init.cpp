@@ -202,6 +202,57 @@ namespace weavess {
     }
 
 
+    // FANNG
+    void ComponentInitFANNG::InitInner() {
+        SetConfigs();
+
+        init();
+
+        // graph_ -> final_graph
+        index->getFinalGraph().resize(index->getBaseLen());
+        for (unsigned i = 0; i < index->getBaseLen(); i++) {
+            std::vector<Index::SimpleNeighbor> tmp;
+
+            std::sort(index->graph_[i].pool.begin(), index->graph_[i].pool.end());
+
+            for (auto &j : index->graph_[i].pool)
+                tmp.push_back(Index::SimpleNeighbor(j.id, j.distance));
+
+            index->getFinalGraph()[i] = tmp;
+
+            // 内存释放
+            std::vector<Index::Neighbor>().swap(index->graph_[i].pool);
+            std::vector<unsigned>().swap(index->graph_[i].nn_new);
+            std::vector<unsigned>().swap(index->graph_[i].nn_old);
+            std::vector<unsigned>().swap(index->graph_[i].rnn_new);
+            std::vector<unsigned>().swap(index->graph_[i].rnn_new);
+        }
+
+        // 内存释放
+        std::vector<Index::nhood>().swap(index->graph_);
+    }
+
+    void ComponentInitFANNG::init() {
+        index->graph_.resize(index->getBaseLen());
+#ifdef PARALLEL
+#pragma omp parallel for
+#endif
+        for (unsigned i = 0; i < index->getBaseLen(); i++) {
+            for (unsigned j = 0; j < index->getBaseLen(); j ++) {
+                if(i == j) continue;
+
+                float dist = index->getDist()->compare(index->getBaseData() + index->getBaseDim() * i,
+                                                       index->getBaseData() + index->getBaseDim() * j,
+                                                       index->getBaseDim());
+                index->graph_[i].pool.emplace_back(Index::Neighbor(j, dist, true));
+            }
+
+            std::make_heap(index->graph_[i].pool.begin(), index->graph_[i].pool.end());
+            index->graph_[i].pool.reserve(index->getBaseLen() - 1);
+        }
+    }
+
+
     // RAND
     void ComponentInitRand::InitInner() {
         SetConfigs();
@@ -984,46 +1035,51 @@ namespace weavess {
         SetConfigs();
 
         Build(false);
+
+//        for(int i = 0; i < index->nodes_.size(); i ++) {
+//            std::cout << "node id : " << i << std::endl;
+//            std::cout << "node level : " << index->nodes_[i]->GetLevel() << std::endl;
+//            for(int level = index->nodes_[i]->GetLevel(); level >= 0; level --) {
+//                std::cout << "level : " << level << std::endl;
+//                for(int j = 0; j < index->nodes_[i]->GetFriends(level).size(); j ++) {
+//                    std::cout << index->nodes_[i]->GetFriends(level)[j]->GetId() << " ";
+//                }
+//                std::cout << std::endl;
+//            }
+//        }
     }
 
     void ComponentInitHNSW::SetConfigs() {
         index->max_m_ = index->getParam().get<unsigned>("max_m");
         index->m_ = index->max_m_;
         index->max_m0_ = index->getParam().get<unsigned>("max_m0");
-        index->ef_construction_ = index->getParam().get<unsigned>("ef_construction");
+        auto ef_construction_ = index->getParam().get<unsigned>("ef_construction");
+        if(ef_construction_ > 0) index->ef_construction_ = ef_construction_;
         index->n_threads_ = index->getParam().get<unsigned>("n_threads");
-        index->mult = index->getParam().get<unsigned>("mult");
-        index->level_mult_ = index->mult > 0 ? index->mult : 1 / log(1.0 * index->m_);
+        index->mult = index->getParam().get<int>("mult");
+        index->level_mult_ = index->mult > 0 ? index->mult : (1 / log(1.0 * index->m_));
     }
 
     void ComponentInitHNSW::Build(bool reverse) {
         index->nodes_.resize(index->getBaseLen());
-
+        // 随机决定当前结点层数
         int level = GetRandomNodeLevel();
+        // 必须提前插入结点
         auto *first = new Index::HnswNode(0, level, index->max_m_, index->max_m0_);
         index->nodes_[0] = first;
         index->max_level_ = level;
         index->enterpoint_ = first;
 #pragma omp parallel num_threads(index->n_threads_)
         {
-            Index::VisitedList *visited_list = new Index::VisitedList(index->getBaseLen());
-            if (reverse) {
+            auto *visited_list = new Index::VisitedList(index->getBaseLen());
 #pragma omp for schedule(dynamic, 128)
-                for (size_t i = index->getBaseLen() - 1; i >= 1; --i) {
-                    int level = GetRandomNodeLevel();
-                    Index::HnswNode *qnode = new Index::HnswNode(i, level, index->max_m_, index->max_m0_);
-                    index->nodes_[i] = qnode;
-                    InsertNode(qnode, visited_list);
-                }
-            } else {
-#pragma omp for schedule(dynamic, 128)
-                for (size_t i = 1; i < index->getBaseLen(); ++i) {
-                    int level = GetRandomNodeLevel();
-                    auto *qnode = new Index::HnswNode(i, level, index->max_m_, index->max_m0_);
-                    index->nodes_[i] = qnode;
-                    InsertNode(qnode, visited_list);
-                }
+            for (size_t i = 1; i < index->getBaseLen(); ++i) {
+                int level = GetRandomNodeLevel();
+                auto *qnode = new Index::HnswNode(i, level, index->max_m_, index->max_m0_);
+                index->nodes_[i] = qnode;
+                InsertNode(qnode, visited_list);
             }
+
             delete visited_list;
         }
     }
@@ -1055,6 +1111,7 @@ namespace weavess {
         int max_level_copy = index->max_level_;
         Index::HnswNode *enterpoint = index->enterpoint_;
 
+        // 当前结点所达层数小于最大层数，逐步向下寻找
         if (cur_level < max_level_copy) {
             Index::HnswNode *cur_node = enterpoint;
 
@@ -1090,9 +1147,10 @@ namespace weavess {
 
         for (auto i = std::min(max_level_copy, cur_level); i >= 0; --i) {
             std::priority_queue<Index::FurtherFirst> result;
+            // 贪婪算法在当前层获取近邻候选点
             SearchAtLayer(qnode, enterpoint, i, visited_list, result);
 
-            a->Hnsw2Neighbor(index->m_, result);
+            a->Hnsw2Neighbor(qnode->GetId(), index->m_, result);
 
             while (!result.empty()) {
                 auto *top_node = result.top().GetNode();
@@ -1156,52 +1214,22 @@ namespace weavess {
         neighbors.push_back(target);
         bool shrink = (level > 0 && neighbors.size() > source->GetMaxM()) ||
                       (level <= 0 && neighbors.size() > source->GetMaxM0());
-        //std::cout << "shrink : " << shrink << std::endl;
         if (!shrink) return;
 
-//        float max = index->getDist()->compare(index->getBaseData() + source->GetId() * index->getBaseDim(),
-//                                              index->getBaseData() + neighbors[0]->GetId() * index->getBaseDim(),
-//                                              index->getBaseDim());
-//        int maxi = 0;
-//        for(size_t i = 1; i < neighbors.size(); i ++) {
-//            float curd = index->getDist()->compare(index->getBaseData() + source->GetId() * index->getBaseDim(),
-//                                                   index->getBaseData() + neighbors[i]->GetId() * index->getBaseDim(),
-//                                                   index->getBaseDim());
-//
-//            if(curd > max) {
-//                max = curd;
-//                maxi = i;
-//            }
-//        }
-//        neighbors.erase(neighbors.begin() + maxi);
-
         std::priority_queue<Index::FurtherFirst> tempres;
-//            for (const auto& neighbor : neighbors) {
-//                _mm_prefetch(neighbor->GetData(), _MM_HINT_T0);
-//            }
-        //std::cout << neighbors.size() << std::endl;
         for (const auto &neighbor : neighbors) {
-            //std::cout << "neighbors : " << neighbor->GetId() << std::endl;
             float tmp = index->getDist()->compare(index->getBaseData() + source->GetId() * index->getBaseDim(),
                                                   index->getBaseData() + neighbor->GetId() * index->getBaseDim(),
                                                   index->getBaseDim());
-//            std::cout << tmp << std::endl;
-//            std::cout << neighbor->GetId() << std::endl;
-//            std::cout << tempres.size() << std::endl;
-//            if(!tempres.empty())
-//                std::cout << tempres.top().GetNode()->GetId() << std::endl;
-            tempres.push(Index::FurtherFirst(neighbors[0], tmp));
-//            std::cout << "mm" << std::endl;
+            tempres.push(Index::FurtherFirst(neighbor, tmp));
         }
-//        std::cout << "tempres : " << tempres.size() << std::endl;
 
         // PRUNE
         ComponentPrune *a = new ComponentPruneHeuristic(index);
-        a->Hnsw2Neighbor(tempres.size() - 1, tempres);
+        a->Hnsw2Neighbor(source->GetId(), tempres.size() - 1, tempres);
 
-        //std::cout << "ff" << tempres.size() << std::endl;
         neighbors.clear();
-        while (tempres.size()) {
+        while (!tempres.empty()) {
             neighbors.emplace_back(tempres.top().GetNode());
             tempres.pop();
         }
@@ -1786,6 +1814,7 @@ namespace weavess {
         index->m_pSampleCenterMap.clear();
 
         unsigned m_iBKTLeafSize = 8;
+        // 构建 m_iTreeNumber 棵 BKT
         for (char i = 0; i < index->m_iTreeNumber; i++) {
             std::random_shuffle(localindices.begin(), localindices.end());
 
@@ -1793,6 +1822,7 @@ namespace weavess {
             index->m_pBKTreeRoots.emplace_back(localindices.size());
             std::cout << "Start to build BKTree : " << i + 1 << std::endl;
 
+            // 分治构建 BKT
             ss.push(BKTStackItem(index->m_pTreeStart[i], 0, localindices.size()));
             while (!ss.empty()) {
                 BKTStackItem item = ss.top();
@@ -1805,9 +1835,10 @@ namespace weavess {
                         index->m_pBKTreeRoots.emplace_back(cid);
                     }
                 } else { // clustering the data into BKTKmeansK clusters
-
                     int numClusters = KmeansClustering(localindices, item.first, item.last, args, index->m_iSamples);
+                    std::cout << "wtf" << std::endl;
                     if (numClusters <= 1) {
+                        std::cout << "wtf" << std::endl;
                         unsigned end = std::min(item.last + 1, (unsigned) localindices.size());
                         std::sort(localindices.begin() + item.first, localindices.begin() + end);
                         index->m_pBKTreeRoots[item.index].centerid = localindices[item.first];
@@ -1819,7 +1850,9 @@ namespace weavess {
                         }
                         index->m_pSampleCenterMap[-1 - index->m_pBKTreeRoots[item.index].centerid] = item.index;
                     } else {
+                        std::cout << "wtf" << std::endl;
                         for (int k = 0; k < index->m_iBKTKmeansK; k++) {
+                            std::cout << k << std::endl;
                             if (args.counts[k] == 0) continue;
                             unsigned cid = localindices[item.first + args.counts[k] - 1];
                             index->m_pBKTreeRoots.emplace_back(cid);
@@ -1829,7 +1862,9 @@ namespace weavess {
                         }
                     }
                 }
+                std::cout << "wtf" << std::endl;
                 index->m_pBKTreeRoots[item.index].childEnd = (unsigned) index->m_pBKTreeRoots.size();
+                std::cout << "wtf" << std::endl;
             }
             index->m_pBKTreeRoots.emplace_back(-1);
             std::cout << i + 1 << " BKTree built, " << index->m_pBKTreeRoots.size() - index->m_pTreeStart[i] << " "
@@ -1849,30 +1884,40 @@ namespace weavess {
         float currDiff, currDist, minClusterDist = MaxDist;
         int noImprovement = 0;
         for (int iter = 0; iter < 100; iter++) {
+            std::cout << "10" << std::endl;
             std::memcpy(args.centers, args.newTCenters, sizeof(float) * args._K * args._D);
             std::random_shuffle(indices.begin() + first, indices.begin() + last);
+            std::cout << "10" << std::endl;
 
             args.ClearCenters();
             args.ClearCounts();
             args.ClearDists(-MaxDist);
+            std::cout << "10" << std::endl;
             // ?
             currDist = KmeansAssign(indices, first, batchEnd, args, true, 1 / (100.0f * (batchEnd - first)));
             std::memcpy(args.counts, args.newCounts, sizeof(unsigned) * args._K);
-
+            std::cout << "10" << std::endl;
             if (currDist < minClusterDist) {
                 noImprovement = 0;
                 minClusterDist = currDist;
             } else {
                 noImprovement++;
             }
+            std::cout << "10" << std::endl;
             currDiff = RefineCenters(args);
+            std::cout << "wt5f" << std::endl;
             if (currDiff < 1e-3 || noImprovement >= 5) break;
+            std::cout << "wt5fffff" << std::endl;
         }
+
+        std::cout << "wt2f" << std::endl;
 
         args.ClearCounts();
         args.ClearDists(MaxDist);
         currDist = KmeansAssign(indices, first, last, args, false, 0);
         std::memcpy(args.counts, args.newCounts, sizeof(unsigned) * args._K);
+
+        std::cout << "wt2f" << std::endl;
 
         int numClusters = 0;
         for (int i = 0; i < args._K; i++) if (args.counts[i] > 0) numClusters++;
@@ -1887,26 +1932,32 @@ namespace weavess {
     float ComponentInitSPTAG_BKT::RefineCenters(Index::KmeansArgs<float> &args) {
         int maxcluster = -1;
         unsigned maxCount = 0;
-
+        std::cout << "11" << std::endl;
         for (int k = 0; k < args._DK; k++) {
+            std::cout << "k : " << k << std::endl;
+            std::cout << args.clusterIdx[k] << std::endl;
             float dist = index->getDist()->compare(index->getBaseData() + index->getBaseDim() * args.clusterIdx[k],
                                                   args.centers + k * args._D,
                                                   index->getBaseDim());
+            std::cout << "11" << std::endl;
             if (args.counts[k] > maxCount && args.newCounts[k] > 0
                 && dist > 1e-6) {
                 maxcluster = k;
                 maxCount = args.counts[k];
             }
         }
+        std::cout << "11" << std::endl;
 
         if (maxcluster != -1 && (args.clusterIdx[maxcluster] < 0 || args.clusterIdx[maxcluster] >= index->getBaseLen()))
             std::cout << "maxcluster:" << maxcluster << "(" << args.newCounts[maxcluster] << ")" << " Error dist:"
                       << args.clusterDist[maxcluster] << std::endl;
 
+        std::cout << "11" << std::endl;
         float diff = 0;
         for (int k = 0; k < args._DK; k++) {
             float *TCenter = args.newTCenters + k * args._D;
             if (args.counts[k] == 0) {
+                std::cout << "wtf7" << std::endl;
                 if (maxcluster != -1) {
                     //int nextid = Utils::rand_int(last, first);
                     //while (args.label[nextid] != maxcluster) nextid = Utils::rand_int(last, first);
@@ -1915,14 +1966,22 @@ namespace weavess {
                 } else {
                     std::memcpy(TCenter, args.centers + k * args._D, sizeof(float) * args._D);
                 }
+                std::cout << "wtf7" << std::endl;
             } else {
+                std::cout << "wtf8" << std::endl;
                 float *currCenters = args.newCenters + k * args._D;
                 for (unsigned j = 0; j < args._D; j++) currCenters[j] /= args.counts[k];
-
+                std::cout << "wtf8" << std::endl;
                 for (unsigned j = 0; j < args._D; j++) TCenter[j] = (float) (currCenters[j]);
+                std::cout << "wtf8" << std::endl;
             }
-            diff += args.fComputeDistance(args.centers + k * args._D, TCenter, args._D);
+            std::cout << "wtf9" << std::endl;
+            diff += index->getDist()->compare(args.centers + k *args._D,
+                                              TCenter,
+                                              args._D);
+            std::cout << "wtf9" << std::endl;
         }
+        std::cout << "wtf6" << std::endl;
         return diff;
     }
 

@@ -223,16 +223,21 @@ namespace weavess {
             }
             //std::cout << "range picked : " << picked.size() << std::endl;
         }else{
-            picked = pool;
+            for(int i = 0; i < pool.size(); i++) {
+                picked.push_back(pool[i]);
+            }
         }
-        Index::SimpleNeighbor *des_pool = cut_graph_ + (size_t)query * (size_t)range;
+        Index::SimpleNeighbor *des_pool = cut_graph_;
         for (size_t t = 0; t < picked.size(); t++) {
             des_pool[t].id = picked[t].id;
             des_pool[t].distance = picked[t].distance;
         }
+
         if (picked.size() < range) {
             des_pool[picked.size()].distance = -1;
         }
+
+        std::vector<Index::SimpleNeighbor>().swap(picked);
     }
 
     void ComponentPruneVAMANA::PruneInner(unsigned query, unsigned int range, boost::dynamic_bitset<> flags,
