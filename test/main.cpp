@@ -210,17 +210,27 @@ void HCNNG(std::string base_path, std::string query_path, std::string ground_pat
 
 }
 
-void SPTAG(std::string base_path, std::string query_path, std::string ground_path) {
+void SPTAG_KDT(std::string base_path, std::string query_path, std::string ground_path) {
     weavess::Parameters parameters;
     parameters.set<unsigned>("numOfThreads", 1);
 
     auto *builder = new weavess::IndexBuilder();
     builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
-            //-> init(weavess::INIT_SPTAG_KDT)
-            -> init(weavess::INIT_SPTAG_BKT);
-            //-> refine(weavess::INIT_SPTAG_KDT, false)
-            //-> refine(weavess::INIT_SPTAG_BKT, false);
+            -> init(weavess::INIT_SPTAG_KDT);
+            //-> refine(weavess::REFINE_SPTAG_KDT, false)
+            //-> search(weavess::SEARCH_ENTRY_SPTAG_KDT, weavess::ROUTER_SPTAG_KDT);
+    std::cout << "Time cost: " << builder->GetBuildTime().count() << std::endl;
+}
 
+void SPTAG_BKT(std::string base_path, std::string query_path, std::string ground_path) {
+    weavess::Parameters parameters;
+    parameters.set<unsigned>("numOfThreads", 1);
+
+    auto *builder = new weavess::IndexBuilder();
+    builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
+            -> init(weavess::INIT_SPTAG_BKT)
+            -> refine(weavess::REFINE_SPTAG_BKT, false)
+            -> search(weavess::SEARCH_ENTRY_SPTAG_BKT, weavess::ROUTER_SPTAG_BKT);
     std::cout << "Time cost: " << builder->GetBuildTime().count() << std::endl;
 }
 
@@ -240,8 +250,9 @@ int main() {
     //NSW(base_path, query_path, ground_path);
     //HNSW(base_path, query_path, ground_path);
 
+    SPTAG_KDT(base_path, query_path, ground_path);
+    //SPTAG_BKT(base_path, query_path, ground_path);
     //FANNG(base_path, query_path, ground_path);
-    //SPTAG(base_path, query_path, ground_path);
     //NGT(base_path, query_path, ground_path);
     //HCNNG(base_path, query_path, ground_path);
 

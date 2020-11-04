@@ -707,6 +707,20 @@ namespace weavess {
         void RouteInner(unsigned query, std::vector<Index::Neighbor> &pool, std::vector<unsigned> &res) override;
     };
 
+    class ComponentSearchRouteSPTAG_KDT : public ComponentSearchRoute {
+    public:
+        explicit ComponentSearchRouteSPTAG_KDT(Index *index) : ComponentSearchRoute(index) {}
+
+        void RouteInner(unsigned query, std::vector<Index::Neighbor> &pool, std::vector<unsigned> &res) override;
+    };
+
+    class ComponentSearchRouteSPTAG_BKT : public ComponentSearchRoute {
+    public:
+        explicit ComponentSearchRouteSPTAG_BKT(Index *index) : ComponentSearchRoute(index) {}
+
+        void RouteInner(unsigned query, std::vector<Index::Neighbor> &pool, std::vector<unsigned> &res) override;
+    };
+
 }
 
 #endif //WEAVESS_COMPONENT_H

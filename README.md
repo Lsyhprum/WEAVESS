@@ -51,4 +51,6 @@
 
 回收内存
 SPTAG RNG -> KNNG
+SPTAG RefineCenters
+SPTAG BKT 后续
 

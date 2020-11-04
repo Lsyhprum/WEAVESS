@@ -232,6 +232,10 @@ namespace weavess {
         std::vector<Index::nhood>().swap(index->graph_);
     }
 
+    void ComponentInitFANNG::SetConfigs() {
+
+    }
+
     void ComponentInitFANNG::init() {
         index->graph_.resize(index->getBaseLen());
 #ifdef PARALLEL
@@ -1808,14 +1812,13 @@ namespace weavess {
         localindices.resize(index->getBaseLen());
         for (unsigned i = 0; i < localindices.size(); i++) localindices[i] = i;
 
-        Index::KmeansArgs<float> args(index->m_iBKTKmeansK, index->getBaseDim(), localindices.size(),
-                                      index->numOfThreads);
+        Index::KmeansArgs<float> args(index->m_iBKTKmeansK, index->getBaseDim(), localindices.size(), index->numOfThreads);
 
         index->m_pSampleCenterMap.clear();
 
         unsigned m_iBKTLeafSize = 8;
         // 构建 m_iTreeNumber 棵 BKT
-        for (char i = 0; i < index->m_iTreeNumber; i++) {
+        for (int i = 0; i < index->m_iTreeNumber; i++) {
             std::random_shuffle(localindices.begin(), localindices.end());
 
             index->m_pTreeStart.push_back(index->m_pBKTreeRoots.size());
@@ -1829,6 +1832,8 @@ namespace weavess {
                 ss.pop();
                 unsigned newBKTid = (unsigned) index->m_pBKTreeRoots.size();
                 index->m_pBKTreeRoots[item.index].childStart = newBKTid;
+
+                // 小于叶子结点个数
                 if (item.last - item.first <= m_iBKTLeafSize) {
                     for (unsigned j = item.first; j < item.last; j++) {
                         unsigned cid = localindices[j];
@@ -1836,9 +1841,9 @@ namespace weavess {
                     }
                 } else { // clustering the data into BKTKmeansK clusters
                     int numClusters = KmeansClustering(localindices, item.first, item.last, args, index->m_iSamples);
-                    std::cout << "wtf" << std::endl;
+                    //std::cout << "wtf" << std::endl;
                     if (numClusters <= 1) {
-                        std::cout << "wtf" << std::endl;
+                        //std::cout << "wtf" << std::endl;
                         unsigned end = std::min(item.last + 1, (unsigned) localindices.size());
                         std::sort(localindices.begin() + item.first, localindices.begin() + end);
                         index->m_pBKTreeRoots[item.index].centerid = localindices[item.first];
@@ -1850,9 +1855,9 @@ namespace weavess {
                         }
                         index->m_pSampleCenterMap[-1 - index->m_pBKTreeRoots[item.index].centerid] = item.index;
                     } else {
-                        std::cout << "wtf" << std::endl;
+                        //std::cout << "wtf" << std::endl;
                         for (int k = 0; k < index->m_iBKTKmeansK; k++) {
-                            std::cout << k << std::endl;
+                            //std::cout << k << std::endl;
                             if (args.counts[k] == 0) continue;
                             unsigned cid = localindices[item.first + args.counts[k] - 1];
                             index->m_pBKTreeRoots.emplace_back(cid);
@@ -1862,9 +1867,9 @@ namespace weavess {
                         }
                     }
                 }
-                std::cout << "wtf" << std::endl;
+                //std::cout << "wtf" << std::endl;
                 index->m_pBKTreeRoots[item.index].childEnd = (unsigned) index->m_pBKTreeRoots.size();
-                std::cout << "wtf" << std::endl;
+                //std::cout << "wtf" << std::endl;
             }
             index->m_pBKTreeRoots.emplace_back(-1);
             std::cout << i + 1 << " BKTree built, " << index->m_pBKTreeRoots.size() - index->m_pTreeStart[i] << " "
@@ -1878,46 +1883,45 @@ namespace weavess {
 
         const float MaxDist = (std::numeric_limits<float>::max)();
 
+        // 随机选取 _DK 个向量作为簇中心
         InitCenters(indices, first, last, args, samples, 3);
 
         unsigned batchEnd = std::min(first + samples, last);
         float currDiff, currDist, minClusterDist = MaxDist;
         int noImprovement = 0;
         for (int iter = 0; iter < 100; iter++) {
-            std::cout << "10" << std::endl;
             std::memcpy(args.centers, args.newTCenters, sizeof(float) * args._K * args._D);
             std::random_shuffle(indices.begin() + first, indices.begin() + last);
-            std::cout << "10" << std::endl;
 
             args.ClearCenters();
             args.ClearCounts();
             args.ClearDists(-MaxDist);
-            std::cout << "10" << std::endl;
-            // ?
             currDist = KmeansAssign(indices, first, batchEnd, args, true, 1 / (100.0f * (batchEnd - first)));
+//            std::cout << "2" << std::endl;
+//            for(int i = 0; i < args._DK; i ++) {
+//                std::cout << args.clusterIdx[i] << " ";
+//            }
+//            std::cout << std::endl;
             std::memcpy(args.counts, args.newCounts, sizeof(unsigned) * args._K);
-            std::cout << "10" << std::endl;
+
             if (currDist < minClusterDist) {
                 noImprovement = 0;
                 minClusterDist = currDist;
             } else {
                 noImprovement++;
             }
-            std::cout << "10" << std::endl;
             currDiff = RefineCenters(args);
-            std::cout << "wt5f" << std::endl;
             if (currDiff < 1e-3 || noImprovement >= 5) break;
-            std::cout << "wt5fffff" << std::endl;
         }
 
-        std::cout << "wt2f" << std::endl;
+        //std::cout << "wt2f" << std::endl;
 
         args.ClearCounts();
         args.ClearDists(MaxDist);
         currDist = KmeansAssign(indices, first, last, args, false, 0);
         std::memcpy(args.counts, args.newCounts, sizeof(unsigned) * args._K);
 
-        std::cout << "wt2f" << std::endl;
+        //std::cout << "wt2f" << std::endl;
 
         int numClusters = 0;
         for (int i = 0; i < args._K; i++) if (args.counts[i] > 0) numClusters++;
@@ -1932,59 +1936,53 @@ namespace weavess {
     float ComponentInitSPTAG_BKT::RefineCenters(Index::KmeansArgs<float> &args) {
         int maxcluster = -1;
         unsigned maxCount = 0;
-        std::cout << "11" << std::endl;
         for (int k = 0; k < args._DK; k++) {
-            std::cout << "k : " << k << std::endl;
-            std::cout << args.clusterIdx[k] << std::endl;
+            unsigned test = -1;
+            //std::cout << "k : " << k << " " << args._DK << " " << args.clusterIdx[k] << " " << test << std::endl;
+
+            if(args.clusterIdx[k] < 0 || args.clusterIdx[k] > index->getBaseLen()) continue;
             float dist = index->getDist()->compare(index->getBaseData() + index->getBaseDim() * args.clusterIdx[k],
                                                   args.centers + k * args._D,
-                                                  index->getBaseDim());
-            std::cout << "11" << std::endl;
-            if (args.counts[k] > maxCount && args.newCounts[k] > 0
-                && dist > 1e-6) {
+                                                   args._D);
+            if (args.counts[k] > maxCount && args.newCounts[k] > 0 && dist > 1e-6) {
                 maxcluster = k;
                 maxCount = args.counts[k];
             }
         }
-        std::cout << "11" << std::endl;
 
         if (maxcluster != -1 && (args.clusterIdx[maxcluster] < 0 || args.clusterIdx[maxcluster] >= index->getBaseLen()))
             std::cout << "maxcluster:" << maxcluster << "(" << args.newCounts[maxcluster] << ")" << " Error dist:"
                       << args.clusterDist[maxcluster] << std::endl;
 
-        std::cout << "11" << std::endl;
+        //std::cout << "11" << std::endl;
         float diff = 0;
         for (int k = 0; k < args._DK; k++) {
             float *TCenter = args.newTCenters + k * args._D;
             if (args.counts[k] == 0) {
-                std::cout << "wtf7" << std::endl;
+                //std::cout << "wtf7" << std::endl;
                 if (maxcluster != -1) {
                     //int nextid = Utils::rand_int(last, first);
                     //while (args.label[nextid] != maxcluster) nextid = Utils::rand_int(last, first);
-                    unsigned nextid = args.clusterIdx[maxcluster];
+                    int nextid = args.clusterIdx[maxcluster];
                     std::memcpy(TCenter, index->getBaseData() + index->getBaseDim() * nextid, sizeof(float) * args._D);
                 } else {
                     std::memcpy(TCenter, args.centers + k * args._D, sizeof(float) * args._D);
                 }
-                std::cout << "wtf7" << std::endl;
+                //std::cout << "wtf7" << std::endl;
             } else {
-                std::cout << "wtf8" << std::endl;
+                //std::cout << "wtf8" << std::endl;
                 float *currCenters = args.newCenters + k * args._D;
                 for (unsigned j = 0; j < args._D; j++) currCenters[j] /= args.counts[k];
-                std::cout << "wtf8" << std::endl;
+                //std::cout << "wtf8" << std::endl;
                 for (unsigned j = 0; j < args._D; j++) TCenter[j] = (float) (currCenters[j]);
-                std::cout << "wtf8" << std::endl;
+                //std::cout << "wtf8" << std::endl;
             }
-            std::cout << "wtf9" << std::endl;
-            diff += index->getDist()->compare(args.centers + k *args._D,
-                                              TCenter,
-                                              args._D);
-            std::cout << "wtf9" << std::endl;
+            diff += index->getDist()->compare(args.centers + k *args._D, TCenter, args._D);
         }
-        std::cout << "wtf6" << std::endl;
         return diff;
     }
 
+    // 返回所有结点与当前所选簇中心的距离之和
     inline float ComponentInitSPTAG_BKT::KmeansAssign(std::vector<unsigned> &indices,
                                                       const unsigned first, const unsigned last,
                                                       Index::KmeansArgs<float> &args,
@@ -2005,20 +2003,24 @@ namespace weavess {
             for (unsigned i = istart; i < iend; i++) {
                 int clusterid = 0;
                 float smallestDist = MaxDist;
+                // 寻找最小距离簇中心
                 for (int k = 0; k < args._DK; k++) {
                     float dist = index->getDist()->compare(index->getBaseData() + index->getBaseDim() * indices[i],
                                                            args.centers + k * args._D,
-                                                           index->getBaseDim()) + lambda * args.counts[k];
+                                                           args._D) + lambda * args.counts[k];
                     if (dist > -MaxDist && dist < smallestDist) {
                         clusterid = k;
                         smallestDist = dist;
                     }
                 }
+                // 标记当前结点所属簇
                 args.label[i] = clusterid;
                 inewCounts[clusterid]++;
                 idist += smallestDist;
                 if (updateCenters) {
+                    // 待分类结点
                     const float *v = index->getBaseData() + index->getBaseDim() * indices[i];
+                    // 结点所属簇中心
                     float *center = inewCenters + clusterid * args._D;
                     for (unsigned j = 0; j < args._D; j++) center[j] += v[j];
                     if (smallestDist > iclusterDist[clusterid]) {
@@ -2035,6 +2037,13 @@ namespace weavess {
             currDist += idist;
         }
 
+//        std::cout << "4" << std::endl;
+//        for(int i = 0; i < args._DK; i ++) {
+//            std::cout << args.clusterIdx[i] << " ";
+//        }
+//        std::cout << std::endl;
+
+        // 基本没用
         for (int i = 1; i < args._T; i++) {
             for (int k = 0; k < args._DK; k++)
                 args.newCounts[k] += args.newCounts[i * args._K + k];
