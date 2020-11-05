@@ -17,7 +17,7 @@ namespace weavess {
         const auto L = index->getParam().get<unsigned>("L_search");
         const auto K = index->getParam().get<unsigned>("K_search");
 
-        std::vector<char> flags(index->getBaseLen());
+        std::vector<char> flags(index->getBaseLen(), 0);
 
         int k = 0;
         while (k < (int) L) {
@@ -440,6 +440,70 @@ namespace weavess {
             res.push_back(full.top().GetNode());
             full.pop();
             i ++;
+        }
+    }
+
+
+    /**
+     * Guided 搜索
+     * @param query 查询点
+     * @param pool 入口点
+     * @param res 结果集
+     */
+    void ComponentSearchRouteGuided::RouteInner(unsigned int query, std::vector<Index::Neighbor> &pool,
+                                                std::vector<unsigned int> &res) {
+        const auto L = index->getParam().get<unsigned>("L_search");
+        const auto K = index->getParam().get<unsigned>("K_search");
+
+        std::vector<char> flags(index->getBaseLen(), 0);
+
+        int k = 0;
+        while (k < (int)L) {
+            int nk = L;
+
+            if (pool[k].flag) {
+                pool[k].flag = false;
+                unsigned n = pool[k].id;
+
+                unsigned div_dim_ = index->Tn[n].div_dim;
+                unsigned left_len = index->Tn[n].left.size();
+                // std::cout << "left_len: " << left_len << std::endl;
+                unsigned right_len = index->Tn[n].right.size();
+                // std::cout << "right_len: " << right_len << std::endl;
+                std::vector<unsigned> nn;
+                unsigned MaxM;
+                if ((index->getBaseData() + index->getBaseDim() * query)[div_dim_] < (index->getBaseData() + index->getBaseDim() * n)[div_dim_]) {
+                    MaxM = left_len; //左子树邻居的个数
+                    nn = index->Tn[n].left;
+                }
+                else {
+                    MaxM = right_len; //右子树邻居的个数
+                    nn = index->Tn[n].right;
+                }
+
+                for (unsigned m = 0; m < MaxM; ++m) {
+                    unsigned id = nn[m];
+                    if (flags[id]) continue;
+                    flags[id] = 1;
+                    float dist = index->getDist()->compare(index->getQueryData() + query * index->getQueryDim(),
+                                                           index->getBaseData() + id * index->getBaseDim(),
+                                                           (unsigned)index->getBaseDim());
+                    //index->dist_cout++;
+                    if (dist >= pool[L - 1].distance) continue;
+                    Index::Neighbor nn(id, dist, true);
+                    int r = Index::InsertIntoPool(pool.data(), L, nn);
+
+                    // if(L+1 < retset.size()) ++L;
+                    if (r < nk) nk = r;
+                }
+            }
+            if (nk <= k)
+                k = nk;
+            else
+                ++k;
+        }
+        for (size_t i = 0; i < K; i++) {
+            res[i] = pool[i].id;
         }
     }
 }

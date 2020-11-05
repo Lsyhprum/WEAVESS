@@ -207,7 +207,20 @@ void NGT(std::string base_path, std::string query_path, std::string ground_path)
 }
 
 void HCNNG(std::string base_path, std::string query_path, std::string ground_path) {
+    weavess::Parameters parameters;
+    parameters.set<unsigned>("minsize_cl", 1000);
+    parameters.set<unsigned>("num_cl", 20);
 
+    parameters.set<unsigned>("nTrees", 4);
+    parameters.set<unsigned>("mLevel", 4);
+    parameters.set<unsigned>("K", 200);
+
+    auto *builder = new weavess::IndexBuilder();
+    builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
+            -> init(weavess::INIT_HCNNG)
+            -> search(weavess::SEARCH_ENTRY_KDT, weavess::ROUTER_GUIDE);
+
+    std::cout << "Time cost: " << builder->GetBuildTime().count() << std::endl;
 }
 
 void SPTAG_KDT(std::string base_path, std::string query_path, std::string ground_path) {
@@ -236,9 +249,9 @@ void SPTAG_BKT(std::string base_path, std::string query_path, std::string ground
 
 
 int main() {
-    std::string base_path = R"(F:\ANNS\DATASET\siftsmall\siftsmall_base.fvecs)";
-    std::string query_path = R"(F:\ANNS\DATASET\siftsmall\siftsmall_query.fvecs)";
-    std::string ground_path = R"(F:\ANNS\DATASET\siftsmall\siftsmall_groundtruth.ivecs)";
+    std::string base_path = R"(G:\ANNS\dataset\siftsmall\siftsmall_base.fvecs)";
+    std::string query_path = R"(G:\ANNS\dataset\siftsmall\siftsmall_query.fvecs)";
+    std::string ground_path = R"(G:\ANNS\dataset\siftsmall\siftsmall_groundtruth.ivecs)";
 
     //KGraph(base_path, query_path, ground_path);
     //NSG(base_path, query_path, ground_path);
@@ -250,11 +263,12 @@ int main() {
     //NSW(base_path, query_path, ground_path);
     //HNSW(base_path, query_path, ground_path);
 
-    SPTAG_KDT(base_path, query_path, ground_path);
+    HCNNG(base_path, query_path, ground_path);
+    //SPTAG_KDT(base_path, query_path, ground_path);
     //SPTAG_BKT(base_path, query_path, ground_path);
     //FANNG(base_path, query_path, ground_path);
     //NGT(base_path, query_path, ground_path);
-    //HCNNG(base_path, query_path, ground_path);
+
 
     return 0;
 }

@@ -17,6 +17,9 @@
 // SPTAG
 #define ALIGN 32
 
+// HCNNG
+#define not_in_set(_elto, _set) (_set.find(_elto)==_set.end())
+
 #include <omp.h>
 #include <mutex>
 #include <queue>
@@ -859,8 +862,80 @@ namespace weavess {
         };
     };
 
+    class HCNNG {
+    public:
+        struct Edge{
+            int v1, v2;
+            float weight;
+            Edge(){
+                v1 = -1;
+                v2 = -1;
+                weight = -1;
+            }
+            Edge(int _v1, int _v2, float _weight){
+                v1 = _v1;
+                v2 = _v2;
+                weight = _weight;
+            }
+            bool operator<(const Edge& e) const {
+                return weight < e.weight;
+            }
+            ~Edge() { }
+        };
+
+        struct DisjointSet{
+            int * parent;
+            int * rank;
+            DisjointSet(int N){
+                parent = new int[N];
+                rank = new int[N];
+                for(int i=0; i<N; i++){
+                    parent[i] = i;
+                    rank[i] = 0;
+                }
+            }
+            void _union(int x, int y){
+                int xroot = parent[x];
+                int yroot = parent[y];
+                int xrank = rank[x];
+                int yrank = rank[y];
+                if(xroot == yroot)
+                    return;
+                else if(xrank < yrank)
+                    parent[xroot] = yroot;
+                else{
+                    parent[yroot] = xroot;
+                    if(xrank == yrank)
+                        rank[xroot] = rank[xroot] + 1;
+                }
+            }
+            int find(int x){
+                if(parent[x] != x)
+                    parent[x] = find(parent[x]);
+                return parent[x];
+            }
+
+            ~DisjointSet() {
+                delete[] parent;
+                delete[] rank;
+            }
+        };
+
+        struct Tnode {
+            unsigned div_dim;
+            std::vector <unsigned> left;
+            std::vector <unsigned> right;
+        };
+        std::vector <Tnode> Tn;
+
+        int xxx = 0;
+
+        unsigned minsize_cl = 0;
+        unsigned num_cl = 0;
+    };
+
     class Index : public NNDescent, public NSG, public SSG, public DPG, public VAMANA, public EFANNA, public IEH,
-            public NSW, public HNSW, public NGT, public SPTAG, public FANNG {
+            public NSW, public HNSW, public NGT, public SPTAG, public FANNG, public HCNNG {
     public:
         explicit Index() {
             dist_ = new Distance();

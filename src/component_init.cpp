@@ -2100,4 +2100,566 @@ namespace weavess {
     }
 
 
+    // HCNNG
+    void ComponentInitHCNNG::InitInner() {
+
+        // Hierarchical clustering
+        SetConfigs();
+
+        int max_mst_degree = 3;
+
+        std::vector<std::vector<Index::Edge> > G(index->getBaseLen());
+        std::vector<omp_lock_t> locks(index->getBaseLen());
+
+        // 初始化数据结构
+        for (int i = 0; i < index->getBaseLen(); i++) {
+            omp_init_lock(&locks[i]);
+            G[i].reserve(max_mst_degree * index->num_cl);
+        }
+
+        printf("creating clusters...\n");
+#pragma omp parallel for
+        for (int i = 0; i < index->num_cl; i++) {
+            int *idx_points = new int[index->getBaseLen()];
+            for (int j = 0; j < index->getBaseLen(); j++)
+                idx_points[j] = j;
+            create_clusters(idx_points, 0, index->getBaseLen() - 1, G, index->minsize_cl, locks, max_mst_degree);
+            printf("end cluster %d\n", i);
+            delete[] idx_points;
+        }
+
+        printf("sorting...\n");
+        sort_edges(G);
+        print_stats_graph(G);
+
+        // G - > final_graph
+        index->getFinalGraph().resize(index->getBaseLen());
+
+        for(int i = 0; i < index->getBaseLen(); i ++) {
+            std::vector<Index::SimpleNeighbor> tmp;
+
+            int degree = G[i].size();
+
+            for(int j = 0; j < degree; j ++) {
+                tmp.emplace_back(G[i][j].v2, G[i][j].weight);  // 已排序
+            }
+            index->getFinalGraph()[i] = tmp;
+        }
+
+        // kd-tree -> search entry
+        unsigned seed = 1998;
+
+        const auto TreeNum = index->getParam().get<unsigned>("nTrees");
+        const auto TreeNumBuild = index->getParam().get<unsigned>("nTrees");
+        const auto K = index->getParam().get<unsigned>("K");
+
+        // 选择树根
+        std::vector<int> indices(index->getBaseLen());
+        index->LeafLists.resize(TreeNum);
+        std::vector<Index::EFANNA::Node *> ActiveSet;
+        std::vector<Index::EFANNA::Node *> NewSet;
+        for (unsigned i = 0; i < (unsigned) TreeNum; i++) {
+            auto *node = new Index::EFANNA::Node;
+            node->DivDim = -1;
+            node->Lchild = nullptr;
+            node->Rchild = nullptr;
+            node->StartIdx = 0;
+            node->EndIdx = index->getBaseLen();
+            node->treeid = i;
+            index->tree_roots_.push_back(node);
+            ActiveSet.push_back(node);
+        }
+
+#pragma omp parallel for
+        for (unsigned i = 0; i < index->getBaseLen(); i++)indices[i] = i;
+#pragma omp parallel for
+        for (unsigned i = 0; i < (unsigned) TreeNum; i++) {
+            std::vector<unsigned> &myids = index->LeafLists[i];
+            myids.resize(index->getBaseLen());
+            std::copy(indices.begin(), indices.end(), myids.begin());
+            std::random_shuffle(myids.begin(), myids.end());
+        }
+        omp_init_lock(&index->rootlock);
+        // 构建随机截断树
+        while (!ActiveSet.empty() && ActiveSet.size() < 1100) {
+#pragma omp parallel for
+            for (unsigned i = 0; i < ActiveSet.size(); i++) {
+                Index::EFANNA::Node *node = ActiveSet[i];
+                unsigned mid;
+                unsigned cutdim;
+                float cutval;
+                std::mt19937 rng(seed ^ omp_get_thread_num());
+                std::vector<unsigned> &myids = index->LeafLists[node->treeid];
+
+                // 根据特征值进行划分
+                meanSplit(rng, &myids[0] + node->StartIdx, node->EndIdx - node->StartIdx, mid, cutdim, cutval);
+
+                node->DivDim = cutdim;
+                node->DivVal = cutval;
+                //node->StartIdx = offset;
+                //node->EndIdx = offset + count;
+                auto *nodeL = new Index::EFANNA::Node();
+                auto *nodeR = new Index::EFANNA::Node();
+                nodeR->treeid = nodeL->treeid = node->treeid;
+                nodeL->StartIdx = node->StartIdx;
+                nodeL->EndIdx = node->StartIdx + mid;
+                nodeR->StartIdx = nodeL->EndIdx;
+                nodeR->EndIdx = node->EndIdx;
+                node->Lchild = nodeL;
+                node->Rchild = nodeR;
+                omp_set_lock(&index->rootlock);
+                if (mid > K)NewSet.push_back(nodeL);
+                if (nodeR->EndIdx - nodeR->StartIdx > K)NewSet.push_back(nodeR);
+                omp_unset_lock(&index->rootlock);
+            }
+            ActiveSet.resize(NewSet.size());
+            std::copy(NewSet.begin(), NewSet.end(), ActiveSet.begin());
+            NewSet.clear();
+        }
+
+#pragma omp parallel for
+        for (unsigned i = 0; i < ActiveSet.size(); i++) {
+            Index::EFANNA::Node *node = ActiveSet[i];
+            //omp_set_lock(&rootlock);
+            //std::cout<<i<<":"<<node->EndIdx-node->StartIdx<<std::endl;
+            //omp_unset_lock(&rootlock);
+            std::mt19937 rng(seed ^ omp_get_thread_num());
+            // 查找树根对应节点
+            std::vector<unsigned> &myids = index->LeafLists[node->treeid];
+            // 添加规定深度下的所有子节点
+            DFSbuild(node, rng, &myids[0] + node->StartIdx, node->EndIdx - node->StartIdx, node->StartIdx);
+        }
+        //DFStest(0,0,tree_roots_[0]);
+        std::cout << "build tree completed" << std::endl;
+
+        for (size_t i = 0; i < (unsigned) TreeNumBuild; i++) {
+            getMergeLevelNodeList(index->tree_roots_[i], i, 0);
+        }
+
+        std::cout << "merge node list size: " << index->mlNodeList.size() << std::endl;
+        if (index->error_flag) {
+            std::cout << "merge level deeper than tree, max merge deepth is " << index->max_deepth - 1 << std::endl;
+        }
+
+        std::cout << "merge tree completed" << std::endl;
+
+        // space partition tree -> guided search
+        build_tree();
+    }
+
+    void ComponentInitHCNNG::SetConfigs() {
+        index->minsize_cl = index->getParam().get<unsigned>("minsize_cl");
+        index->num_cl = index->getParam().get<unsigned>("num_cl");
+
+        // kd-tree
+        index->mLevel = index->getParam().get<unsigned>("mLevel");
+        index->nTrees = index->getParam().get<unsigned>("nTrees");
+    }
+
+    void ComponentInitHCNNG::build_tree() {
+        index->Tn.resize(index->getBaseLen());
+
+        for (size_t i = 0; i < index->getBaseLen(); i++) {
+            auto size = index->getFinalGraph()[i].size();
+            long long min_diff =1e6, min_diff_dim = -1;
+            for (size_t j = 0; j < index->getBaseDim(); j++) {
+                int lnum = 0, rnum = 0;
+                for (size_t k = 0; k < size; k++) {
+                    if ((index->getBaseData() + index->getFinalGraph()[i][k].id * index->getBaseDim())[j] < (index->getBaseData() + i * index->getBaseDim())[j]) {
+                        lnum++;
+                    }
+                    else {
+                        rnum++;
+                    }
+                }
+                long long diff = lnum - rnum;
+                if (diff < 0) diff = -diff;
+                if (diff < min_diff) {
+                    min_diff = diff;
+                    min_diff_dim = j;
+                }
+            }
+            index->Tn[i].div_dim = min_diff_dim;
+            for (size_t k = 0; k < size; k++) {
+                if ((index->getBaseData() + index->getFinalGraph()[i][k].id * index->getBaseDim())[min_diff_dim] < (index->getBaseData() + i * index->getBaseDim())[min_diff_dim]) {
+                    index->Tn[i].left.push_back(index->getFinalGraph()[i][k].id);
+                }
+                else {
+                    index->Tn[i].right.push_back(index->getFinalGraph()[i][k].id);
+                }
+            }
+        }
+    }
+
+    int ComponentInitHCNNG::rand_int(const int &min, const int &max) {
+        static thread_local std::mt19937 *generator = nullptr;
+        if (!generator)
+            generator = new std::mt19937(clock() + std::hash<std::thread::id>()(std::this_thread::get_id()));
+        std::uniform_int_distribution<int> distribution(min, max);
+        return distribution(*generator);
+    }
+
+    std::tuple<std::vector<std::vector<Index::Edge> >, float> kruskal(std::vector<Index::Edge> &edges, int N, int max_mst_degree) {
+        sort(edges.begin(), edges.end());
+        std::vector<std::vector<Index::Edge >> MST(N);
+        auto *disjset = new Index::DisjointSet(N);
+        float cost = 0;
+        //std::cout << "www" << edges.size() << std::endl;
+        for (Index::Edge &e : edges) {
+            //std::cout << "111 " << (disjset->find(e.v1) != disjset->find(e.v2)) << std::endl;
+            //std::cout << "111 " << (MST[e.v1].size() < max_mst_degree) << std::endl;
+            //std::cout << "111 " << (MST[e.v2].size() < max_mst_degree) << std::endl;
+            if (disjset->find(e.v1) != disjset->find(e.v2) && MST[e.v1].size() < max_mst_degree &&
+                MST[e.v2].size() < max_mst_degree) {
+                MST[e.v1].push_back(e);
+                MST[e.v2].push_back(Index::Edge(e.v2, e.v1, e.weight));
+                disjset->_union(e.v1, e.v2);
+                cost += e.weight;
+
+            }
+        }
+        delete disjset;
+        return make_tuple(MST, cost);
+    }
+
+    std::vector<std::vector<Index::Edge> >
+    ComponentInitHCNNG::create_exact_mst(int *idx_points, int left, int right, int max_mst_degree) {
+        int N = right - left + 1;
+        if (N == 1) {
+            index->xxx++;
+            printf("%d\n", index->xxx);
+        }
+        float cost;
+        std::vector<Index::Edge> full;
+        std::vector<std::vector<Index::Edge> > mst;
+        full.reserve(N * (N - 1));
+        for (int i = 0; i < N; i++) {
+            for (int j = 0; j < N; j++)
+                if (i != j) {
+                    float dist = index->getDist()->compare(
+                            index->getBaseData() + idx_points[left + i] * index->getBaseDim(),
+                            index->getBaseData() + idx_points[left + j] * index->getBaseDim(),
+                            (unsigned) index->getBaseDim());
+                    full.emplace_back(i, j, dist);
+                }
+
+        }
+        tie(mst, cost) = kruskal(full, N, max_mst_degree);
+        return mst;
+    }
+
+    bool check_in_neighbors(int u, std::vector<Index::Edge> &neigh) {
+        for (int i = 0; i < neigh.size(); i++){
+            if (neigh[i].v2 == u)
+                return true;
+        }
+        return false;
+    }
+
+    void ComponentInitHCNNG::create_clusters(int *idx_points, int left, int right, std::vector<std::vector<Index::Edge> > &graph,
+                                             int minsize_cl, std::vector<omp_lock_t> &locks, int max_mst_degree){
+        int num_points = right - left + 1;
+
+        if(num_points<minsize_cl){
+            std::vector<std::vector<Index::Edge> > mst = create_exact_mst(idx_points, left, right, max_mst_degree);
+            for(int i=0; i<num_points; i++){
+                //std::cout << "w1" << " " << mst.size() << std::endl;
+                //std::cout << "w2" << " " << mst[2].size() <<std::endl;
+                for(int j=0; j<mst[i].size(); j++){
+                    omp_set_lock(&locks[idx_points[left+i]]);
+                    if(!check_in_neighbors(idx_points[left+mst[i][j].v2], graph[idx_points[left+i]])){
+                        graph[idx_points[left+i]].push_back(Index::Edge(idx_points[left+i], idx_points[left+mst[i][j].v2], mst[i][j].weight));
+                    }
+
+                    omp_unset_lock(&locks[idx_points[left+i]]);
+                }
+            }
+        }else{
+            // 随机抽取两点进行分簇
+            int x = rand_int(left, right);
+            int y = rand_int(left, right);
+            while(y==x) y = rand_int(left, right);
+
+            std::vector<std::pair<float,int> > dx(num_points);
+            std::vector<std::pair<float,int> > dy(num_points);
+            std::unordered_set<int> taken;
+            for(int i=0; i<num_points; i++){
+                dx[i] = std::make_pair(index->getDist()->compare(index->getBaseData() + index->getBaseDim() * idx_points[x],
+                                                                 index->getBaseData() + index->getBaseDim() * idx_points[left+i],
+                                                                 index->getBaseDim()), idx_points[left+i]);
+                dy[i] = std::make_pair(index->getDist()->compare(index->getBaseData() + index->getBaseDim() * idx_points[y],
+                                                                 index->getBaseData() + index->getBaseDim() * idx_points[left+i],
+                                                                 index->getBaseDim()), idx_points[left+i]);
+            }
+            sort(dx.begin(), dx.end());
+            sort(dy.begin(), dy.end());
+            int i = 0, j = 0, turn = rand_int(0, 1), p = left, q = right;
+            while(i<num_points || j<num_points){
+                if(turn == 0){
+                    if(i<num_points){
+                        if(not_in_set(dx[i].second, taken)){
+                            idx_points[p] = dx[i].second;
+                            taken.insert(dx[i].second);
+                            p++;
+                            turn = (turn+1)%2;
+                        }
+                        i++;
+                    }else{
+                        turn = (turn+1)%2;
+                    }
+                }else{
+                    if(j<num_points){
+                        if(not_in_set(dy[j].second, taken)){
+                            idx_points[q] = dy[j].second;
+                            taken.insert(dy[j].second);
+                            q--;
+                            turn = (turn+1)%2;
+                        }
+                        j++;
+                    }else{
+                        turn = (turn+1)%2;
+                    }
+                }
+            }
+
+            dx.clear();
+            dy.clear();
+            taken.clear();
+            std::vector<std::pair<float,int> >().swap(dx);
+            std::vector<std::pair<float,int> >().swap(dy);
+
+            create_clusters(idx_points, left, p-1, graph, minsize_cl, locks, max_mst_degree);
+            create_clusters(idx_points, p, right, graph, minsize_cl, locks, max_mst_degree);
+        }
+    }
+
+    void ComponentInitHCNNG::sort_edges(std::vector<std::vector<Index::Edge> > &G) {
+        int N = G.size();
+#pragma omp parallel for
+        for (int i = 0; i < N; i++)
+            sort(G[i].begin(), G[i].end());
+    }
+
+    std::vector<int> get_sizeadj(std::vector<std::vector<Index::Edge> > &G) {
+        std::vector<int> NE(G.size());
+        for (int i = 0; i < G.size(); i++)
+            NE[i] = G[i].size();
+        return NE;
+    }
+
+    template<typename SomeType>
+    float mean_v(std::vector<SomeType> a) {
+        float s = 0;
+        for (float x: a) s += x;
+        return s / a.size();
+    }
+
+    template<typename SomeType>
+    float sum_v(std::vector<SomeType> a) {
+        float s = 0;
+        for (float x: a) s += x;
+        return s;
+    }
+
+    template<typename SomeType>
+    float max_v(std::vector<SomeType> a) {
+        float mx = a[0];
+        for (float x: a) mx = std::max(mx, x);
+        return mx;
+    }
+
+    template<typename SomeType>
+    float min_v(std::vector<SomeType> a) {
+        float mn = a[0];
+        for (float x: a) mn = std::min(mn, x);
+        return mn;
+    }
+
+    template<typename SomeType>
+    float std_v(std::vector<SomeType> a) {
+        float m = mean_v(a), s = 0, n = a.size();
+        for (float x: a) s += (x - m) * (x - m);
+        return sqrt(s / (n - 1));
+    }
+
+    void ComponentInitHCNNG::print_stats_graph(std::vector<std::vector<Index::Edge> > &G) {
+        std::vector<int> sizeadj;
+        sizeadj = get_sizeadj(G);
+        printf("num edges:\t%.0lf\n", sum_v(sizeadj) / 2);
+        printf("max degree:\t%.0lf\n", max_v(sizeadj));
+        printf("min degree:\t%.0lf\n", min_v(sizeadj));
+        printf("avg degree:\t%.2lf\n", mean_v(sizeadj));
+        printf("std degree:\t%.2lf\n\n", std_v(sizeadj));
+    }
+
+    // kdt
+    void ComponentInitHCNNG::meanSplit(std::mt19937 &rng, unsigned *indices, unsigned count, unsigned &index1,
+                                     unsigned &cutdim, float &cutval) {
+        float *mean_ = new float[index->getBaseDim()];
+        float *var_ = new float[index->getBaseDim()];
+        memset(mean_, 0, index->getBaseDim() * sizeof(float));
+        memset(var_, 0, index->getBaseDim() * sizeof(float));
+
+        /* Compute mean values.  Only the first SAMPLE_NUM values need to be
+          sampled to get a good estimate.
+         */
+        unsigned cnt = std::min((unsigned) index->SAMPLE_NUM + 1, count);
+        for (unsigned j = 0; j < cnt; ++j) {
+            const float *v = index->getBaseData() + indices[j] * index->getBaseDim();
+            for (size_t k = 0; k < index->getBaseDim(); ++k) {
+                mean_[k] += v[k];
+            }
+        }
+        float div_factor = float(1) / cnt;
+        for (size_t k = 0; k < index->getBaseDim(); ++k) {
+            mean_[k] *= div_factor;
+        }
+
+        /* Compute variances (no need to divide by count). */
+
+        for (unsigned j = 0; j < cnt; ++j) {
+            const float *v = index->getBaseData() + indices[j] * index->getBaseDim();
+            for (size_t k = 0; k < index->getBaseDim(); ++k) {
+                float dist = v[k] - mean_[k];
+                var_[k] += dist * dist;
+            }
+        }
+
+        /* Select one of the highest variance indices at random. */
+        cutdim = selectDivision(rng, var_);
+
+        cutval = mean_[cutdim];
+
+        unsigned lim1, lim2;
+
+        planeSplit(indices, count, cutdim, cutval, lim1, lim2);
+        //cut the subtree using the id which best balances the tree
+        if (lim1 > count / 2) index1 = lim1;
+        else if (lim2 < count / 2) index1 = lim2;
+        else index1 = count / 2;
+
+        /* If either list is empty, it means that all remaining features
+         * are identical. Split in the middle to maintain a balanced tree.
+         */
+        if ((lim1 == count) || (lim2 == 0)) index1 = count / 2;
+        delete[] mean_;
+        delete[] var_;
+    }
+
+    void ComponentInitHCNNG::planeSplit(unsigned *indices, unsigned count, unsigned cutdim, float cutval, unsigned &lim1,
+                                      unsigned &lim2) {
+        /* Move vector indices for left subtree to front of list. */
+        int left = 0;
+        int right = count - 1;
+        for (;;) {
+            const float *vl = index->getBaseData() + indices[left] * index->getBaseDim();
+            const float *vr = index->getBaseData() + indices[right] * index->getBaseDim();
+            while (left <= right && vl[cutdim] < cutval) {
+                ++left;
+                vl = index->getBaseData() + indices[left] * index->getBaseDim();
+            }
+            while (left <= right && vr[cutdim] >= cutval) {
+                --right;
+                vr = index->getBaseData() + indices[right] * index->getBaseDim();
+            }
+            if (left > right) break;
+            std::swap(indices[left], indices[right]);
+            ++left;
+            --right;
+        }
+        lim1 = left;//lim1 is the id of the leftmost point <= cutval
+        right = count - 1;
+        for (;;) {
+            const float *vl = index->getBaseData() + indices[left] * index->getBaseDim();
+            const float *vr = index->getBaseData() + indices[right] * index->getBaseDim();
+            while (left <= right && vl[cutdim] <= cutval) {
+                ++left;
+                vl = index->getBaseData() + indices[left] * index->getBaseDim();
+            }
+            while (left <= right && vr[cutdim] > cutval) {
+                --right;
+                vr = index->getBaseData() + indices[right] * index->getBaseDim();
+            }
+            if (left > right) break;
+            std::swap(indices[left], indices[right]);
+            ++left;
+            --right;
+        }
+        lim2 = left;//lim2 is the id of the leftmost point >cutval
+    }
+
+    int ComponentInitHCNNG::selectDivision(std::mt19937 &rng, float *v) {
+        int num = 0;
+        size_t topind[index->RAND_DIM];
+
+        //Create a list of the indices of the top index->RAND_DIM values.
+        for (size_t i = 0; i < index->getBaseDim(); ++i) {
+            if ((num < index->RAND_DIM) || (v[i] > v[topind[num - 1]])) {
+                // Put this element at end of topind.
+                if (num < index->RAND_DIM) {
+                    topind[num++] = i;            // Add to list.
+                } else {
+                    topind[num - 1] = i;         // Replace last element.
+                }
+                // Bubble end value down to right location by repeated swapping. sort the varience in decrease order
+                int j = num - 1;
+                while (j > 0 && v[topind[j]] > v[topind[j - 1]]) {
+                    std::swap(topind[j], topind[j - 1]);
+                    --j;
+                }
+            }
+        }
+        // Select a random integer in range [0,num-1], and return that index.
+        int rnd = rng() % num;
+        return (int) topind[rnd];
+    }
+
+    void ComponentInitHCNNG::DFSbuild(Index::EFANNA::Node *node, std::mt19937 &rng, unsigned *indices, unsigned count,
+                                    unsigned offset) {
+        //omp_set_lock(&rootlock);
+        //std::cout<<node->treeid<<":"<<offset<<":"<<count<<std::endl;
+        //omp_unset_lock(&rootlock);
+
+        if (count <= index->TNS) {
+            node->DivDim = -1;
+            node->Lchild = nullptr;
+            node->Rchild = nullptr;
+            node->StartIdx = offset;
+            node->EndIdx = offset + count;
+            //add points
+
+        } else {
+            unsigned idx;
+            unsigned cutdim;
+            float cutval;
+            meanSplit(rng, indices, count, idx, cutdim, cutval);
+            node->DivDim = cutdim;
+            node->DivVal = cutval;
+            node->StartIdx = offset;
+            node->EndIdx = offset + count;
+            auto *nodeL = new Index::EFANNA::Node();
+            auto *nodeR = new Index::EFANNA::Node();
+            node->Lchild = nodeL;
+            nodeL->treeid = node->treeid;
+            DFSbuild(nodeL, rng, indices, idx, offset);
+            node->Rchild = nodeR;
+            nodeR->treeid = node->treeid;
+            DFSbuild(nodeR, rng, indices + idx, count - idx, offset + idx);
+        }
+    }
+
+    void ComponentInitHCNNG::getMergeLevelNodeList(Index::EFANNA::Node *node, size_t treeid, unsigned deepth) {
+        auto ml = index->getParam().get<unsigned>("mLevel");
+        if (node->Lchild != nullptr && node->Rchild != nullptr && deepth < ml) {
+            deepth++;
+            getMergeLevelNodeList(node->Lchild, treeid, deepth);
+            getMergeLevelNodeList(node->Rchild, treeid, deepth);
+        } else if (deepth == ml) {
+            index->mlNodeList.emplace_back(node, treeid);
+        } else {
+            index->error_flag = true;
+            if (deepth < index->max_deepth)index->max_deepth = deepth;
+        }
+    }
+
 }

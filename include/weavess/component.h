@@ -256,6 +256,41 @@ namespace weavess {
         void init();
     };
 
+    class ComponentInitHCNNG : public ComponentInit {
+    public:
+        explicit ComponentInitHCNNG(Index *index) : ComponentInit(index) {}
+
+        void InitInner() override;
+
+    private:
+        void SetConfigs();
+
+        void build_tree();
+
+        int rand_int(const int & min, const int & max);
+
+        std::vector<std::vector< Index::Edge > >  create_exact_mst(int *idx_points, int left, int right, int max_mst_degree);
+
+        void create_clusters(int *idx_points, int left, int right, std::vector<std::vector< Index::Edge > > &graph,
+                             int minsize_cl, std::vector<omp_lock_t> &locks, int max_mst_degree);
+
+        void sort_edges(std::vector<std::vector< Index::Edge > > &G);
+
+        void print_stats_graph(std::vector<std::vector< Index::Edge > > &G);
+
+        void meanSplit(std::mt19937 &rng, unsigned *indices, unsigned count, unsigned &index1,
+                                           unsigned &cutdim, float &cutval);
+
+        void
+        planeSplit(unsigned *indices, unsigned count, unsigned cutdim, float cutval, unsigned &lim1, unsigned &lim2);
+
+        int selectDivision(std::mt19937 &rng, float *v);
+
+        void DFSbuild(Index::EFANNA::Node *node, std::mt19937 &rng, unsigned *indices, unsigned count, unsigned offset);
+
+        void getMergeLevelNodeList(Index::EFANNA::Node *node, size_t treeid, unsigned deepth);
+    };
+
 
     // refine graph
     class ComponentRefine : public Component {
@@ -717,6 +752,13 @@ namespace weavess {
     class ComponentSearchRouteSPTAG_BKT : public ComponentSearchRoute {
     public:
         explicit ComponentSearchRouteSPTAG_BKT(Index *index) : ComponentSearchRoute(index) {}
+
+        void RouteInner(unsigned query, std::vector<Index::Neighbor> &pool, std::vector<unsigned> &res) override;
+    };
+
+    class ComponentSearchRouteGuided : public ComponentSearchRoute {
+    public:
+        explicit ComponentSearchRouteGuided(Index *index) : ComponentSearchRoute(index) {}
 
         void RouteInner(unsigned query, std::vector<Index::Neighbor> &pool, std::vector<unsigned> &res) override;
     };
