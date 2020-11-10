@@ -19,6 +19,16 @@
 | NGT    |    Increment     |         ANNG          |                   |               |     ONNG     |              |      DVPTree       |       Greedy       |
 | SPTAG  |  Divide&Conquer  |                       | KD-tree / BK-tree |               |     RNG      |              |                    |                    |
 | HCNNG  |  Divide&Conquer  |Hierarchical Clustering|                   |               |              |              |      KD-tree       |       Guided       |
+
+## Parameters
+
+### IEH
+
+|  Name        |  Default  |  Description                                  |
+|:------------:|:---------:|:---------------------------------------------:|
+|  P           | 10        | number of top nearest candidates              |
+|  K           | 50        | number of expansion                           |
+|  S           | 3         | iteration number                              |
  
 
 ## TODO
@@ -45,7 +55,9 @@
 
 - [x] HCNNG
 
-- [ ] SPTAG
+- [x] SPTAG
 
 - [x] FANNG
+
+
 

@@ -7,9 +7,8 @@
 namespace weavess {
     void ComponentPruneNaive::PruneInner(unsigned query, unsigned range, boost::dynamic_bitset<> flags,
                                          std::vector<Index::SimpleNeighbor> &pool, Index::SimpleNeighbor *cut_graph_) {
-
         Index::SimpleNeighbor *des_pool = cut_graph_ + (size_t) query * (size_t) range;
-        for (size_t t = 0; t < pool.size(); t++) {
+        for (size_t t = 0; t < range; t++) {
             des_pool[t].id = pool[t].id;
             des_pool[t].distance = pool[t].distance;
         }

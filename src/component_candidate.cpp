@@ -113,23 +113,30 @@ namespace weavess {
                                                      boost::dynamic_bitset<> flags,
                                                      std::vector<Index::SimpleNeighbor> &result) {
 
+        //how many nodes will be visited for a query in the search stage
+        unsigned m_iMaxCheck = 8192L;
+        //how many nodes each node will visit during graph refine in the build stage
+        unsigned maxCheck = index->m_iMaxCheckForRefineGraph > m_iMaxCheck ? index->m_iMaxCheckForRefineGraph : m_iMaxCheck;
+
         // Prioriy queue used for neighborhood graph
         Index::Heap m_NGQueue;
+        // 初始化
+        m_NGQueue.Resize(maxCheck * 30);
 
         // Priority queue Used for Tree
         Index::Heap m_SPTQueue;
-
-        // Priority queue used for result
-        std::priority_queue<Index::SPTAGFurtherFirst> tmp;
-        std::priority_queue<Index::SPTAGCloserFirst> res;
+        m_SPTQueue.Resize(maxCheck * 10);
 
         Index::OptHashPosVector nodeCheckStatus;
+        nodeCheckStatus.Init(maxCheck, index->m_iHashTableExp);
+
+        Index::QueryResultSet p_query(index->L_refine);
 
         unsigned m_iNumOfContinuousNoBetterPropagation = 0;
         unsigned m_iNumberOfCheckedLeaves = 0;
-        unsigned maxCheck = index->m_iMaxCheckForRefineGraph;
         unsigned m_iContinuousLimit = maxCheck / 64;
 
+        // init_search_trees
         for(unsigned i = 0; i < index->m_iTreeNumber; i ++) {
             const Index::BKTNode& node = index->m_pBKTreeRoots[index->m_pTreeStart[i]];
             if (node.childStart < 0) {
@@ -149,6 +156,7 @@ namespace weavess {
             }
         }
 
+        // search_trees
         while (!m_SPTQueue.empty())
         {
             Index::HeapCell bcell = m_SPTQueue.pop();
@@ -179,40 +187,38 @@ namespace weavess {
             Index::HeapCell gnode = m_NGQueue.pop();
             unsigned tmpNode = gnode.node;
             std::vector<Index::SimpleNeighbor> node = index->getFinalGraph()[tmpNode];
-            //const unsigned *node = m_pGraph[tmpNode];
-            if (gnode.distance <= tmp.top().GetDistance()) {
+            if (gnode.distance <= p_query.worstDist()) {
                 unsigned checkNode = node[checkPos].id;
-                if (checkNode < -1) {
-                    const Index::BKTNode& tnode = index->m_pBKTreeRoots[-2 - checkNode];
+                if ((int)checkNode < -1) {
+                    //std::cout << 2.211 << std::endl;
+                    const Index::BKTNode& tnode = index->m_pBKTreeRoots[-2 - (int)checkNode];
                     unsigned i = -tnode.childStart;
 
-                    m_iNumOfContinuousNoBetterPropagation = 0;
-                    tmp.push(Index::SPTAGFurtherFirst(tmpNode, gnode.distance));
-
+                    do {
+                        m_iNumOfContinuousNoBetterPropagation = 0;
+                        p_query.AddPoint(tmpNode, gnode.distance);
+                        break;
+                        tmpNode = index->m_pBKTreeRoots[i].centerid;
+                    }while(i++ < tnode.childEnd);
                 } else {
                     m_iNumOfContinuousNoBetterPropagation = 0;
-                    tmp.push(Index::SPTAGFurtherFirst(tmpNode, gnode.distance));
+                    p_query.AddPoint(tmpNode, gnode.distance);
                 }
             } else {
                 m_iNumOfContinuousNoBetterPropagation++;
                 if (m_iNumOfContinuousNoBetterPropagation > m_iContinuousLimit || m_iNumberOfCheckedLeaves > index->m_iMaxCheck) {
+                    p_query.SortResult();
 
-                    while (!tmp.empty()) {
-                        res.push(Index::SPTAGCloserFirst(tmp.top().GetNode(), tmp.top().GetDistance()));
-                        tmp.pop();
-                    }
-
-                    while (!res.empty()) {
-                        auto top_node = res.top();
-                        result.emplace_back(top_node.GetNode(), top_node.GetDistance());
-                        res.pop();
+                    for(auto & iter : p_query) {
+                        result.emplace_back(iter.VID, iter.Dist);
                     }
                     return;
                 }
             }
+
             for (unsigned i = 0; i <= checkPos; i++) {
                 unsigned nn_index = node[i].id;
-                if (nn_index < 0) break;
+                if ((int)nn_index < 0) break;
                 if (nodeCheckStatus.CheckAndSet(nn_index)) continue;
                 float distance2leaf = index->getDist()->compare(index->getBaseData() + index->getBaseDim() * query,
                                                                 index->getBaseData() + index->getBaseDim() * nn_index,
@@ -249,15 +255,9 @@ namespace weavess {
             }
         }
 
-        while (!tmp.empty()) {
-            res.push(Index::SPTAGCloserFirst(tmp.top().GetNode(), tmp.top().GetDistance()));
-            tmp.pop();
-        }
-
-        while (!res.empty()) {
-            auto top_node = res.top();
-            result.emplace_back(top_node.GetNode(), top_node.GetDistance());
-            res.pop();
+        p_query.SortResult();
+        for(auto & iter : p_query) {
+            result.emplace_back(iter.VID, iter.Dist);
         }
     }
 
@@ -265,32 +265,39 @@ namespace weavess {
     void ComponentCandidateSPTAG_KDT::CandidateInner(unsigned int query, unsigned int enter,
                                                      boost::dynamic_bitset<> flags,
                                                      std::vector<Index::SimpleNeighbor> &result) {
-
-        // Prioriy queue used for neighborhood graph
-        Index::Heap m_NGQueue;
-
-        // Priority queue Used for Tree
-        Index::Heap m_SPTQueue;
-
-        // Priority queue used for result
-        std::priority_queue<Index::SPTAGFurtherFirst> tmp;
-        std::priority_queue<Index::SPTAGCloserFirst> res;
-
         unsigned m_iNumberOfCheckedLeaves = 0;
         unsigned m_iNumberOfTreeCheckedLeaves = 0;
         unsigned m_iNumberOfInitialDynamicPivots = 50;
         unsigned m_iMaxCheck = 8192L;
         unsigned m_iNumOfContinuousNoBetterPropagation = 0;
         unsigned m_iThresholdOfNumberOfContinuousNoBetterPropagation = 3;
+        unsigned m_iNumberOfOtherDynamicPivots = 4;
+        unsigned maxCheck = index->m_iMaxCheckForRefineGraph > m_iMaxCheck ? index->m_iMaxCheckForRefineGraph : m_iMaxCheck;
+
+        // Prioriy queue used for neighborhood graph
+        Index::Heap m_NGQueue;
+        // 初始化
+        m_NGQueue.Resize(maxCheck * 30);
+
+        // Priority queue Used for Tree
+        Index::Heap m_SPTQueue;
+        m_SPTQueue.Resize(maxCheck * 10);
+
+        // Priority queue used for result
+        std::priority_queue<Index::SPTAGFurtherFirst> tmp;
+        std::priority_queue<Index::SPTAGCloserFirst> res;
 
         Index::OptHashPosVector nodeCheckStatus;
+        nodeCheckStatus.Init(maxCheck, index->m_iHashTableExp);
 
+        // 根据 KDT 获取入口点
         for(int i = 0; i < index->m_iTreeNumber; i ++) {
             unsigned node = index->m_pTreeStart[i];
 
             KDTSearch(query, node, m_NGQueue, m_SPTQueue, nodeCheckStatus, m_iNumberOfCheckedLeaves, m_iNumberOfTreeCheckedLeaves);
         }
 
+        // 查询足够的 KDT 结点
         unsigned p_limits = m_iNumberOfInitialDynamicPivots;
         while (!m_SPTQueue.empty() && m_iNumberOfCheckedLeaves < p_limits)
         {
@@ -302,8 +309,9 @@ namespace weavess {
             Index::HeapCell gnode = m_NGQueue.pop();
             std::vector<Index::SimpleNeighbor> node = index->getFinalGraph()[gnode.node];
 
-            // 待修改
-            if(tmp.top().GetDistance() > gnode.distance || (tmp.top().GetDistance() == gnode.distance && tmp.top().GetNode() > gnode.node)) {
+            if(tmp.size() < index->L_refine || (tmp.size() >= index->L_refine && tmp.top().GetDistance() > gnode.distance) || (tmp.size() >= index->L_refine && tmp.top().GetDistance() == gnode.distance && tmp.top().GetNode() > gnode.node)) {
+                if(tmp.size() + 1 > index->L_refine)
+                    tmp.pop();
                 tmp.push(Index::SPTAGFurtherFirst(gnode.node, gnode.distance));
                 if(m_iNumberOfCheckedLeaves > m_iMaxCheck) {
                     while (!tmp.empty()) {
@@ -311,33 +319,51 @@ namespace weavess {
                         tmp.pop();
                     }
 
+                    int num = 0;
                     while (!res.empty()) {
+                        num ++;
                         auto top_node = res.top();
                         result.emplace_back(top_node.GetNode(), top_node.GetDistance());
                         res.pop();
                     }
+                    ////std::cout << 24.64 << std::endl;
+
+                    if(num < index->L_refine) {
+                        result.emplace_back(-1, -1);
+                    }
                     return;
                 }
             }
-
             float upperBound = std::max(tmp.top().GetDistance(), gnode.distance);
             bool bLocalOpt = true;
-            for (unsigned i = 0; i < index->m_iNeighborhoodSize; i++) {
+            //if(query == 700)
+                //std::cout << 4.7 << std::endl;
+
+            // modify
+            for (unsigned i = 0; i < node.size(); i++) {
                 unsigned nn_index = node[i].id;
                 if (nn_index < 0) break;
+                //if(query == 700)
+                    //std::cout << 4.71 << std::endl;
                 if (nodeCheckStatus.CheckAndSet(nn_index)) continue;
+                //if(query == 700)
+                    //std::cout << 4.72 << " " << nn_index << std::endl;
                 float distance2leaf = index->getDist()->compare(index->getBaseData() + index->getBaseDim() * query,
                                                                 index->getBaseData() + index->getBaseDim() * nn_index,
                                                                 index->getBaseDim());
+                //if(query == 700)
+                    //std::cout << 4.73 << " " << std::endl;
                 if (distance2leaf <= upperBound) bLocalOpt = false;
                 m_iNumberOfCheckedLeaves++;
                 m_NGQueue.insert(Index::HeapCell(nn_index, distance2leaf));
             }
+            //if(query == 700)
+                //std::cout << 4.8 << std::endl;
             if (bLocalOpt) m_iNumOfContinuousNoBetterPropagation++;
             else m_iNumOfContinuousNoBetterPropagation = 0;
             if (m_iNumOfContinuousNoBetterPropagation > m_iThresholdOfNumberOfContinuousNoBetterPropagation) {
                 if (m_iNumberOfTreeCheckedLeaves <= m_iNumberOfCheckedLeaves / 10) {
-                    while(!m_SPTQueue.empty() && m_iNumberOfTreeCheckedLeaves < p_limits) {
+                    while(!m_SPTQueue.empty() && m_iNumberOfCheckedLeaves < m_iNumberOfCheckedLeaves + m_iNumberOfOtherDynamicPivots) {
                         auto& tcell = m_SPTQueue.pop();
                         KDTSearch(query, tcell.node, m_NGQueue, m_SPTQueue, nodeCheckStatus, m_iNumberOfCheckedLeaves, m_iNumberOfTreeCheckedLeaves);
                     }
@@ -345,6 +371,8 @@ namespace weavess {
                     break;
                 }
             }
+            //if(query == 700)
+                //std::cout << 4.9l << std::endl;
         }
 
         while (!tmp.empty()) {
@@ -361,8 +389,8 @@ namespace weavess {
 
     void ComponentCandidateSPTAG_KDT::KDTSearch(unsigned query, unsigned node, Index::Heap &m_NGQueue, Index::Heap &m_SPTQueue, Index::OptHashPosVector &nodeCheckStatus,
                                                 unsigned &m_iNumberOfCheckedLeaves, unsigned &m_iNumberOfTreeCheckedLeaves) {
-        if(node < 0) {
-            unsigned tmp = -node - 1;
+        if((int)node < 0) {
+            unsigned tmp = -(int)node - 1;
             if(tmp > index->getBaseLen()) return;
 
             if(nodeCheckStatus.CheckAndSet(tmp)) return;
