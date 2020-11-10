@@ -379,10 +379,12 @@ namespace weavess {
         std::unordered_map<unsigned, int> mp; // 记录结点近邻访问位置
         std::unordered_map<unsigned, unsigned> relation; // 记录终止结点和起始结点关系
 
-        unsigned start = pool[0].id;
-        flags[start] = true;
+        unsigned enter = pool[0].id;
+        unsigned start = index->getFinalGraph()[enter][0].id;
+        relation[start] = enter;
+        mp[enter] = 0;
         float dist = index->getDist()->compare(index->getBaseData() + index->getBaseDim() * start,
-                                               index->getBaseData() + index->getBaseDim() * query,
+                                               index->getQueryData() + index->getQueryDim() * query,
                                                index->getBaseDim());
 
         int m = 1;
@@ -390,49 +392,52 @@ namespace weavess {
         full.push(Index::FANNGCloserFirst(start, dist));
 
         while(!queue.empty() && m < L) {
+            //std::cout << 1 << std::endl;
             unsigned top_node = queue.top().GetNode();
-            mp[top_node] = 0;
             queue.pop();
-            unsigned top_node_nn = index->getFinalGraph()[top_node][0].id;
 
-            if(flags[top_node_nn] == false) {
-                relation[top_node_nn] = top_node;
-                flags[top_node_nn] = true;
+            // 未访问
+            if(!flags[top_node]) {
+                flags[top_node] = true;
+
+                unsigned nnid = index->getFinalGraph()[top_node][0].id;
+                relation[nnid] = top_node;
+                mp[top_node] = 0;
                 m += 1;
-                float dist = index->getDist()->compare(index->getBaseData() + index->getBaseDim() * query,
-                                                       index->getBaseData() + index->getBaseDim() * top_node_nn,
+                float dist = index->getDist()->compare(index->getQueryData() + index->getQueryDim() * query,
+                                                       index->getBaseData() + index->getBaseDim() * nnid,
                                                        index->getBaseDim());
-                queue.push(Index::FANNGCloserFirst(top_node_nn, dist));
-                full.push(Index::FANNGCloserFirst(top_node_nn, dist));
+                queue.push(Index::FANNGCloserFirst(nnid, dist));
+                full.push(Index::FANNGCloserFirst(nnid, dist));
+            }
+            //std::cout << 2 << std::endl;
+
+            unsigned start_node = relation[top_node];
+
+            //std::cout << 3 << " " << start_node << std::endl;
+
+            unsigned pos = 0;
+            // 获取 top_node 近邻访问位置情况
+            auto iter = mp.find(start_node);
+            //std::cout << 3.11 << " " << (*iter).second << std::endl;
+            //std::cout << index->getFinalGraph()[start_node].size() << std::endl;
+            // 已访问所有近邻
+            if((*iter).second < index->getFinalGraph()[start_node].size() - 1) {
+                //std::cout << 3.1 << std::endl;
+                pos = (*iter).second + 1;
+                mp[start_node] = pos;
+                unsigned nnid = index->getFinalGraph()[start_node][pos].id;
+                //std::cout << 3.2 << " " << nnid << std::endl;
+                relation[nnid] = start_node;
+                float dist = index->getDist()->compare(index->getQueryData() + index->getQueryDim() * query,
+                                                      index->getBaseData() + index->getBaseDim() * nnid,
+                                                      index->getBaseDim());
+                //std::cout << 3.3 << std::endl;
+                queue.push(Index::FANNGCloserFirst(nnid, dist));
+                full.push(Index::FANNGCloserFirst(nnid, dist));
             }
 
-            unsigned start_node = relation[top_node_nn];
-            bool flag = false;
-            while(!flag) {
-                if(mp[start_node] + 1 != index->getFinalGraph()[start_node].size() && flags[index->getFinalGraph()[start_node][mp[start_node] + 1].id] == false) {
-                    flag = true;
-                    break;
-                }
-                while(mp[start_node] + 1 == index->getFinalGraph()[start_node].size())
-                    start_node = relation[start_node];
-                while(flags[index->getFinalGraph()[start_node][mp[start_node] + 1].id]) {
-                    mp[start_node] += 1;
-                    if(mp[start_node] == index->getFinalGraph()[start_node].size()) {
-                        start_node = relation[start_node];
-                        break;
-                    }
-                }
-            }
-            if(flag) {
-                unsigned node = index->getFinalGraph()[start_node][mp[start_node] + 1].id;
-                float dist = index->getDist()->compare(index->getBaseData() + index->getBaseDim() * query,
-                                                       index->getBaseData() + index->getBaseDim() * node,
-                                                       index->getBaseDim());
-                queue.push(Index::FANNGCloserFirst(node, dist));
-                full.push(Index::FANNGCloserFirst(node, dist));
-                relation[node] = start_node;
-                mp[start_node] += 1;
-            }
+            //std::cout << 4 << std::endl;
         }
 
         int i = 0;
@@ -441,6 +446,7 @@ namespace weavess {
             full.pop();
             i ++;
         }
+        //std::cout << 5 << std::endl;
     }
 
 
@@ -472,7 +478,7 @@ namespace weavess {
                 // std::cout << "right_len: " << right_len << std::endl;
                 std::vector<unsigned> nn;
                 unsigned MaxM;
-                if ((index->getBaseData() + index->getBaseDim() * query)[div_dim_] < (index->getBaseData() + index->getBaseDim() * n)[div_dim_]) {
+                if ((index->getQueryData() + index->getQueryDim() * query)[div_dim_] < (index->getBaseData() + index->getBaseDim() * n)[div_dim_]) {
                     MaxM = left_len; //左子树邻居的个数
                     nn = index->Tn[n].left;
                 }
@@ -597,7 +603,7 @@ namespace weavess {
                 if (nodeCheckStatus.CheckAndSet(nn_index)) continue;
                 //if(query == 700)
                 //std::cout << 4.72 << " " << nn_index << std::endl;
-                float distance2leaf = index->getDist()->compare(index->getBaseData() + index->getBaseDim() * query,
+                float distance2leaf = index->getDist()->compare(index->getQueryData() + index->getQueryDim() * query,
                                                                 index->getBaseData() + index->getBaseDim() * nn_index,
                                                                 index->getBaseDim());
                 //if(query == 700)
@@ -649,7 +655,7 @@ namespace weavess {
             ++m_iNumberOfCheckedLeaves;
             ++m_iNumberOfTreeCheckedLeaves;
 
-            m_NGQueue.insert(Index::HeapCell(tmp, index->getDist()->compare(index->getBaseData() + index->getBaseDim() * query,
+            m_NGQueue.insert(Index::HeapCell(tmp, index->getDist()->compare(index->getQueryData() + index->getQueryDim() * query,
                                                                             index->getBaseData() + index->getBaseDim() * tmp,
                                                                             index->getBaseDim())));
             return;
@@ -657,7 +663,7 @@ namespace weavess {
         auto& tnode = index->m_pKDTreeRoots[node];
 
         float distBound = 0;
-        float diff = (index->getBaseData() + index->getBaseDim() * query)[tnode.split_dim] - tnode.split_value;
+        float diff = (index->getQueryData() + index->getQueryDim() * query)[tnode.split_dim] - tnode.split_value;
         float distanceBound = distBound + diff * diff;
         unsigned otherChild, bestChild;
         if (diff < 0)

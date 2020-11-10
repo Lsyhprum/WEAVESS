@@ -130,6 +130,9 @@ namespace weavess {
         } else if (type == REFINE_SPTAG_KDT) {
             std::cout << "__REFINE : SPTAG_KDT__" << std::endl;
             a = new ComponentRefineSPTAG_KDT(final_index_);
+        } else if (type == REFINE_FANNG) {
+            std::cout << "__REFINE : FANNG__" << std::endl;
+            a = new ComponentRefineFANNG(final_index_);
         } else {
             std::cerr << "__REFINE : WRONG TYPE__" << std::endl;
         }

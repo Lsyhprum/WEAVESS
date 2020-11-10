@@ -30,7 +30,7 @@ void FANNG(std::string base_path, std::string query_path, std::string ground_pat
 
     auto *builder = new weavess::IndexBuilder();
     builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
-            -> init(weavess::TYPE::INIT_NN_DESCENT)
+            -> init(weavess::TYPE::INIT_FANNG)
             -> refine(weavess::TYPE::REFINE_FANNG, false)
             -> search(weavess::TYPE::SEARCH_ENTRY_RAND, weavess::TYPE::ROUTER_BACKTRACK);
 
@@ -274,11 +274,10 @@ int main() {
     //HNSW(base_path, query_path, ground_path);
     //HCNNG(base_path, query_path, ground_path);
     //SPTAG_KDT(base_path, query_path, ground_path);
+    //SPTAG_BKT(base_path, query_path, ground_path);
 
-    SPTAG_BKT(base_path, query_path, ground_path);
-    //FANNG(base_path, query_path, ground_path);
+    FANNG(base_path, query_path, ground_path);
     //NGT(base_path, query_path, ground_path);
-
 
     return 0;
 }
