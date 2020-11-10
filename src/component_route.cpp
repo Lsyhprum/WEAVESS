@@ -17,7 +17,7 @@ namespace weavess {
         const auto L = index->getParam().get<unsigned>("L_search");
         const auto K = index->getParam().get<unsigned>("K_search");
 
-        std::vector<char> flags(index->getBaseLen());
+        std::vector<char> flags(index->getBaseLen(), 0);
 
         int k = 0;
         while (k < (int) L) {
@@ -441,5 +441,420 @@ namespace weavess {
             full.pop();
             i ++;
         }
+    }
+
+
+    /**
+     * Guided 搜索
+     * @param query 查询点
+     * @param pool 入口点
+     * @param res 结果集
+     */
+    void ComponentSearchRouteGuided::RouteInner(unsigned int query, std::vector<Index::Neighbor> &pool,
+                                                std::vector<unsigned int> &res) {
+        const auto L = index->getParam().get<unsigned>("L_search");
+        const auto K = index->getParam().get<unsigned>("K_search");
+
+        std::vector<char> flags(index->getBaseLen(), 0);
+
+        int k = 0;
+        while (k < (int)L) {
+            int nk = L;
+
+            if (pool[k].flag) {
+                pool[k].flag = false;
+                unsigned n = pool[k].id;
+
+                unsigned div_dim_ = index->Tn[n].div_dim;
+                unsigned left_len = index->Tn[n].left.size();
+                // std::cout << "left_len: " << left_len << std::endl;
+                unsigned right_len = index->Tn[n].right.size();
+                // std::cout << "right_len: " << right_len << std::endl;
+                std::vector<unsigned> nn;
+                unsigned MaxM;
+                if ((index->getBaseData() + index->getBaseDim() * query)[div_dim_] < (index->getBaseData() + index->getBaseDim() * n)[div_dim_]) {
+                    MaxM = left_len; //左子树邻居的个数
+                    nn = index->Tn[n].left;
+                }
+                else {
+                    MaxM = right_len; //右子树邻居的个数
+                    nn = index->Tn[n].right;
+                }
+
+                for (unsigned m = 0; m < MaxM; ++m) {
+                    unsigned id = nn[m];
+                    if (flags[id]) continue;
+                    flags[id] = 1;
+                    float dist = index->getDist()->compare(index->getQueryData() + query * index->getQueryDim(),
+                                                           index->getBaseData() + id * index->getBaseDim(),
+                                                           (unsigned)index->getBaseDim());
+                    //index->dist_cout++;
+                    if (dist >= pool[L - 1].distance) continue;
+                    Index::Neighbor nn(id, dist, true);
+                    int r = Index::InsertIntoPool(pool.data(), L, nn);
+
+                    // if(L+1 < retset.size()) ++L;
+                    if (r < nk) nk = r;
+                }
+            }
+            if (nk <= k)
+                k = nk;
+            else
+                ++k;
+        }
+        for (size_t i = 0; i < K; i++) {
+            res[i] = pool[i].id;
+        }
+    }
+
+
+    /**
+     * SPTAG-KDT 搜索
+     * @param query 查询点
+     * @param pool 入口点
+     * @param res 结果集
+     */
+    void ComponentSearchRouteSPTAG_KDT::RouteInner(unsigned int query, std::vector<Index::Neighbor> &pool,
+                                                   std::vector<unsigned int> &result) {
+        const auto L = index->getParam().get<unsigned>("L_search");
+        const auto K = index->getParam().get<unsigned>("K_search");
+
+        unsigned m_iNumberOfCheckedLeaves = 0;
+        unsigned m_iNumberOfTreeCheckedLeaves = 0;
+        unsigned m_iNumberOfInitialDynamicPivots = 50;
+        unsigned m_iNumOfContinuousNoBetterPropagation = 0;
+        unsigned m_iThresholdOfNumberOfContinuousNoBetterPropagation = 3;
+        unsigned m_iNumberOfOtherDynamicPivots = 4;
+        unsigned m_iMaxCheck = 8192L;
+        unsigned maxCheck = index->m_iMaxCheckForRefineGraph > m_iMaxCheck ? index->m_iMaxCheckForRefineGraph : m_iMaxCheck;
+
+        // Prioriy queue used for neighborhood graph
+        Index::Heap m_NGQueue;
+        // 初始化
+        m_NGQueue.Resize(maxCheck * 30);
+
+        // Priority queue Used for Tree
+        Index::Heap m_SPTQueue;
+        m_SPTQueue.Resize(maxCheck * 10);
+
+        // Priority queue used for result
+        std::priority_queue<Index::SPTAGFurtherFirst> tmp;
+        std::priority_queue<Index::SPTAGCloserFirst> res;
+
+        Index::OptHashPosVector nodeCheckStatus;
+        nodeCheckStatus.Init(maxCheck, index->m_iHashTableExp);
+
+        // 根据 KDT 获取入口点
+        for(int i = 0; i < index->m_iTreeNumber; i ++) {
+            unsigned node = index->m_pTreeStart[i];
+
+            KDTSearch(query, node, m_NGQueue, m_SPTQueue, nodeCheckStatus, m_iNumberOfCheckedLeaves, m_iNumberOfTreeCheckedLeaves);
+        }
+
+        // 查询足够的 KDT 结点
+        unsigned p_limits = m_iNumberOfInitialDynamicPivots;
+        while (!m_SPTQueue.empty() && m_iNumberOfCheckedLeaves < p_limits)
+        {
+            auto& tcell = m_SPTQueue.pop();
+            KDTSearch(query, tcell.node, m_NGQueue, m_SPTQueue, nodeCheckStatus, m_iNumberOfCheckedLeaves, m_iNumberOfTreeCheckedLeaves);
+        }
+
+        while (!m_NGQueue.empty()) {
+            Index::HeapCell gnode = m_NGQueue.pop();
+            std::vector<Index::SimpleNeighbor> node = index->getFinalGraph()[gnode.node];
+
+            if(tmp.size() < index->L_refine || (tmp.size() >= index->L_refine && tmp.top().GetDistance() > gnode.distance) || (tmp.size() >= index->L_refine && tmp.top().GetDistance() == gnode.distance && tmp.top().GetNode() > gnode.node)) {
+                if(tmp.size() + 1 > index->L_refine)
+                    tmp.pop();
+                tmp.push(Index::SPTAGFurtherFirst(gnode.node, gnode.distance));
+                if(m_iNumberOfCheckedLeaves > m_iMaxCheck) {
+                    while (!tmp.empty()) {
+                        res.push(Index::SPTAGCloserFirst(tmp.top().GetNode(), tmp.top().GetDistance()));
+                        tmp.pop();
+                    }
+
+                    int num = 0;
+                    while (!res.empty() && num < K) {
+                        num ++;
+                        auto top_node = res.top();
+                        result.emplace_back(top_node.GetNode());
+                        res.pop();
+                    }
+                    return;
+                }
+            }
+            float upperBound = std::max(tmp.top().GetDistance(), gnode.distance);
+            bool bLocalOpt = true;
+            //if(query == 700)
+            //std::cout << 4.7 << std::endl;
+
+            // modify
+            for (unsigned i = 0; i < node.size(); i++) {
+                unsigned nn_index = node[i].id;
+                if (nn_index < 0) break;
+                //if(query == 700)
+                //std::cout << 4.71 << std::endl;
+                if (nodeCheckStatus.CheckAndSet(nn_index)) continue;
+                //if(query == 700)
+                //std::cout << 4.72 << " " << nn_index << std::endl;
+                float distance2leaf = index->getDist()->compare(index->getBaseData() + index->getBaseDim() * query,
+                                                                index->getBaseData() + index->getBaseDim() * nn_index,
+                                                                index->getBaseDim());
+                //if(query == 700)
+                //std::cout << 4.73 << " " << std::endl;
+                if (distance2leaf <= upperBound) bLocalOpt = false;
+                m_iNumberOfCheckedLeaves++;
+                m_NGQueue.insert(Index::HeapCell(nn_index, distance2leaf));
+            }
+            //if(query == 700)
+            //std::cout << 4.8 << std::endl;
+            if (bLocalOpt) m_iNumOfContinuousNoBetterPropagation++;
+            else m_iNumOfContinuousNoBetterPropagation = 0;
+            if (m_iNumOfContinuousNoBetterPropagation > m_iThresholdOfNumberOfContinuousNoBetterPropagation) {
+                if (m_iNumberOfTreeCheckedLeaves <= m_iNumberOfCheckedLeaves / 10) {
+                    while(!m_SPTQueue.empty() && m_iNumberOfCheckedLeaves < m_iNumberOfCheckedLeaves + m_iNumberOfOtherDynamicPivots) {
+                        auto& tcell = m_SPTQueue.pop();
+                        KDTSearch(query, tcell.node, m_NGQueue, m_SPTQueue, nodeCheckStatus, m_iNumberOfCheckedLeaves, m_iNumberOfTreeCheckedLeaves);
+                    }
+                } else if (gnode.distance > tmp.top().GetDistance()) {
+                    break;
+                }
+            }
+            //if(query == 700)
+            //std::cout << 4.9l << std::endl;
+        }
+
+        while (!tmp.empty()) {
+            res.push(Index::SPTAGCloserFirst(tmp.top().GetNode(), tmp.top().GetDistance()));
+            tmp.pop();
+        }
+
+        int num = 0;
+        while (!res.empty() && num < K) {
+            num ++;
+            auto top_node = res.top();
+            result.emplace_back(top_node.GetNode());
+            res.pop();
+        }
+    }
+
+    void ComponentSearchRouteSPTAG_KDT::KDTSearch(unsigned query, unsigned node, Index::Heap &m_NGQueue, Index::Heap &m_SPTQueue, Index::OptHashPosVector &nodeCheckStatus,
+                                                unsigned &m_iNumberOfCheckedLeaves, unsigned &m_iNumberOfTreeCheckedLeaves) {
+        if((int)node < 0) {
+            unsigned tmp = -(int)node - 1;
+            if(tmp > index->getBaseLen()) return;
+
+            if(nodeCheckStatus.CheckAndSet(tmp)) return;
+
+            ++m_iNumberOfCheckedLeaves;
+            ++m_iNumberOfTreeCheckedLeaves;
+
+            m_NGQueue.insert(Index::HeapCell(tmp, index->getDist()->compare(index->getBaseData() + index->getBaseDim() * query,
+                                                                            index->getBaseData() + index->getBaseDim() * tmp,
+                                                                            index->getBaseDim())));
+            return;
+        }
+        auto& tnode = index->m_pKDTreeRoots[node];
+
+        float distBound = 0;
+        float diff = (index->getBaseData() + index->getBaseDim() * query)[tnode.split_dim] - tnode.split_value;
+        float distanceBound = distBound + diff * diff;
+        unsigned otherChild, bestChild;
+        if (diff < 0)
+        {
+            bestChild = tnode.left;
+            otherChild = tnode.right;
+        }
+        else
+        {
+            otherChild = tnode.left;
+            bestChild = tnode.right;
+        }
+
+        m_SPTQueue.insert(Index::HeapCell(otherChild, distanceBound));
+        KDTSearch(query, bestChild, m_NGQueue, m_SPTQueue, nodeCheckStatus, m_iNumberOfCheckedLeaves, m_iNumberOfTreeCheckedLeaves);
+    }
+
+
+    /**
+     * SPTAG-BKT 搜索
+     * @param query 查询点
+     * @param pool 入口点
+     * @param res 结果集
+     */
+    void ComponentSearchRouteSPTAG_BKT::RouteInner(unsigned int query, std::vector<Index::Neighbor> &pool,
+                                                   std::vector<unsigned int> &res) {
+
+        const auto L = index->getParam().get<unsigned>("L_search");
+        const auto K = index->getParam().get<unsigned>("K_search");
+
+        unsigned m_iNumberOfCheckedLeaves = 0;
+        unsigned m_iNumOfContinuousNoBetterPropagation = 0;
+        unsigned m_iMaxCheck = 8192L;
+        unsigned maxCheck = index->m_iMaxCheckForRefineGraph > m_iMaxCheck ? index->m_iMaxCheckForRefineGraph : m_iMaxCheck;
+        unsigned m_iContinuousLimit = maxCheck / 64;
+
+        // Prioriy queue used for neighborhood graph
+        Index::Heap m_NGQueue;
+        // 初始化
+        m_NGQueue.Resize(maxCheck * 30);
+
+        // Priority queue Used for Tree
+        Index::Heap m_SPTQueue;
+        m_SPTQueue.Resize(maxCheck * 10);
+
+        Index::OptHashPosVector nodeCheckStatus;
+        nodeCheckStatus.Init(maxCheck, index->m_iHashTableExp);
+
+        Index::QueryResultSet p_query(L);
+
+        // init_search_trees
+        for(unsigned i = 0; i < index->m_iTreeNumber; i ++) {
+            const Index::BKTNode& node = index->m_pBKTreeRoots[index->m_pTreeStart[i]];
+            if (node.childStart < 0) {
+                m_SPTQueue.insert(Index::HeapCell(index->m_pTreeStart[i],
+                                                  index->getDist()->compare(index->getQueryData() + index->getQueryDim() * query,
+                                                                            index->getBaseData() + index->getBaseDim() * node.centerid,
+                                                                            index->getBaseDim())));
+            }
+            else {
+                for (unsigned begin = node.childStart; begin < node.childEnd; begin++) {
+                    unsigned cen = index->m_pBKTreeRoots[begin].centerid;
+                    m_SPTQueue.insert(Index::HeapCell(begin,
+                                                      index->getDist()->compare(index->getQueryData() + index->getQueryDim() * query,
+                                                                                index->getBaseData() + index->getBaseDim() * cen,
+                                                                                index->getBaseDim())));
+                }
+            }
+        }
+
+        // search_trees
+        while (!m_SPTQueue.empty())
+        {
+            Index::HeapCell bcell = m_SPTQueue.pop();
+            const Index::BKTNode& tnode = index->m_pBKTreeRoots[bcell.node];
+            if (tnode.childStart < 0) {
+                if (!nodeCheckStatus.CheckAndSet(tnode.centerid)) {
+                    m_iNumberOfCheckedLeaves++;
+                    m_NGQueue.insert(Index::HeapCell(tnode.centerid, bcell.distance));
+                }
+                if (m_iNumberOfCheckedLeaves >= index->m_iNumberOfInitialDynamicPivots) break;
+            }
+            else {
+                if (!nodeCheckStatus.CheckAndSet(tnode.centerid)) {
+                    m_NGQueue.insert(Index::HeapCell(tnode.centerid, bcell.distance));
+                }
+                for (unsigned begin = tnode.childStart; begin < tnode.childEnd; begin++) {
+                    unsigned cen = index->m_pBKTreeRoots[begin].centerid;
+                    m_SPTQueue.insert(Index::HeapCell(begin,
+                                                      index->getDist()->compare(index->getQueryData() + index->getQueryDim() * query,
+                                                                                index->getBaseData() + index->getBaseDim() * cen,
+                                                                                index->getBaseDim())));
+                }
+            }
+        }
+
+        // modify
+        const unsigned checkPos = index->m_iNeighborhoodSize - 1;
+        while (!m_NGQueue.empty()) {
+            Index::HeapCell gnode = m_NGQueue.pop();
+            int tmpNode = gnode.node;
+            std::vector<Index::SimpleNeighbor> node = index->getFinalGraph()[tmpNode];
+            if (gnode.distance <= p_query.worstDist()) {
+                //std::cout <<1.4 << " " << checkPos << " " << node.size() << std::endl;
+                unsigned checkNode = node[checkPos].id;
+                if ((int)checkNode < -1) {
+                    //std::cout << 2.211 << std::endl;
+                    std::cout << (int)(-2-(int)checkNode) << " " << checkNode <<  std::endl;
+                    const Index::BKTNode& tnode = index->m_pBKTreeRoots[-2 - (int)checkNode];
+                    //std::cout << 2.2111 << std::endl;
+                    int i = -tnode.childStart;
+                    //std::cout << 2.21112 << " " << i << std::endl;
+
+                    do {
+                        m_iNumOfContinuousNoBetterPropagation = 0;
+                        p_query.AddPoint(tmpNode, gnode.distance);
+                        break;
+                        tmpNode = index->m_pBKTreeRoots[i].centerid;
+                    }while(i++ < tnode.childEnd);
+                } else {
+                    //std::cout << 2.212 << std::endl;
+                    m_iNumOfContinuousNoBetterPropagation = 0;
+                    p_query.AddPoint(tmpNode, gnode.distance);
+                }
+            } else {
+                //std::cout <<1.5 << std::endl;
+                m_iNumOfContinuousNoBetterPropagation++;
+                if (m_iNumOfContinuousNoBetterPropagation > m_iContinuousLimit || m_iNumberOfCheckedLeaves > index->m_iMaxCheck) {
+                    //std::cout << 2.213 << std::endl;
+                    p_query.SortResult();
+
+                    int num = 0;
+                    for(auto & iter : p_query) {
+                        if(num == K) break;
+                        res.emplace_back(iter.VID);
+                        num ++;
+                    }
+                    return;
+                }
+            }
+            //std::cout << 2 << std::endl;
+
+            // modify
+            for (unsigned i = 0; i <= (checkPos > (node.size() - 1) ? checkPos : (node.size()-1)); i++) {
+                //std::cout << 2.1 << " " << i << " " << checkPos << std::endl;
+                unsigned nn_index = node[i].id;
+                //std::cout << nn_index << std::endl;
+                if ((int)nn_index < 0) break;
+                if (nodeCheckStatus.CheckAndSet(nn_index)) continue;
+                //std::cout << 2.21111 << std::endl;
+                float distance2leaf = index->getDist()->compare(index->getQueryData() + index->getQueryDim() * query,
+                                                                index->getBaseData() + index->getBaseDim() * nn_index,
+                                                                index->getBaseDim());
+                m_iNumberOfCheckedLeaves++;
+                m_NGQueue.insert(Index::HeapCell(nn_index, distance2leaf));
+            }
+            //std::cout << "2.23" << std::endl;
+            if (m_NGQueue.Top().distance >m_SPTQueue.Top().distance) {
+                //SearchTrees(m_pSamples, m_fComputeDistance, p_query, p_space, m_iNumberOfOtherDynamicPivots + p_space.m_iNumberOfCheckedLeaves);
+                while (!m_SPTQueue.empty())
+                {
+                    Index::HeapCell bcell = m_SPTQueue.pop();
+                    const Index::BKTNode& tnode = index->m_pBKTreeRoots[bcell.node];
+                    if (tnode.childStart < 0) {
+                        if (!nodeCheckStatus.CheckAndSet(tnode.centerid)) {
+                            m_iNumberOfCheckedLeaves++;
+                            m_NGQueue.insert(Index::HeapCell(tnode.centerid, bcell.distance));
+                        }
+                        if (m_iNumberOfCheckedLeaves >= index->m_iNumberOfInitialDynamicPivots) break;
+                    }
+                    else {
+                        if (!nodeCheckStatus.CheckAndSet(tnode.centerid)) {
+                            m_NGQueue.insert(Index::HeapCell(tnode.centerid, bcell.distance));
+                        }
+                        for (unsigned begin = tnode.childStart; begin < tnode.childEnd; begin++) {
+                            unsigned cen = index->m_pBKTreeRoots[begin].centerid;
+                            m_SPTQueue.insert(Index::HeapCell(begin,
+                                                              index->getDist()->compare(index->getQueryData() + index->getQueryDim() * query,
+                                                                                        index->getBaseData() + index->getBaseDim() * cen,
+                                                                                        index->getBaseDim())));
+                        }
+                    }
+                }
+            }
+
+            //std::cout << 4 << std::endl;
+        }
+
+        p_query.SortResult();
+        int num = 0;
+        std::cout << "p_query : " << std::endl;
+        for(auto & iter : p_query) {
+            if(num == K) break;
+            res.emplace_back(iter.VID);
+            std::cout << iter.VID << "|" << iter.Dist << " ";
+            num ++;
+        }
+        std::cout << std::endl;
     }
 }

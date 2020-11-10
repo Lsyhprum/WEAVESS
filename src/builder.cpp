@@ -80,6 +80,9 @@ namespace weavess {
         } else if (type == INIT_FANNG) {
             std::cout << "__INIT : FANNG__" << std::endl;
             a = new ComponentInitFANNG(final_index_);
+        } else if (type == INIT_HCNNG) {
+            std::cout << "__INIT : HCNNG__" << std::endl;
+            a = new ComponentInitHCNNG(final_index_);
         } else {
             std::cout << "__INIT : WRONG TYPE__" << std::endl;
             exit(-1);
@@ -212,6 +215,15 @@ namespace weavess {
         } else if (route_type == ROUTER_BACKTRACK) {
             std::cout << "__ROUTER : BACKTRACK__" << std::endl;
             b = new ComponentSearchRouteBacktrack(final_index_);
+        } else if (route_type == ROUTER_GUIDE) {
+            std::cout << "__ROUTER : GUIDED__" << std::endl;
+            b = new ComponentSearchRouteGuided(final_index_);
+        } else if (route_type == ROUTER_SPTAG_KDT) {
+            std::cout << "__ROUTER : SPTAG_KDT__" << std::endl;
+            b = new ComponentSearchRouteSPTAG_KDT(final_index_);
+        } else if (route_type == ROUTER_SPTAG_BKT) {
+            std::cout << "__ROUTER : SPTAG_BKT__" << std::endl;
+            b = new ComponentSearchRouteSPTAG_BKT(final_index_);
         } else {
             std::cerr << "__ROUTER : WRONG TYPE__" << std::endl;
             exit(-1);
@@ -236,10 +248,11 @@ namespace weavess {
 
                 a->SearchEntryInner(i, pool);
 
-                std::vector<unsigned> tmp(K);
-                b->RouteInner(i, pool, tmp);
+                b->RouteInner(i, pool, res[i]);
 
-                res[i] = tmp;
+//                for(unsigned j = 0; j < res[i].size(); j ++) {
+//                    std::cout << res[i][j] << " ";
+//                }
             }
 
             auto e1 = std::chrono::high_resolution_clock::now();
@@ -260,6 +273,15 @@ namespace weavess {
                     if (k == K)
                         cnt++;
                 }
+
+//                for(unsigned j = 0; j < K; j ++) {
+//                    std::cout << res[i][j] << " ";
+//                }
+//                std::cout << std::endl;
+//                for(unsigned j = 0; j < K; j ++) {
+//                    std::cout << final_index_->getGroundData()[i * final_index_->getGroundDim() + j] << " ";
+//                }
+//                std::cout << std::endl;
             }
 
             float acc = 1 - (float) cnt / (final_index_->getGroundLen() * K);

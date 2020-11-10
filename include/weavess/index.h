@@ -16,7 +16,9 @@
 
 // SPTAG
 #define ALIGN 32
-#define aligned_malloc(a, b) _mm_malloc(a, b)
+
+// HCNNG
+#define not_in_set(_elto, _set) (_set.find(_elto)==_set.end())
 
 #include <omp.h>
 #include <mutex>
@@ -38,6 +40,7 @@
 #include "policy.h"
 #include "distance.h"
 #include "parameters.h"
+#include "CommonDataStructure.h"
 
 namespace weavess {
 
@@ -496,11 +499,11 @@ namespace weavess {
         // node type for storing BKT
         struct BKTNode
         {
-            unsigned centerid;
-            unsigned childStart;
-            unsigned childEnd;
+            int centerid;
+            int childStart;
+            int childEnd;
 
-            BKTNode(unsigned cid = -1) : centerid(cid), childStart(-1), childEnd(-1) {}
+            BKTNode(int cid = -1) : centerid(cid), childStart(-1), childEnd(-1) {}
         };
 
         template <typename T>
@@ -521,8 +524,8 @@ namespace weavess {
             float* newWeightedCounts;
 
             KmeansArgs(int k, unsigned dim, unsigned datasize, int threadnum) : _K(k), _DK(k), _D(dim), _T(threadnum) {
-                centers = (T*)aligned_malloc(sizeof(T) * k * dim, ALIGN);
-                newTCenters = (T*)aligned_malloc(sizeof(T) * k * dim, ALIGN);
+                centers = (T*)_mm_malloc(sizeof(T) * k * dim, ALIGN);
+                newTCenters = (T*)_mm_malloc(sizeof(T) * k * dim, ALIGN);
                 counts = new unsigned[k];
                 newCenters = new float[threadnum * k * dim];
                 newCounts = new unsigned[threadnum * k];
@@ -534,10 +537,8 @@ namespace weavess {
             }
 
             ~KmeansArgs() {
-                delete[] centers;
-                delete[] newTCenters;
-//                aligned_free(centers);
-//                aligned_free(newTCenters);
+                _mm_free(centers);
+                _mm_free(newTCenters);
                 delete[] counts;
                 delete[] newCenters;
                 delete[] newCounts;
@@ -822,6 +823,208 @@ namespace weavess {
             float distance_;
         };
 
+        struct BasicResult
+        {
+            unsigned VID;
+            float Dist;
+
+            BasicResult() : VID(-1), Dist((std::numeric_limits<float>::max)()) {}
+
+            BasicResult(unsigned p_vid, float p_dist) : VID(p_vid), Dist(p_dist) {}
+        };
+
+        class QueryResult
+        {
+        public:
+            typedef BasicResult* iterator;
+            typedef const BasicResult* const_iterator;
+
+            QueryResult()
+                    : m_resultNum(0)
+            {
+            }
+
+
+            QueryResult(int p_resultNum)
+            {
+                Init(p_resultNum);
+            }
+
+
+            QueryResult(int p_resultNum, BasicResult* p_results)
+                    : m_resultNum(p_resultNum)
+
+            {
+                m_results.Set(p_results, p_resultNum, false);
+            }
+
+
+//            QueryResult(const QueryResult& p_other)
+//            {
+//                Init(p_other.m_resultNum);
+//                if (m_resultNum > 0)
+//                {
+//                    std::copy(p_other.m_results.Data(), p_other.m_results.Data() + m_resultNum, m_results.Data());
+//                }
+//            }
+
+
+            QueryResult& operator=(const QueryResult& p_other)
+            {
+                Init(p_other.m_resultNum);
+                if (m_resultNum > 0)
+                {
+                    std::copy(p_other.m_results.Data(), p_other.m_results.Data() + m_resultNum, m_results.Data());
+                }
+
+                return *this;
+            }
+
+
+            ~QueryResult()
+            {
+            }
+
+
+            inline void Init(int p_resultNum)
+            {
+                m_resultNum = p_resultNum;
+
+                m_results = Array<BasicResult>::Alloc(p_resultNum);
+            }
+
+
+            inline int GetResultNum() const
+            {
+                return m_resultNum;
+            }
+
+
+            inline BasicResult* GetResult(int i) const
+            {
+                return i < m_resultNum ? m_results.Data() + i : nullptr;
+            }
+
+
+            inline void SetResult(int p_index, unsigned p_VID, float p_dist)
+            {
+                if (p_index < m_resultNum)
+                {
+                    m_results[p_index].VID = p_VID;
+                    m_results[p_index].Dist = p_dist;
+                }
+            }
+
+
+            inline BasicResult* GetResults() const
+            {
+                return m_results.Data();
+            }
+
+
+            inline void Reset()
+            {
+                for (int i = 0; i < m_resultNum; i++)
+                {
+                    m_results[i].VID = -1;
+                    const float MaxDist = (std::numeric_limits<float>::max)();
+                    m_results[i].Dist = MaxDist;
+                }
+            }
+
+
+            iterator begin()
+            {
+                return m_results.Data();
+            }
+
+
+            iterator end()
+            {
+                return m_results.Data() + m_resultNum;
+            }
+
+
+            const_iterator begin() const
+            {
+                return m_results.Data();
+            }
+
+
+            const_iterator end() const
+            {
+                return m_results.Data() + m_resultNum;
+            }
+
+
+        protected:
+            int m_resultNum;
+
+            Array<BasicResult> m_results;
+        };
+
+        // Space to save temporary answer, similar with TopKCache
+        class QueryResultSet : public QueryResult
+        {
+        public:
+            QueryResultSet(int K) : QueryResult(K)
+            {
+            }
+
+//            QueryResultSet(const QueryResultSet& other) : QueryResult(other)
+//            {
+//            }
+
+            inline float worstDist() const
+            {
+                return m_results[0].Dist;
+            }
+
+            bool AddPoint(const unsigned index, float dist)
+            {
+                if (dist < m_results[0].Dist || (dist == m_results[0].Dist && index < m_results[0].VID))
+                {
+                    m_results[0].VID = index;
+                    m_results[0].Dist = dist;
+                    Heapify(m_resultNum);
+                    return true;
+                }
+                return false;
+            }
+
+            inline void SortResult()
+            {
+                for (int i = m_resultNum - 1; i >= 0; i--)
+                {
+                    std::swap(m_results[0], m_results[i]);
+                    Heapify(i);
+                }
+            }
+
+            void Reverse()
+            {
+                std::reverse(m_results.Data(), m_results.Data() + m_resultNum);
+            }
+
+        private:
+            void Heapify(int count)
+            {
+                int parent = 0, next = 1, maxidx = count - 1;
+                while (next < maxidx)
+                {
+                    if (m_results[next].Dist < m_results[next + 1].Dist) next++;
+                    if (m_results[parent].Dist < m_results[next].Dist)
+                    {
+                        std::swap(m_results[next], m_results[parent]);
+                        parent = next;
+                        next = (parent << 1) + 1;
+                    }
+                    else break;
+                }
+                if (next == maxidx && m_results[parent].Dist < m_results[next].Dist) std::swap(m_results[parent], m_results[next]);
+            }
+        };
+
         std::unordered_map<unsigned, unsigned> m_pSampleCenterMap;
 
         std::vector<unsigned> m_pTreeStart;
@@ -829,14 +1032,26 @@ namespace weavess {
         std::vector<BKTNode> m_pBKTreeRoots;
 
         unsigned numOfThreads;
+
+        // KDT/BKT 个数
         unsigned m_iTreeNumber;
+        // TPT 个数
+        unsigned m_iTPTNumber = 32;
+        // TPT 叶子个数
+        unsigned m_iTPTLeafSize = 2000;
+        // K
+        unsigned m_iNeighborhoodSize = 32;
+        // K2 = K * m_iNeighborhoodScale
+        unsigned m_iNeighborhoodScale = 2;
+        // L
+        unsigned m_iCEF = 1000;
+        unsigned m_iHashTableExp = 4;
+
+
 
         // 抽样选取数量
         unsigned m_iSamples = 1000;
-        unsigned m_iTPTNumber = 32;
-        unsigned m_iNeighborhoodSize = 32;
-        unsigned m_iNeighborhoodScale = 2;
-        unsigned m_iCEF = 1000;
+
         unsigned m_iCEFScale = 2;
         unsigned m_iBKTKmeansK = 32;
         unsigned m_iNumberOfInitialDynamicPivots = 50;
@@ -862,8 +1077,80 @@ namespace weavess {
         };
     };
 
+    class HCNNG {
+    public:
+        struct Edge{
+            int v1, v2;
+            float weight;
+            Edge(){
+                v1 = -1;
+                v2 = -1;
+                weight = -1;
+            }
+            Edge(int _v1, int _v2, float _weight){
+                v1 = _v1;
+                v2 = _v2;
+                weight = _weight;
+            }
+            bool operator<(const Edge& e) const {
+                return weight < e.weight;
+            }
+            ~Edge() { }
+        };
+
+        struct DisjointSet{
+            int * parent;
+            int * rank;
+            DisjointSet(int N){
+                parent = new int[N];
+                rank = new int[N];
+                for(int i=0; i<N; i++){
+                    parent[i] = i;
+                    rank[i] = 0;
+                }
+            }
+            void _union(int x, int y){
+                int xroot = parent[x];
+                int yroot = parent[y];
+                int xrank = rank[x];
+                int yrank = rank[y];
+                if(xroot == yroot)
+                    return;
+                else if(xrank < yrank)
+                    parent[xroot] = yroot;
+                else{
+                    parent[yroot] = xroot;
+                    if(xrank == yrank)
+                        rank[xroot] = rank[xroot] + 1;
+                }
+            }
+            int find(int x){
+                if(parent[x] != x)
+                    parent[x] = find(parent[x]);
+                return parent[x];
+            }
+
+            ~DisjointSet() {
+                delete[] parent;
+                delete[] rank;
+            }
+        };
+
+        struct Tnode {
+            unsigned div_dim;
+            std::vector <unsigned> left;
+            std::vector <unsigned> right;
+        };
+        std::vector <Tnode> Tn;
+
+        int xxx = 0;
+
+        unsigned minsize_cl = 0;
+        unsigned num_cl = 0;
+    };
+
     class Index : public NNDescent, public NSG, public SSG, public DPG, public VAMANA, public EFANNA, public IEH,
-            public NSW, public HNSW, public NGT, public SPTAG, public FANNG {
+            public NSW, public HNSW, public NGT, public SPTAG, public FANNG, public HCNNG {
     public:
         explicit Index() {
             dist_ = new Distance();
