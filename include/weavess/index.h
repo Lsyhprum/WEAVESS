@@ -31,7 +31,7 @@
 #include <fstream>
 #include <cassert>
 #include <iostream>
-#include <windows.h>
+//#include <windows.h>
 #include <algorithm>
 #include <unordered_set>
 #include <boost/dynamic_bitset.hpp>
@@ -191,7 +191,7 @@ namespace weavess {
 
     class VAMANA {
     public:
-        float alpha;
+        float alpha = 1;
     };
 
     class EFANNA {

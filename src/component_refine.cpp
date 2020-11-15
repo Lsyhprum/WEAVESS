@@ -29,7 +29,6 @@ namespace weavess {
 #pragma omp for schedule(dynamic, 100)
 #endif
             for (unsigned n = 0; n < index->getBaseLen(); ++n) {
-
                 b->PruneInner(n, range, flags, index->getFinalGraph()[n], cut_graph_);
             }
         }
@@ -539,16 +538,26 @@ namespace weavess {
                 Index::SimpleNeighbor nn(pool[j].id, pool[j].distance);
                 index->getFinalGraph()[i][j] = nn;
             }
+            std::sort(index->getFinalGraph()[i].begin(), index->getFinalGraph()[i].end());
         }
+
+//        for(int i = 0; i < 100; i ++) {
+//            std::cout << index->getFinalGraph()[i].size() << " : ";
+//            for(int j = 0; j < index->getFinalGraph()[i].size(); j ++) {
+//                std::cout << index->getFinalGraph()[i][j].id << "|" << index->getFinalGraph()[i][j].distance << " ";
+//            }
+//            std::cout << std::endl;
+//        }
     }
 
     void ComponentRefineVAMANA::SetConfigs() {
         index->R_refine = index->getParam().get<unsigned>("R_refine");
-        index->alpha = index->getParam().get<float>("alpha");
     }
 
     void ComponentRefineVAMANA::Link(Index::SimpleNeighbor *cut_graph_) {
         std::vector<std::mutex> locks(index->getBaseLen());
+
+        std::cout << "alpha " << index->alpha << std::endl;
 
         // CANDIDATE
         std::cout << "__CANDIDATE : NSG__" << std::endl;
@@ -556,9 +565,8 @@ namespace weavess {
 
         // PRUNE
         std::cout << "__PRUNE : VAMANA__" << std::endl;
-        ComponentPrune *b = new ComponentPruneHeuristic(index);
+        ComponentPrune *b = new ComponentPruneVAMANA(index);
 
-        // first prune
 #pragma omp parallel
         {
             std::vector<Index::SimpleNeighbor> pool;
@@ -575,15 +583,17 @@ namespace weavess {
             }
         }
 
-        // second prune
 #pragma omp for schedule(dynamic, 100)
         for (unsigned n = 0; n < index->getBaseLen(); ++n) {
             InterInsert(n, index->R_refine, locks, cut_graph_);
         }
+
+        // set step 2 alpha
+        index->alpha = 2;
     }
 
     void ComponentRefineVAMANA::InterInsert(unsigned int n, unsigned int range, std::vector<std::mutex> &locks,
-                                             Index::SimpleNeighbor *cut_graph_) {
+                                            Index::SimpleNeighbor *cut_graph_) {
         // 结点 n 近邻
         Index::SimpleNeighbor *src_pool = cut_graph_ + (size_t) n * (size_t) range;
         // 遍历近邻
@@ -637,7 +647,6 @@ namespace weavess {
                     if (!skip) {
                         result.push_back(temp_pool[k]);
                     } else {
-                        // save_remains  ??
                         skipped.push(cur_dist, temp_pool[k]);
                     }
 
@@ -690,7 +699,7 @@ namespace weavess {
 
             std::sort(index->graph_[i].pool.begin(), index->graph_[i].pool.end());
 
-            for (auto & j : index->graph_[i].pool)
+            for (auto &j : index->graph_[i].pool)
                 tmp.push_back(Index::SimpleNeighbor(j.id, j.distance));
 
             index->getFinalGraph()[i] = tmp;
@@ -875,8 +884,7 @@ namespace weavess {
         index->getFinalGraph().resize(index->getBaseLen());
 
         unsigned m_iRefineIter = 2;
-        for (int iter = 0; iter < m_iRefineIter - 1; iter++)
-        {
+        for (int iter = 0; iter < m_iRefineIter - 1; iter++) {
             index->L_refine = index->m_iCEF * index->m_iCEFScale;
             index->R_refine = index->m_iNeighborhoodSize;
             Link(cut_graph_);
@@ -963,8 +971,7 @@ namespace weavess {
         index->getFinalGraph().resize(index->getBaseLen());
 
         unsigned m_iRefineIter = 2;
-        for (int iter = 0; iter < m_iRefineIter - 1; iter++)
-        {
+        for (int iter = 0; iter < m_iRefineIter - 1; iter++) {
             index->L_refine = index->m_iCEF * index->m_iCEFScale;
             index->R_refine = index->m_iNeighborhoodSize;
             Link(cut_graph_);

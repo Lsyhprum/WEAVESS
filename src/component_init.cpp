@@ -24,8 +24,9 @@ namespace weavess {
 
             std::sort(index->graph_[i].pool.begin(), index->graph_[i].pool.end());
 
-            for (auto &j : index->graph_[i].pool)
+            for (auto &j : index->graph_[i].pool){
                 tmp.push_back(Index::SimpleNeighbor(j.id, j.distance));
+            }
 
             index->getFinalGraph()[i] = tmp;
 
@@ -206,7 +207,9 @@ namespace weavess {
     void ComponentInitFANNG::InitInner() {
         SetConfigs();
 
+        std::cout << 1 << std::endl;
         init();
+        std::cout << 2 << std::endl;
 
         // graph_ -> final_graph
         index->getFinalGraph().resize(index->getBaseLen());
@@ -1668,7 +1671,7 @@ namespace weavess {
 #pragma omp parallel for num_threads(index->numOfThreads)
         for (int i = 0; i < index->m_iTreeNumber; i++) {
             // 非多线程 -> 删除 ！！！
-            Sleep(i * 100);
+            //Sleep(i * 100);
             std::srand(clock());
 
             std::vector<unsigned> pindices(localindices.begin(), localindices.end());
@@ -1711,7 +1714,7 @@ namespace weavess {
 #pragma omp parallel for schedule(dynamic)
         for (int i = 0; i < index->m_iTPTNumber; i++) {
             // 非多线程注意注释
-            Sleep(i * 100);
+            //Sleep(i * 100);
             std::srand(clock());
             for (unsigned j = 0; j < index->getBaseLen(); j++) TptreeDataIndices[i][j] = j;
             std::random_shuffle(TptreeDataIndices[i].begin(), TptreeDataIndices[i].end());
@@ -2125,7 +2128,7 @@ namespace weavess {
 #pragma omp parallel for schedule(dynamic)
         for (int i = 0; i < index->m_iTPTNumber; i++) {
             // 非多线程注意注释
-            Sleep(i * 100);
+            //Sleep(i * 100);
             std::srand(clock());
             for (unsigned j = 0; j < index->getBaseLen(); j++) TptreeDataIndices[i][j] = j;
             std::random_shuffle(TptreeDataIndices[i].begin(), TptreeDataIndices[i].end());
