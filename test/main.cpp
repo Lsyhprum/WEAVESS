@@ -8,7 +8,7 @@ void KGraph(std::string base_path, std::string query_path, std::string ground_pa
     weavess::Parameters parameters;
     parameters.set<unsigned>("K", 25);
     parameters.set<unsigned>("L", 100);
-    parameters.set<unsigned>("ITER", 10);
+    parameters.set<unsigned>("ITER", 8);
     parameters.set<unsigned>("S", 10);
     parameters.set<unsigned>("R", 100);
 
@@ -67,7 +67,7 @@ void SSG(std::string base_path, std::string query_path, std::string ground_path)
     weavess::Parameters parameters;
     parameters.set<unsigned>("K", 200);
     parameters.set<unsigned>("L", 200);
-    parameters.set<unsigned>("ITER", 1);
+    parameters.set<unsigned>("ITER", 8);
     parameters.set<unsigned>("S", 10);
     parameters.set<unsigned>("R", 100);
 
@@ -90,9 +90,9 @@ void DPG(std::string base_path, std::string query_path, std::string ground_path)
     std::string graph_file = R"(dpg.knng)";
 
     weavess::Parameters parameters;
-    parameters.set<unsigned>("K", 200);
-    parameters.set<unsigned>("L", 200);
-    parameters.set<unsigned>("ITER", 3);
+    parameters.set<unsigned>("K", 50);
+    parameters.set<unsigned>("L", 60);
+    parameters.set<unsigned>("ITER", 8);
     parameters.set<unsigned>("S", 10);
     parameters.set<unsigned>("R", 100);
 
@@ -108,13 +108,18 @@ void DPG(std::string base_path, std::string query_path, std::string ground_path)
 
 void VAMANA(std::string base_path, std::string query_path, std::string ground_path) {
     weavess::Parameters parameters;
-    parameters.set<unsigned>("L", 200);
-    parameters.set<unsigned>("R_refine", 100);
-    parameters.set<float>("alpha", 1.5);
+
+    const unsigned R = 70;
+    const unsigned L = 125;
+
+    parameters.set<unsigned>("L", R);
+    parameters.set<unsigned>("L_refine", L);
+    parameters.set<unsigned>("R_refine", R);
 
     auto *builder = new weavess::IndexBuilder();
     builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
             -> init(weavess::INIT_RAND)
+            -> refine(weavess::REFINE_VAMANA, true)
             -> refine(weavess::REFINE_VAMANA, true)
             -> search(weavess::TYPE::SEARCH_ENTRY_CENTROID, weavess::TYPE::ROUTER_GREEDY);
 
@@ -267,7 +272,8 @@ int main() {
     //NSG(base_path, query_path, ground_path);
     //SSG(base_path, query_path, ground_path);
     //DPG(base_path, query_path, ground_path);
-    //VAMANA(base_path, query_path, ground_path);
+    VAMANA(base_path, query_path, ground_path);
+
     //EFANNA(base_path, query_path, ground_path);
     //IEH(base_path, query_path, ground_path);
     //NSW(base_path, query_path, ground_path);
@@ -275,8 +281,8 @@ int main() {
     //HCNNG(base_path, query_path, ground_path);
     //SPTAG_KDT(base_path, query_path, ground_path);
     //SPTAG_BKT(base_path, query_path, ground_path);
+    //FANNG(base_path, query_path, ground_path);
 
-    FANNG(base_path, query_path, ground_path);
     //NGT(base_path, query_path, ground_path);
 
     return 0;

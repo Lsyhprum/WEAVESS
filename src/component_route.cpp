@@ -52,6 +52,7 @@ namespace weavess {
             else ++k;
         }
 
+        res.resize(K);
         for (size_t i = 0; i < K; i++) {
             res[i] = pool[i].id;
         }
