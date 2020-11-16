@@ -60,13 +60,16 @@ namespace weavess {
      *  PRUNE       : RNG
      */
     void ComponentRefineFANNG::RefineInner() {
+
+        SetConfigs();
+
         unsigned range = index->R_refine;
 
         auto *cut_graph_ = new Index::SimpleNeighbor[index->getBaseLen() * range];
 
         // PRUNE
         std::cout << "__PRUNE : RNG__" << std::endl;
-        auto *b = new ComponentPruneNaive(index);
+        auto *b = new ComponentPruneHeuristic(index);
 
 #ifdef PARALLEL
 #pragma omp parallel
@@ -711,6 +714,13 @@ namespace weavess {
             std::vector<unsigned>().swap(index->graph_[i].rnn_new);
             std::vector<unsigned>().swap(index->graph_[i].rnn_new);
         }
+
+//        for(int i = 0; i < index->getBaseLen(); i ++) {
+//            for(int j = 0; j < index->getFinalGraph()[i].size(); j ++) {
+//                std::cout << index->getFinalGraph()[i][j].id << "|" << index->getFinalGraph()[i][j].distance << " ";
+//            }
+//            std::cout << std::endl;
+//        }
 
         std::vector<Index::nhood>().swap(index->graph_);
     }

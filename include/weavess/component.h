@@ -676,6 +676,16 @@ namespace weavess {
         void getSearchNodeList(Index::Node *node, const float *q, unsigned int lsize, std::vector<Index::Node *> &vn);
     };
 
+    class ComponentSearchEntryKDTSingle : public ComponentSearchEntry {
+    public:
+        explicit ComponentSearchEntryKDTSingle(Index *index) : ComponentSearchEntry(index) {}
+
+        void SearchEntryInner(unsigned query, std::vector<Index::Neighbor> &pool) override;
+
+    private:
+        void getSearchNodeList(Index::Node *node, const float *q, unsigned int lsize, std::vector<Index::Node *> &vn);
+    };
+
     class ComponentSearchEntryNone : public ComponentSearchEntry {
     public:
         explicit ComponentSearchEntryNone(Index *index) : ComponentSearchEntry(index) {}

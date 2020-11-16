@@ -133,9 +133,9 @@ void EFANNA(std::string base_path, std::string query_path, std::string ground_pa
 
     parameters.set<unsigned>("K", 200);
     parameters.set<unsigned>("L", 200);
-    parameters.set<unsigned>("ITER", 8);
+    parameters.set<unsigned>("ITER", 12);
     parameters.set<unsigned>("S", 10);
-    parameters.set<unsigned>("R", 10);
+    parameters.set<unsigned>("R", 100);
 
     auto *builder = new weavess::IndexBuilder();
     builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
@@ -216,14 +216,14 @@ void HCNNG(std::string base_path, std::string query_path, std::string ground_pat
     parameters.set<unsigned>("minsize_cl", 1000);
     parameters.set<unsigned>("num_cl", 20);
 
-    parameters.set<unsigned>("nTrees", 4);
+    parameters.set<unsigned>("nTrees", 10);
     parameters.set<unsigned>("mLevel", 4);
-    parameters.set<unsigned>("K", 200);
+    parameters.set<unsigned>("K", 10);
 
     auto *builder = new weavess::IndexBuilder();
     builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
             -> init(weavess::INIT_HCNNG)
-            -> search(weavess::SEARCH_ENTRY_KDT, weavess::ROUTER_GUIDE);
+            -> search(weavess::SEARCH_ENTRY_KDT, weavess::ROUTER_GREEDY);
 
     std::cout << "Time cost: " << builder->GetBuildTime().count() << std::endl;
 }
@@ -272,16 +272,16 @@ int main() {
     //NSG(base_path, query_path, ground_path);
     //SSG(base_path, query_path, ground_path);
     //DPG(base_path, query_path, ground_path);
-    VAMANA(base_path, query_path, ground_path);
+    //VAMANA(base_path, query_path, ground_path);
+    //FANNG(base_path, query_path, ground_path);
+    //IEH(base_path, query_path, ground_path);
 
     //EFANNA(base_path, query_path, ground_path);
-    //IEH(base_path, query_path, ground_path);
     //NSW(base_path, query_path, ground_path);
     //HNSW(base_path, query_path, ground_path);
-    //HCNNG(base_path, query_path, ground_path);
+    HCNNG(base_path, query_path, ground_path);
     //SPTAG_KDT(base_path, query_path, ground_path);
     //SPTAG_BKT(base_path, query_path, ground_path);
-    //FANNG(base_path, query_path, ground_path);
 
     //NGT(base_path, query_path, ground_path);
 

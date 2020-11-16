@@ -15,7 +15,7 @@
 | EFANNA |    Refinement    |                       |      KD-tree      |   NN-Descent  |              |              |      KD-tree       |       Greedy       |
 | IEH    |    Refinement    |         KNNG          |                   |               |              |              |        LSH         |       Greedy       |
 | NSW    |    Increment     |                       |     First Node    |               |              |              |                    |                    |
-| HNSW   |    Increment     |                       |   Top Layer Node  |               |   HEURISTIC  |              |                    |                    |
+| HNSW   |    Increment     |                       |   Top Layer Node  |               |     RNG      |              |                    |                    |
 | NGT    |    Increment     |         ANNG          |                   |               |     ONNG     |              |      DVPTree       |       Greedy       |
 | SPTAG  |  Divide&Conquer  |                       | KD-tree / BK-tree |               |     RNG      |              |                    |                    |
 | HCNNG  |  Divide&Conquer  |Hierarchical Clustering|                   |               |              |              |      KD-tree       |       Guided       |
@@ -53,6 +53,8 @@
 
 - [x] IEH
 
+- [x] VAMANA
+
 
 
 
@@ -70,8 +72,6 @@
 
 - [x] HCNNG
 
-- [x] VAMANA
-
 - [x] FANNG
 
 ### TODO
@@ -80,6 +80,9 @@
 * FANNG 朴素 init 方法代价较高 : 考虑改进为论文中的改进方法
 * VAMANA REFINE 速度慢
 * 检查个算法candidate init 后排序情况
+* efanna 算法问题
+* FANNG RNG -> HNSW prune
+* 检查 search getQueryData
 
 
 

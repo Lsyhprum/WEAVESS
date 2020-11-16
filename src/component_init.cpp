@@ -207,9 +207,7 @@ namespace weavess {
     void ComponentInitFANNG::InitInner() {
         SetConfigs();
 
-        std::cout << 1 << std::endl;
         init();
-        std::cout << 2 << std::endl;
 
         // graph_ -> final_graph
         index->getFinalGraph().resize(index->getBaseLen());
@@ -2538,7 +2536,8 @@ namespace weavess {
     // HCNNG
     void ComponentInitHCNNG::InitInner() {
 
-        // Hierarchical clustering
+        // -- Hierarchical clustering --
+
         SetConfigs();
 
         int max_mst_degree = 3;
@@ -2581,7 +2580,7 @@ namespace weavess {
             index->getFinalGraph()[i] = tmp;
         }
 
-        // kd-tree -> search entry
+        // -- KD-tree --
         unsigned seed = 1998;
 
         const auto TreeNum = index->getParam().get<unsigned>("nTrees");
@@ -2678,8 +2677,15 @@ namespace weavess {
 
         std::cout << "merge tree completed" << std::endl;
 
-        // space partition tree -> guided search
+        //  -- space partition tree -> guided search --
         build_tree();
+
+//        for(int i = 0; i < 10; i ++) {
+//            for(int j = 0; j < index->getFinalGraph()[i].size(); j ++) {
+//                std::cout << index->getFinalGraph()[i][j].id << "|" << index->getFinalGraph()[i][j].distance << " ";
+//            }
+//            std::cout << std::endl;
+//        }
     }
 
     void ComponentInitHCNNG::SetConfigs() {
