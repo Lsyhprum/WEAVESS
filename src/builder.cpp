@@ -166,10 +166,8 @@ namespace weavess {
         std::cout << "__SEARCH__" << std::endl;
 
         unsigned K = 10;
-        unsigned L_start = K;
-        unsigned L_end = 500;
-        unsigned experiment_num = 10;
-        unsigned LI = (L_end - L_start) / experiment_num;
+        unsigned L_st = 5;
+        unsigned L_st2 = 8;
 
         final_index_->getParam().set<unsigned>("K_search", K);
 
@@ -190,6 +188,9 @@ namespace weavess {
         } else if (entry_type == SEARCH_ENTRY_KDT) {
             std::cout << "__SEARCH ENTRY : KDT__" << std::endl;
             a = new ComponentSearchEntryKDT(final_index_);
+        } else if (entry_type == SEARCH_ENTRY_KDT_SINGLE) {
+            std::cout << "__SEARCH ENTRY : KDT SINGLE__" << std::endl;
+            a = new ComponentSearchEntryKDTSingle(final_index_);
         } else if (entry_type == SEARCH_ENTRY_NONE) {
             std::cout << "__SEARCH ENTRY : NONE__" << std::endl;
             a = new ComponentSearchEntryNone(final_index_);
@@ -232,7 +233,10 @@ namespace weavess {
             exit(-1);
         }
 
-        for (unsigned L = L_start; L < L_end; L += LI) {
+        for (unsigned i = 0; i < 10; i ++) {
+            unsigned L = L_st + L_st2;
+            L_st = L_st2;
+            L_st2 = L;
             std::cout << "SEARCH_L : " << L << std::endl;
             if (L < K) {
                 std::cout << "search_L cannot be smaller than search_K! " << std::endl;
@@ -250,6 +254,11 @@ namespace weavess {
                 pool.clear();
 
                 a->SearchEntryInner(i, pool);
+
+//                for(unsigned j = 0; j < pool.size(); j ++) {
+//                    std::cout << pool[j].id << "|" << pool[j].distance << " ";
+//                }
+//                std::cout << std::endl;
 
                 b->RouteInner(i, pool, res[i]);
 
