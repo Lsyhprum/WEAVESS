@@ -204,9 +204,9 @@ void NGT(std::string base_path, std::string query_path, std::string ground_path)
 
     auto *builder = new weavess::IndexBuilder();
     builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
-            -> init(weavess::INIT_ANNG)
-            -> refine(weavess::REFINE_ONNG, false)
-            -> search(weavess::SEARCH_ENTRY_NONE, weavess::ROUTER_NGT);
+            -> init(weavess::INIT_ANNG);
+            //-> refine(weavess::REFINE_ONNG, false)
+            //-> search(weavess::SEARCH_ENTRY_NONE, weavess::ROUTER_NGT);
 
     std::cout << "Time cost: " << builder->GetBuildTime().count() << std::endl;
 }
@@ -232,10 +232,28 @@ void SPTAG_KDT(std::string base_path, std::string query_path, std::string ground
     weavess::Parameters parameters;
     parameters.set<unsigned>("numOfThreads", 1);
     parameters.set<unsigned>("KDTNumber", 1);
-    parameters.set<unsigned>("NeighborhoodSize", 32);
+    parameters.set<unsigned>("NeighborhoodSize", 64);
     parameters.set<unsigned>("GraphNeighborhoodScale", 2);
     parameters.set<unsigned>("TPTLeafSize", 2000);
     parameters.set<unsigned>("CEF", 1000);
+
+    auto *builder = new weavess::IndexBuilder();
+    builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
+            -> init(weavess::INIT_SPTAG_KDT)
+            -> refine(weavess::REFINE_SPTAG_KDT, false);
+            //-> search(weavess::SEARCH_ENTRY_NONE, weavess::ROUTER_SPTAG_KDT);
+    std::cout << "Time cost: " << builder->GetBuildTime().count() << std::endl;
+}
+
+void SPTAG_KDT_new(std::string base_path, std::string query_path, std::string ground_path) {
+    weavess::Parameters parameters;
+    parameters.set<unsigned>("KDTNumber", 1);
+    parameters.set<unsigned>("TPTNumber", 32);
+    parameters.set<unsigned>("TPTLeafSize", 2000);
+    parameters.set<unsigned>("NeighborhoodSize", 32);
+    parameters.set<unsigned>("GraphNeighborhoodScale", 2);
+    parameters.set<unsigned>("CEF", 1000);
+    parameters.set<unsigned>("numOfThreads", 10);
 
     auto *builder = new weavess::IndexBuilder();
     builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
@@ -275,14 +293,14 @@ int main() {
     //VAMANA(base_path, query_path, ground_path);
     //FANNG(base_path, query_path, ground_path);
     //IEH(base_path, query_path, ground_path);
+    //HCNNG(base_path, query_path, ground_path);
+    SPTAG_KDT_new(base_path, query_path, ground_path);
 
     //EFANNA(base_path, query_path, ground_path);
     //NSW(base_path, query_path, ground_path);
     //HNSW(base_path, query_path, ground_path);
-    HCNNG(base_path, query_path, ground_path);
-    //SPTAG_KDT(base_path, query_path, ground_path);
-    //SPTAG_BKT(base_path, query_path, ground_path);
 
+    //SPTAG_BKT(base_path, query_path, ground_path);
     //NGT(base_path, query_path, ground_path);
 
     return 0;

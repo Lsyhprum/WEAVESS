@@ -70,7 +70,7 @@ namespace weavess {
             a = new ComponentInitANNG(final_index_);
         } else if (type == INIT_SPTAG_KDT) {
             std::cout << "__INIT : SPTAG_KDT__" << std::endl;
-            a = new ComponentInitSPTAG_KDT(final_index_);
+            a = new ComponentInitSPTAG_KDT_new(final_index_);
         } else if (type == INIT_SPTAG_BKT) {
             std::cout << "__INIT : SPTAG_BKT__" << std::endl;
             a = new ComponentInitSPTAG_BKT(final_index_);
@@ -129,7 +129,7 @@ namespace weavess {
             a = new ComponentRefineSPTAG_BKT(final_index_);
         } else if (type == REFINE_SPTAG_KDT) {
             std::cout << "__REFINE : SPTAG_KDT__" << std::endl;
-            a = new ComponentRefineSPTAG_KDT(final_index_);
+            a = new ComponentRefineSPTAG_KDT_new(final_index_);
         } else if (type == REFINE_FANNG) {
             std::cout << "__REFINE : FANNG__" << std::endl;
             a = new ComponentRefineFANNG(final_index_);
@@ -224,7 +224,7 @@ namespace weavess {
             b = new ComponentSearchRouteGuided(final_index_);
         } else if (route_type == ROUTER_SPTAG_KDT) {
             std::cout << "__ROUTER : SPTAG_KDT__" << std::endl;
-            b = new ComponentSearchRouteSPTAG_KDT(final_index_);
+            b = new ComponentSearchRouteSPTAG_KDT_new(final_index_);
         } else if (route_type == ROUTER_SPTAG_BKT) {
             std::cout << "__ROUTER : SPTAG_BKT__" << std::endl;
             b = new ComponentSearchRouteSPTAG_BKT(final_index_);
