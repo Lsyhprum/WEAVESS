@@ -25,8 +25,8 @@ void FANNG(std::string base_path, std::string query_path, std::string ground_pat
     std::string graph_file = R"(fanng.graph)";
 
     weavess::Parameters parameters;
+    parameters.set<unsigned>("L", 100);
     parameters.set<unsigned>("R_refine", 25);
-    parameters.set<unsigned>("M", 30);
 
     auto *builder = new weavess::IndexBuilder();
     builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
@@ -291,10 +291,10 @@ int main() {
     //SSG(base_path, query_path, ground_path);
     //DPG(base_path, query_path, ground_path);
     //VAMANA(base_path, query_path, ground_path);
-    //FANNG(base_path, query_path, ground_path);
+    FANNG(base_path, query_path, ground_path);
     //IEH(base_path, query_path, ground_path);
     //HCNNG(base_path, query_path, ground_path);
-    SPTAG_KDT_new(base_path, query_path, ground_path);
+    //SPTAG_KDT_new(base_path, query_path, ground_path);
 
     //EFANNA(base_path, query_path, ground_path);
     //NSW(base_path, query_path, ground_path);

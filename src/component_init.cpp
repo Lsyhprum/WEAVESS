@@ -216,8 +216,12 @@ namespace weavess {
 
             std::sort(index->graph_[i].pool.begin(), index->graph_[i].pool.end());
 
-            for (auto &j : index->graph_[i].pool)
-                tmp.push_back(Index::SimpleNeighbor(j.id, j.distance));
+            for(int j = 0; j < index->L; j ++) {
+                tmp.push_back(Index::SimpleNeighbor(index->graph_[i].pool[j].id, index->graph_[i].pool[j].distance));
+            }
+
+//            for (auto &j : index->graph_[i].pool)
+//                tmp.push_back(Index::SimpleNeighbor(j.id, j.distance));
 
             index->getFinalGraph()[i] = tmp;
 
@@ -234,7 +238,7 @@ namespace weavess {
     }
 
     void ComponentInitFANNG::SetConfigs() {
-
+        index->L = index->getParam().get<unsigned>("L");
     }
 
     void ComponentInitFANNG::init() {
