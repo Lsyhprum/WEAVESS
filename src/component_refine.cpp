@@ -1002,15 +1002,17 @@ namespace weavess {
             }
         }
 
-//        for(int i = 0; i < index->getBaseLen(); i ++) {
-//            std::cout << i << " " << index->getFinalGraph()[i].size() << std::endl;
-//            for(int j = 0; j < index->getFinalGraph()[i].size(); j ++) {
+        for(int i = 0; i < 10; i ++) {
+            std::cout << i << " " << index->getFinalGraph()[i].size() << std::endl;
+            for(int j = 0; j < index->getFinalGraph()[i].size(); j ++) {
+                std::cout << index->getFinalGraph()[i][j].id << " " << index->getFinalGraph()[i][j].distance << " ";
 //                if(index->getFinalGraph()[i][j].id > index->getBaseLen()) {
 //                    std::cout << "wtf" << std::endl;
 //                    std::cout << i << " " << j << " " << index->getFinalGraph()[i][j].id << " " << index->getFinalGraph()[i][j].distance << std::endl;
 //                }
-//            }
-//        }
+            }
+            std::cout << std::endl;
+        }
 
         index->m_iNeighborhoodSize /= index->m_iNeighborhoodScale;  //K
         auto *cut_graph2_ = new Index::SimpleNeighbor[index->getBaseLen() * index->m_iNeighborhoodSize];
@@ -1035,6 +1037,18 @@ namespace weavess {
                 }
             }
         }
+
+        for(int i = 0; i < 10; i ++) {
+            std::cout << i << " " << index->getFinalGraph()[i].size() << std::endl;
+            for(int j = 0; j < index->getFinalGraph()[i].size(); j ++) {
+                std::cout << index->getFinalGraph()[i][j].id << " " << index->getFinalGraph()[i][j].distance << " ";
+//                if(index->getFinalGraph()[i][j].id > index->getBaseLen()) {
+//                    std::cout << "wtf" << std::endl;
+//                    std::cout << i << " " << j << " " << index->getFinalGraph()[i][j].id << " " << index->getFinalGraph()[i][j].distance << std::endl;
+//                }
+            }
+            std::cout << std::endl;
+        }
     }
 
     void ComponentRefineSPTAG_KDT::Link(Index::SimpleNeighbor *cut_graph_) {
@@ -1045,8 +1059,8 @@ namespace weavess {
         auto *a = new ComponentCandidateSPTAG_KDT(index);
 
         // PRUNE
-        std::cout << "__PRUNE : NAIVE__" << std::endl;
-        auto *b = new ComponentPruneNaive(index);
+        std::cout << "__PRUNE : RNG__" << std::endl;
+        auto *b = new ComponentPruneHeuristic(index);
 
 #pragma omp parallel
         {
@@ -1060,6 +1074,107 @@ namespace weavess {
                 flags.reset();
 
                 a->CandidateInner(n, n, flags, pool);
+                //std::cout << "candidate finish" << std::endl;
+                //std::cout << n << " candidate : " << pool.size() << std::endl;
+                b->PruneInner(n, index->R_refine, flags, pool, cut_graph_);
+                //std::cout << "prune finish" << std::endl;
+                //std::cout << n << " prune : " << pool.size() << std::endl;
+            }
+
+            std::vector<Index::SimpleNeighbor>().swap(pool);
+        }
+    }
+
+    void ComponentRefineSPTAG_KDT_new::RefineInner() {
+        auto *cut_graph_ = new Index::SimpleNeighbor[index->getBaseLen() * (size_t) index->m_iNeighborhoodSize];
+
+        unsigned m_iRefineIter = 2;
+        for (int iter = 0; iter < m_iRefineIter - 1; iter++) {
+            index->L_refine = index->m_iCEF * index->m_iCEFScale;
+            index->R_refine = index->m_iNeighborhoodSize;
+            Link(cut_graph_);
+
+            for (size_t i = 0; i < index->getBaseLen(); i++) {
+                Index::SimpleNeighbor *pool = cut_graph_ + i * (size_t) index->m_iNeighborhoodSize;
+                unsigned pool_size = 0;
+                for (unsigned j = 0; j < index->m_iNeighborhoodSize; j++) {
+                    if (pool[j].distance == -1) break;
+                    pool_size = j;
+                }
+                pool_size++;
+                for (unsigned j = 0; j < pool_size; j++) {
+                    Index::SimpleNeighbor nn(pool[j].id, pool[j].distance);
+                    index->getFinalGraph()[i][j] = nn;
+                }
+                index->getFinalGraph()[i].resize(pool_size);
+            }
+        }
+
+//        for(int i = 0; i < 10; i ++) {
+//            std::cout << i << " " << index->getFinalGraph()[i].size() << std::endl;
+//            for(int j = 0; j < index->getFinalGraph()[i].size(); j ++) {
+//                std::cout << index->getFinalGraph()[i][j].id << " " << index->getFinalGraph()[i][j].distance << " ";
+//            }
+//            std::cout << std::endl;
+//        }
+
+        index->m_iNeighborhoodSize /= index->m_iNeighborhoodScale;  //K
+        auto *cut_graph2_ = new Index::SimpleNeighbor[index->getBaseLen() * index->m_iNeighborhoodSize];
+
+        if (m_iRefineIter > 0) {
+            index->L_refine = index->m_iCEF;
+            index->R_refine = index->m_iNeighborhoodSize;
+            Link(cut_graph2_);
+
+            for (size_t i = 0; i < index->getBaseLen(); i++) {
+                Index::SimpleNeighbor *pool = cut_graph2_ + i * (size_t) index->m_iNeighborhoodSize;
+                unsigned pool_size = 0;
+                for (unsigned j = 0; j < index->m_iNeighborhoodSize; j++) {
+                    if (pool[j].distance == -1) break;
+                    pool_size = j;
+                }
+                pool_size++;
+                for (unsigned j = 0; j < pool_size; j++) {
+                    Index::SimpleNeighbor nn(pool[j].id, pool[j].distance);
+                    index->getFinalGraph()[i][j] = nn;
+                }
+                index->getFinalGraph()[i].resize(pool_size);
+            }
+        }
+
+//        for(int i = 0; i < 10; i ++) {
+//            std::cout << i << " " << index->getFinalGraph()[i].size() << std::endl;
+//            for(int j = 0; j < index->getFinalGraph()[i].size(); j ++) {
+//                std::cout << index->getFinalGraph()[i][j].id << " " << index->getFinalGraph()[i][j].distance << " ";
+//            }
+//            std::cout << std::endl;
+//        }
+    }
+
+    void ComponentRefineSPTAG_KDT_new::Link(Index::SimpleNeighbor *cut_graph_) {
+        std::vector<std::mutex> locks(index->getBaseLen());
+
+        // CANDIDATE
+        std::cout << "__CANDIDATE : SPTAG_KDT__" << std::endl;
+        auto *a = new ComponentCandidateSPTAG_KDT_new(index);
+
+        // PRUNE
+        std::cout << "__PRUNE : RNG__" << std::endl;
+        auto *b = new ComponentPruneHeuristic(index);
+
+#pragma omp parallel
+        {
+            std::vector<Index::SimpleNeighbor> pool;
+            boost::dynamic_bitset<> flags{index->getBaseLen(), 0};
+
+#pragma omp for schedule(dynamic, 100)
+            for (unsigned n = 0; n < index->getBaseLen(); ++n) {
+                pool.clear();
+                flags.reset();
+
+                a->CandidateInner(n, n, flags, pool);
+//                for(int i = 0; i < pool.size(); i ++)
+//                    std::cout << pool[i].id << "|" << pool[i].distance << " ";
                 //std::cout << "candidate finish" << std::endl;
                 //std::cout << n << " candidate : " << pool.size() << std::endl;
                 b->PruneInner(n, index->R_refine, flags, pool, cut_graph_);

@@ -22,21 +22,41 @@
 
 ## Parameters
 
+### FANNG
+
+|  Name        |  Default  |  Description                       |  sift1M |  gist |  glove-100 |  crawl |  audio |  msong |  uqv |  enron |
+|:------------:|:---------:|:----------------------------------:|:-------:|:-----:|:----------:|:------:|:------:|:------:|:----:|:------:|
+|  R           |           | degree bound                       |    70   |   10  |     10     |   90   |   90   |   50   |  10  |   30   |
+
 ### IEH
 
-|  Name        |  Default  |  Description                                  |
-|:------------:|:---------:|:---------------------------------------------:|
-|  P           | 10        | number of top nearest candidates              |
-|  K           | 50        | number of expansion                           |
-|  S           | 3         | iteration number                              |
+|  Name        |  Default  |  Description                       |
+|:------------:|:---------:|:----------------------------------:|
+|  P           | 10        | number of top nearest candidates   |
+|  K           | 50        | number of expansion                |
+|  S           | 3         | iteration number                   |
 
 ### VAMANA
 
-|  Name        |  Default  |  Description                                  |
-|:------------:|:---------:|:---------------------------------------------:|
-|  R           | 70        | degree bound                                  |
-|  L           | 125       | number of top nearest candidates              |
-|  alpha       | 2         | distance threshold                            |
+|  Name        |  Default  |  Description                       |  sift1M |  gist |  glove-100 |  crawl |  audio |  msong |  uqv |  enron |
+|:------------:|:---------:|:----------------------------------:|:-------:|:-----:|:----------:|:------:|:------:|:------:|:----:|:------:|
+|  R           | 70        | degree bound                       |    70   |  110  |    110     |    70  |   70   |   30   |  30  |   30   |
+|  L           | 125       | number of top nearest candidates   |    80   |  120  |    140     |   100  |  100   |   40   |  60  |   40   |
+|  alpha       | 2         | distance threshold                 |         |       |            |        |        |        |      |        |
+
+### NSW
+
+|  Name             |  Default  |  Description                             |  sift1M |  gist |  glove-100 |  crawl |  audio |  msong |  uqv |  enron |
+|:-----------------:|:---------:|:----------------------------------------:|:-------:|:-----:|:----------:|:------:|:------:|:------:|:----:|:------:|
+|  max_m0           |  24       | max number of edges for nodes at level0  |    40   |   60  |     80     |    60  |   40   |   60   |  30  |   80   |
+|  ef_construction  |  150      | number of top nearest candidates         |   300   |  200  |    100     |   400  |  800   |  300   | 400  |  600   |
+
+### HCNNG
+
+|  Name        |  Default  |  Description                       |  sift1M |  gist |  glove-100 |  crawl |  audio |  msong |  uqv |  enron |
+|:------------:|:---------:|:----------------------------------:|:-------:|:-----:|:----------:|:------:|:------:|:------:|:----:|:------:|
+|  num_cl      |           | num clusters                       |    45   |   30  |     60     |   35   |   40   |   55   |  20  |   30   |
+|  minsize_cl  |  sqrt(N)  | min size cluster                   |         |       |            |        |        |        |      |        |
  
 
 ## TODO
@@ -55,6 +75,10 @@
 
 - [x] VAMANA
 
+- [x] HCNNG
+
+- [x] FANNG
+
 
 
 
@@ -62,17 +86,15 @@
 
 - [x] HNSW
 
-
-
 - [ ] NGT
 
 - [x] SPTAG
 
 
 
-- [x] HCNNG
 
-- [x] FANNG
+
+
 
 ### TODO
 

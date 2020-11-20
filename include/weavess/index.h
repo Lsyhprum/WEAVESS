@@ -31,7 +31,7 @@
 #include <fstream>
 #include <cassert>
 #include <iostream>
-//#include <windows.h>
+#include <windows.h>
 #include <algorithm>
 #include <unordered_set>
 #include <boost/dynamic_bitset.hpp>
@@ -490,9 +490,9 @@ namespace weavess {
     public:
         struct KDTNode
         {
-            unsigned left;
-            unsigned right;
-            unsigned split_dim;
+            int left;
+            int right;
+            int split_dim;
             float split_value;
         };
 
@@ -510,27 +510,27 @@ namespace weavess {
         struct KmeansArgs {
             int _K;
             int _DK;
-            unsigned _D;
+            int _D;
             int _T;
             T* centers;
             T* newTCenters;
-            unsigned* counts;
+            int* counts;
             float* newCenters;
-            unsigned* newCounts;
+            int* newCounts;
             int* label;
-            unsigned* clusterIdx;
+            int* clusterIdx;
             float* clusterDist;
             float* weightedCounts;
             float* newWeightedCounts;
 
-            KmeansArgs(int k, unsigned dim, unsigned datasize, int threadnum) : _K(k), _DK(k), _D(dim), _T(threadnum) {
+            KmeansArgs(int k, int dim, int datasize, int threadnum) : _K(k), _DK(k), _D(dim), _T(threadnum) {
                 centers = (T*)_mm_malloc(sizeof(T) * k * dim, ALIGN);
                 newTCenters = (T*)_mm_malloc(sizeof(T) * k * dim, ALIGN);
-                counts = new unsigned[k];
+                counts = new int[k];
                 newCenters = new float[threadnum * k * dim];
-                newCounts = new unsigned[threadnum * k];
+                newCounts = new int[threadnum * k];
                 label = new int[datasize];
-                clusterIdx = new unsigned[threadnum * k];
+                clusterIdx = new int[threadnum * k];
                 clusterDist = new float[threadnum * k];
                 weightedCounts = new float[k];
                 newWeightedCounts = new float[threadnum * k];
@@ -550,7 +550,7 @@ namespace weavess {
             }
 
             inline void ClearCounts() {
-                memset(newCounts, 0, sizeof(unsigned) * _T * _K);
+                memset(newCounts, 0, sizeof(int) * _T * _K);
                 memset(newWeightedCounts, 0, sizeof(float) * _T * _K);
             }
 
@@ -565,16 +565,16 @@ namespace weavess {
                 }
             }
 
-            void Shuffle(std::vector<unsigned>& indices, unsigned first, unsigned last) {
-                unsigned* pos = new unsigned[_K];
+            void Shuffle(std::vector<int>& indices, int first, int last) {
+                int* pos = new int[_K];
                 pos[0] = first;
                 for (int k = 1; k < _K; k++) pos[k] = pos[k - 1] + newCounts[k - 1];
 
                 for (int k = 0; k < _K; k++) {
                     if (newCounts[k] == 0) continue;
-                    unsigned i = pos[k];
+                    int i = pos[k];
                     while (newCounts[k] > 0) {
-                        unsigned swapid = pos[label[i]] + newCounts[label[i]] - 1;
+                        int swapid = pos[label[i]] + newCounts[label[i]] - 1;
                         newCounts[label[i]]--;
                         std::swap(indices[i], indices[swapid]);
                         std::swap(label[i], label[swapid]);
@@ -588,10 +588,10 @@ namespace weavess {
 
         struct HeapCell
         {
-            unsigned node;
+            int node;
             float distance;
 
-            HeapCell(unsigned _node = -1, float _distance = (std::numeric_limits<float>::max)()) : node(_node), distance(_distance) {}
+            HeapCell(int _node = -1, float _distance = (std::numeric_limits<float>::max)()) : node(_node), distance(_distance) {}
 
             inline bool operator < (const HeapCell& rhs) const
             {
@@ -668,15 +668,6 @@ namespace weavess {
                 heapify();      /* Move new node 1 to right position. */
                 return heap[count + 1];  /* Return old last node. */
             }
-        private:
-            // Storage array for the heap.
-            // Type T must be comparable.
-            std::unique_ptr<HeapCell[]> heap;
-            int length;
-            int count; // Number of element in the heap
-            int lastlevel;
-            // Reorganizes the heap (a parent is smaller than its children) starting with a node.
-
             void heapify()
             {
                 int parent = 1, next = 2;
@@ -691,6 +682,14 @@ namespace weavess {
                 }
                 if (next == count && heap[next] < heap[parent]) std::swap(heap[parent], heap[next]);
             }
+        private:
+            // Storage array for the heap.
+            // Type T must be comparable.
+            std::unique_ptr<HeapCell[]> heap;
+            int length;
+            int count; // Number of element in the heap
+            int lastlevel;
+            // Reorganizes the heap (a parent is smaller than its children) starting with a node.
         };
 
         class OptHashPosVector
@@ -708,18 +707,18 @@ namespace weavess {
             // Record 2 hash tables.
             // [0~m_poolSize + 1) is the first block.
             // [m_poolSize + 1, 2*(m_poolSize + 1)) is the second block;
-            std::unique_ptr<unsigned[]> m_hashTable;
+            std::unique_ptr<int[]> m_hashTable;
 
 
-            inline unsigned hash_func2(unsigned idx, int loop)
+            inline int hash_func2(int idx, int loop)
             {
                 return (idx + loop) & m_poolSize;
             }
 
 
-            inline unsigned hash_func(unsigned idx)
+            inline int hash_func(int idx)
             {
-                return ((unsigned)(idx * 99991) + _rotl(idx, 2) + 101) & m_poolSize;
+                return ((int)(idx * 99991) + _rotl(idx, 2) + 101) & m_poolSize;
             }
 
         public:
@@ -728,7 +727,7 @@ namespace weavess {
             ~OptHashPosVector() {}
 
 
-            void Init(unsigned size, int exp)
+            void Init(int size, int exp)
             {
                 int ex = 0;
                 while (size != 0) {
@@ -737,7 +736,7 @@ namespace weavess {
                 }
                 m_secondHash = true;
                 m_poolSize = (1 << (ex + exp)) - 1;
-                m_hashTable.reset(new unsigned[(m_poolSize + 1) * 2]);
+                m_hashTable.reset(new int[(m_poolSize + 1) * 2]);
                 clear();
             }
 
@@ -746,27 +745,27 @@ namespace weavess {
                 if (!m_secondHash)
                 {
                     // Clear first block.
-                    memset(m_hashTable.get(), 0, sizeof(unsigned) * (m_poolSize + 1));
+                    memset(m_hashTable.get(), 0, sizeof(int) * (m_poolSize + 1));
                 }
                 else
                 {
                     // Clear all blocks.
                     m_secondHash = false;
-                    memset(m_hashTable.get(), 0, 2 * sizeof(unsigned) * (m_poolSize + 1));
+                    memset(m_hashTable.get(), 0, 2 * sizeof(int) * (m_poolSize + 1));
                 }
             }
 
 
-            inline bool CheckAndSet(unsigned idx)
+            inline bool CheckAndSet(int idx)
             {
                 // Inner Index is begin from 1
                 return _CheckAndSet(m_hashTable.get(), idx + 1) == 0;
             }
 
 
-            inline int _CheckAndSet(unsigned* hashTable, unsigned idx)
+            inline int _CheckAndSet(int* hashTable, int idx)
             {
-                unsigned index = hash_func((unsigned)idx);
+                int index = hash_func((int)idx);
                 for (int loop = 0; loop < m_maxLoop; ++loop)
                 {
                     if (!hashTable[index])
@@ -799,38 +798,38 @@ namespace weavess {
 
         class SPTAGFurtherFirst {
         public:
-            SPTAGFurtherFirst(unsigned node, float distance) : node_(node), distance_(distance) {}
+            SPTAGFurtherFirst(int node, float distance) : node_(node), distance_(distance) {}
             inline float GetDistance() const { return distance_; }
-            inline unsigned GetNode() const { return node_; }
+            inline int GetNode() const { return node_; }
             bool operator< (const SPTAGFurtherFirst& n) const {
                 return (distance_ < n.GetDistance());
             }
         private:
-            unsigned node_;
+            int node_;
             float distance_;
         };
 
         class SPTAGCloserFirst {
         public:
-            SPTAGCloserFirst(unsigned node, float distance) : node_(node), distance_(distance) {}
+            SPTAGCloserFirst(int node, float distance) : node_(node), distance_(distance) {}
             inline float GetDistance() const { return distance_; }
-            inline unsigned GetNode() const { return node_; }
+            inline int GetNode() const { return node_; }
             bool operator< (const SPTAGCloserFirst& n) const {
                 return (distance_ > n.GetDistance());
             }
         private:
-            unsigned node_;
+            int node_;
             float distance_;
         };
 
         struct BasicResult
         {
-            unsigned VID;
+            int VID;
             float Dist;
 
             BasicResult() : VID(-1), Dist((std::numeric_limits<float>::max)()) {}
 
-            BasicResult(unsigned p_vid, float p_dist) : VID(p_vid), Dist(p_dist) {}
+            BasicResult(int p_vid, float p_dist) : VID(p_vid), Dist(p_dist) {}
         };
 
         class QueryResult
@@ -906,7 +905,7 @@ namespace weavess {
             }
 
 
-            inline void SetResult(int p_index, unsigned p_VID, float p_dist)
+            inline void SetResult(int p_index, int p_VID, float p_dist)
             {
                 if (p_index < m_resultNum)
                 {
@@ -980,7 +979,7 @@ namespace weavess {
                 return m_results[0].Dist;
             }
 
-            bool AddPoint(const unsigned index, float dist)
+            bool AddPoint(const int index, float dist)
             {
                 if (dist < m_results[0].Dist || (dist == m_results[0].Dist && index < m_results[0].VID))
                 {
@@ -1025,9 +1024,9 @@ namespace weavess {
             }
         };
 
-        std::unordered_map<unsigned, unsigned> m_pSampleCenterMap;
+        std::unordered_map<int, int> m_pSampleCenterMap;
 
-        std::vector<unsigned> m_pTreeStart;
+        std::vector<int> m_pTreeStart;
         std::vector<KDTNode> m_pKDTreeRoots;
         std::vector<BKTNode> m_pBKTreeRoots;
 
@@ -1035,10 +1034,12 @@ namespace weavess {
 
         // KDT/BKT 个数
         unsigned m_iTreeNumber;
+        unsigned m_numTopDimensionKDTSplit = 5;
         // TPT 个数
         unsigned m_iTPTNumber = 32;
         // TPT 叶子个数
         unsigned m_iTPTLeafSize = 2000;
+        unsigned m_numTopDimensionTPTSplit = 5;
         // K
         unsigned m_iNeighborhoodSize = 32;
         // K2 = K * m_iNeighborhoodScale
@@ -1047,10 +1048,8 @@ namespace weavess {
         unsigned m_iCEF = 1000;
         unsigned m_iHashTableExp = 4;
 
-
-
         // 抽样选取数量
-        unsigned m_iSamples = 1000;
+        int m_iSamples = 1000;
 
         unsigned m_iCEFScale = 2;
         unsigned m_iBKTKmeansK = 32;
