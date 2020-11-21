@@ -1052,8 +1052,10 @@ namespace weavess {
         int m_iSamples = 1000;
 
         unsigned m_iCEFScale = 2;
-        unsigned m_iBKTKmeansK = 32;
+        unsigned m_iBKTKmeansK;
+        unsigned m_iBKTLeafSize = 8;
         unsigned m_iNumberOfInitialDynamicPivots = 50;
+        unsigned m_iNumberOfOtherDynamicPivots = 4;
         unsigned m_iMaxCheckForRefineGraph = 10000;
         unsigned m_iMaxCheck = 8192L;
     };

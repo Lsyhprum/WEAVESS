@@ -261,6 +261,133 @@ namespace weavess {
         }
     }
 
+    void ComponentCandidateSPTAG_BKT_new::BKTSearch(unsigned int query, Index::Heap &m_NGQueue,
+                                                    Index::Heap &m_SPTQueue, Index::OptHashPosVector &nodeCheckStatus,
+                                                    unsigned int &m_iNumberOfCheckedLeaves,
+                                                    unsigned int &m_iNumberOfTreeCheckedLeaves,
+                                                    int p_limits) {
+        while (!m_SPTQueue.empty())
+        {
+            Index::HeapCell bcell = m_SPTQueue.pop();
+            const Index::BKTNode& tnode = index->m_pBKTreeRoots[bcell.node];
+            if (tnode.childStart < 0) {
+                if (!nodeCheckStatus.CheckAndSet(tnode.centerid)) {
+                    m_iNumberOfCheckedLeaves++;
+                    m_NGQueue.insert(Index::HeapCell(tnode.centerid, bcell.distance));
+                }
+                if (m_iNumberOfCheckedLeaves >= p_limits) break;
+            }
+            else {
+                if (!nodeCheckStatus.CheckAndSet(tnode.centerid)) {
+                    m_NGQueue.insert(Index::HeapCell(tnode.centerid, bcell.distance));
+                }
+                for (int begin = tnode.childStart; begin < tnode.childEnd; begin++) {
+                    int tmp = index->m_pBKTreeRoots[begin].centerid;
+                    float dist = index->getDist()->compare(index->getBaseData() + index->getBaseDim() * query,
+                                                           index->getBaseData() + index->getBaseDim() * tmp,
+                                                           index->getBaseDim());
+                    m_SPTQueue.insert(Index::HeapCell(begin, dist));
+                }
+            }
+        }
+    }
+
+    void ComponentCandidateSPTAG_BKT_new::CandidateInner(unsigned int query, unsigned int enter,
+                                                         boost::dynamic_bitset<> flags,
+                                                         std::vector<Index::SimpleNeighbor> &result) {
+        unsigned maxCheck = index->m_iMaxCheckForRefineGraph > index->m_iMaxCheck ? index->m_iMaxCheckForRefineGraph : index->m_iMaxCheck;
+        unsigned m_iContinuousLimit = maxCheck / 64;
+        const float MaxDist = (std::numeric_limits<float>::max)();
+
+        unsigned m_iNumOfContinuousNoBetterPropagation = 0;
+        unsigned m_iNumberOfCheckedLeaves = 0;
+        unsigned m_iNumberOfTreeCheckedLeaves = 0;
+
+        // Prioriy queue used for neighborhood graph
+        Index::Heap m_NGQueue;
+        m_NGQueue.Resize(maxCheck * 30);
+
+        // Priority queue Used for Tree
+        Index::Heap m_SPTQueue;
+        m_SPTQueue.Resize(maxCheck * 10);
+
+        Index::OptHashPosVector nodeCheckStatus;
+        nodeCheckStatus.Init(maxCheck, index->m_iHashTableExp);
+        nodeCheckStatus.CheckAndSet(query);
+
+        Index::QueryResultSet p_query(index->L_refine);
+
+
+        // InitSearchTrees 根据 BKT 获取入口点
+        for (char i = 0; i < index->m_iTreeNumber; i++) {
+            const Index::BKTNode& node = index->m_pBKTreeRoots[index->m_pTreeStart[i]];
+            if (node.childStart < 0) {
+                float dist = index->getDist()->compare(index->getBaseData() + index->getBaseDim() * query,
+                                                       index->getBaseData() + index->getBaseDim() * node.centerid,
+                                                       index->getBaseDim());
+                m_SPTQueue.insert(Index::HeapCell(index->m_pTreeStart[i], dist));
+            }
+            else {
+                for (int begin = node.childStart; begin < node.childEnd; begin++) {
+                    int tmp = index->m_pBKTreeRoots[begin].centerid;
+                    float dist = index->getDist()->compare(index->getBaseData() + index->getBaseDim() * query,
+                                                           index->getBaseData() + index->getBaseDim() * tmp,
+                                                           index->getBaseDim());
+                    m_SPTQueue.insert(Index::HeapCell(begin, dist));
+                }
+            }
+        }
+
+        BKTSearch(query, m_NGQueue, m_SPTQueue, nodeCheckStatus, m_iNumberOfCheckedLeaves, m_iNumberOfTreeCheckedLeaves, index->m_iNumberOfInitialDynamicPivots);
+
+        const unsigned checkPos = index->getFinalGraph()[0].size() - 1;
+        while (!m_NGQueue.empty()) {
+            Index::HeapCell gnode = m_NGQueue.pop();
+            int tmpNode = gnode.node;
+            std::vector<Index::SimpleNeighbor> node = index->getFinalGraph()[tmpNode];
+            if (gnode.distance <= p_query.worstDist()) {
+                int checkNode = node[checkPos].id;
+                if (checkNode < -1) {
+                    const Index::BKTNode& tnode = index->m_pBKTreeRoots[-2 - checkNode];
+                    m_iNumOfContinuousNoBetterPropagation = 0;
+                    p_query.AddPoint(tmpNode, gnode.distance);
+                } else {
+                    m_iNumOfContinuousNoBetterPropagation = 0;
+                    p_query.AddPoint(tmpNode, gnode.distance);
+                }
+            } else {
+                m_iNumOfContinuousNoBetterPropagation++;
+                if (m_iNumOfContinuousNoBetterPropagation > m_iContinuousLimit || m_iNumberOfCheckedLeaves > maxCheck) {
+                    p_query.SortResult();
+                    for(int i = 0; i < p_query.GetResultNum(); i ++) {
+                        if(p_query.GetResult(i)->Dist == MaxDist) break;
+                        result.emplace_back(p_query.GetResult(i)->VID, p_query.GetResult(i)->Dist);
+                    }
+                    return;
+                }
+            }
+            for (unsigned i = 0; i <= checkPos; i++) {
+                int nn_index = node[i].id;
+                if (nn_index < 0) break;
+                if (nodeCheckStatus.CheckAndSet(nn_index)) continue;
+                float distance2leaf = index->getDist()->compare(index->getBaseData() + index->getBaseDim() * query,
+                                                                index->getBaseData() + index->getBaseDim() * nn_index,
+                                                                index->getBaseDim());
+                m_iNumberOfCheckedLeaves++;
+                m_NGQueue.insert(Index::HeapCell(nn_index, distance2leaf));
+            }
+            if (m_NGQueue.Top().distance > m_SPTQueue.Top().distance) {
+                BKTSearch(query, m_NGQueue, m_SPTQueue, nodeCheckStatus, m_iNumberOfCheckedLeaves, m_iNumberOfTreeCheckedLeaves, index->m_iNumberOfOtherDynamicPivots + m_iNumberOfCheckedLeaves);
+            }
+        }
+        p_query.SortResult();
+        for(int i = 0; i < p_query.GetResultNum(); i ++) {
+            if(p_query.GetResult(i)->Dist == MaxDist) break;
+            result.emplace_back(p_query.GetResult(i)->VID, p_query.GetResult(i)->Dist);
+        }
+    }
+
+
     // SPTAG_KDT
     void ComponentCandidateSPTAG_KDT::CandidateInner(unsigned int query, unsigned int enter,
                                                      boost::dynamic_bitset<> flags,
@@ -428,7 +555,6 @@ namespace weavess {
                                                     Index::Heap &m_SPTQueue, Index::OptHashPosVector &nodeCheckStatus,
                                                     unsigned int &m_iNumberOfCheckedLeaves,
                                                     unsigned int &m_iNumberOfTreeCheckedLeaves) {
-        //std::cout << 1 << std::endl;
         if (node < 0)
         {
             int tmp = -node - 1;
@@ -442,10 +568,8 @@ namespace weavess {
                                                                             index->getBaseDim())));
             return;
         }
-        //std::cout << 2 << std::endl;
 
         auto& tnode = index->m_pKDTreeRoots[node];
-        //std::cout << 2 << " " << tnode.split_dim << std::endl;
 
         float distBound = 0;
         float diff = (index->getBaseData() + index->getBaseDim() * query)[tnode.split_dim] - tnode.split_value;
@@ -476,7 +600,6 @@ namespace weavess {
         unsigned m_iNumOfContinuousNoBetterPropagation = 0;
         const float MaxDist = (std::numeric_limits<float>::max)();
         unsigned m_iThresholdOfNumberOfContinuousNoBetterPropagation = 3;
-        unsigned m_iNumberOfOtherDynamicPivots = 4;
         unsigned m_iNumberOfInitialDynamicPivots = 50;
         unsigned maxCheck = index->m_iMaxCheckForRefineGraph > index->m_iMaxCheck ? index->m_iMaxCheckForRefineGraph : index->m_iMaxCheck;
 

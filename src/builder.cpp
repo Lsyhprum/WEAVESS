@@ -73,7 +73,7 @@ namespace weavess {
             a = new ComponentInitSPTAG_KDT_new(final_index_);
         } else if (type == INIT_SPTAG_BKT) {
             std::cout << "__INIT : SPTAG_BKT__" << std::endl;
-            a = new ComponentInitSPTAG_BKT(final_index_);
+            a = new ComponentInitSPTAG_BKT_new(final_index_);
         } else if (type == INIT_IEH) {
             std::cout << "__INIT : IEH__" << std::endl;
             a = new ComponentInitIEH(final_index_);
@@ -227,7 +227,7 @@ namespace weavess {
             b = new ComponentSearchRouteSPTAG_KDT_new(final_index_);
         } else if (route_type == ROUTER_SPTAG_BKT) {
             std::cout << "__ROUTER : SPTAG_BKT__" << std::endl;
-            b = new ComponentSearchRouteSPTAG_BKT(final_index_);
+            b = new ComponentSearchRouteSPTAG_BKT_new(final_index_);
         } else {
             std::cerr << "__ROUTER : WRONG TYPE__" << std::endl;
             exit(-1);
