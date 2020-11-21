@@ -263,6 +263,27 @@ void SPTAG_KDT_new(std::string base_path, std::string query_path, std::string gr
     std::cout << "Time cost: " << builder->GetBuildTime().count() << std::endl;
 }
 
+void SPTAG_BKT_new(std::string base_path, std::string query_path, std::string ground_path) {
+    weavess::Parameters parameters;
+
+    parameters.set<unsigned>("BKTNumber", 1);
+    parameters.set<unsigned>("BKTKMeansK", 4);
+    parameters.set<unsigned>("TPTNumber", 4);
+    parameters.set<unsigned>("TPTLeafSize", 1000);
+    parameters.set<unsigned>("NeighborhoodSize", 32);
+    parameters.set<unsigned>("GraphNeighborhoodScale", 2);
+    parameters.set<unsigned>("CEF", 500);
+    parameters.set<unsigned>("numOfThreads", 10);
+
+    auto *builder = new weavess::IndexBuilder();
+    builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
+            -> init(weavess::INIT_SPTAG_BKT)
+            -> refine(weavess::REFINE_SPTAG_BKT, false)
+            -> search(weavess::SEARCH_ENTRY_NONE, weavess::ROUTER_SPTAG_BKT);
+
+    std::cout << "Time cost: " << builder->GetBuildTime().count() << std::endl;
+}
+
 void SPTAG_BKT(std::string base_path, std::string query_path, std::string ground_path) {
     weavess::Parameters parameters;
     parameters.set<unsigned>("numOfThreads", 1);
@@ -291,16 +312,16 @@ int main() {
     //SSG(base_path, query_path, ground_path);
     //DPG(base_path, query_path, ground_path);
     //VAMANA(base_path, query_path, ground_path);
-    FANNG(base_path, query_path, ground_path);
+    //FANNG(base_path, query_path, ground_path);
     //IEH(base_path, query_path, ground_path);
     //HCNNG(base_path, query_path, ground_path);
     //SPTAG_KDT_new(base_path, query_path, ground_path);
+    SPTAG_BKT_new(base_path, query_path, ground_path);
 
     //EFANNA(base_path, query_path, ground_path);
     //NSW(base_path, query_path, ground_path);
     //HNSW(base_path, query_path, ground_path);
 
-    //SPTAG_BKT(base_path, query_path, ground_path);
     //NGT(base_path, query_path, ground_path);
 
     return 0;

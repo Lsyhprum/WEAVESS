@@ -99,7 +99,6 @@
 ### TODO
 
 * n2 引入third_party 方法
-* FANNG 朴素 init 方法代价较高 : 考虑改进为论文中的改进方法
 * VAMANA REFINE 速度慢
 * 检查个算法candidate init 后排序情况
 * efanna 算法问题

@@ -285,6 +285,42 @@ namespace weavess {
         float RefineCenters(Index::KmeansArgs<float> &args);
     };
 
+    class ComponentInitSPTAG_BKT_new : public ComponentInit {
+    public:
+        explicit ComponentInitSPTAG_BKT_new(Index *index) : ComponentInit(index) {}
+
+        void InitInner() override;
+
+    protected:
+        void BuildTrees();
+
+        void BuildGraph();
+
+    private:
+        void SetConfigs();
+
+        int rand(int high, int low = 0);
+
+        void PartitionByTptree(std::vector<int> &indices, const int first, const int last,
+                               std::vector<std::pair<int, int>> &leaves);
+
+        static inline bool Compare(const Index::SimpleNeighbor &lhs, const Index::SimpleNeighbor &rhs);
+
+        void AddNeighbor(int idx, float dist, int origin);
+
+        int KmeansClustering(std::vector<int> &indices, const int first, const int last,
+                             Index::KmeansArgs<float> &args, int samples = 1000);
+
+        inline void InitCenters(std::vector<int> &indices, const int first, const int last,
+                                Index::KmeansArgs<float> &args, int samples, int tryIters);
+
+        inline float KmeansAssign(std::vector<int> &indices,
+                                  const int first, const int last, Index::KmeansArgs<float> &args,
+                                  const bool updateCenters, float lambda);
+
+        float RefineCenters(Index::KmeansArgs<float> &args);
+    };
+
     class ComponentInitFANNG : public ComponentInit {
     public:
         explicit ComponentInitFANNG(Index *index) : ComponentInit(index) {}
@@ -558,6 +594,19 @@ namespace weavess {
         void KDTSearch(unsigned query, int node, Index::Heap &m_NGQueue, Index::Heap &m_SPTQueue,
                        Index::OptHashPosVector &nodeCheckStatus,
                        unsigned &m_iNumberOfCheckedLeaves, unsigned &m_iNumberOfTreeCheckedLeaves);
+    };
+
+    class ComponentCandidateSPTAG_BKT_new : public ComponentCandidate {
+    public:
+        explicit ComponentCandidateSPTAG_BKT_new(Index *index) : ComponentCandidate(index) {}
+
+        void CandidateInner(unsigned query, unsigned enter, boost::dynamic_bitset<> flags,
+                            std::vector<Index::SimpleNeighbor> &result) override;
+
+    private:
+        void BKTSearch(unsigned query, Index::Heap &m_NGQueue, Index::Heap &m_SPTQueue,
+                       Index::OptHashPosVector &nodeCheckStatus,
+                       unsigned &m_iNumberOfCheckedLeaves, unsigned &m_iNumberOfTreeCheckedLeaves, int p_limits);
     };
 
 
@@ -845,6 +894,20 @@ namespace weavess {
         explicit ComponentSearchRouteSPTAG_BKT(Index *index) : ComponentSearchRoute(index) {}
 
         void RouteInner(unsigned query, std::vector<Index::Neighbor> &pool, std::vector<unsigned> &res) override;
+    };
+
+    class ComponentSearchRouteSPTAG_BKT_new : public ComponentSearchRoute {
+    public:
+        explicit ComponentSearchRouteSPTAG_BKT_new(Index *index) : ComponentSearchRoute(index) {}
+
+        void RouteInner(unsigned query, std::vector<Index::Neighbor> &pool, std::vector<unsigned> &res) override;
+
+    private:
+        void BKTSearch(unsigned int query, Index::Heap &m_NGQueue,
+                  Index::Heap &m_SPTQueue, Index::OptHashPosVector &nodeCheckStatus,
+                  unsigned int &m_iNumberOfCheckedLeaves,
+                  unsigned int &m_iNumberOfTreeCheckedLeaves,
+                  int p_limits);
     };
 
     class ComponentSearchRouteGuided : public ComponentSearchRoute {
