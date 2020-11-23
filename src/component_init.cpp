@@ -4,6 +4,7 @@
 
 #include "weavess/component.h"
 
+
 namespace weavess {
 
     // NN-Descent
@@ -24,7 +25,7 @@ namespace weavess {
 
             std::sort(index->graph_[i].pool.begin(), index->graph_[i].pool.end());
 
-            for (auto &j : index->graph_[i].pool){
+            for (auto &j : index->graph_[i].pool) {
                 tmp.push_back(Index::SimpleNeighbor(j.id, j.distance));
             }
 
@@ -216,7 +217,7 @@ namespace weavess {
 
             std::sort(index->graph_[i].pool.begin(), index->graph_[i].pool.end());
 
-            for(int j = 0; j < index->L; j ++) {
+            for (int j = 0; j < index->L; j++) {
                 tmp.push_back(Index::SimpleNeighbor(index->graph_[i].pool[j].id, index->graph_[i].pool[j].distance));
             }
 
@@ -247,8 +248,8 @@ namespace weavess {
 #pragma omp parallel for
 #endif
         for (unsigned i = 0; i < index->getBaseLen(); i++) {
-            for (unsigned j = 0; j < index->getBaseLen(); j ++) {
-                if(i == j) continue;
+            for (unsigned j = 0; j < index->getBaseLen(); j++) {
+                if (i == j) continue;
 
                 float dist = index->getDist()->compare(index->getBaseData() + index->getBaseDim() * i,
                                                        index->getBaseData() + index->getBaseDim() * j,
@@ -748,15 +749,15 @@ namespace weavess {
 
         Index::Codes basecode;
 
-        std::cout<<"max support code length 32 and search hamming radius no greater than 1"<<std::endl;
+        std::cout << "max support code length 32 and search hamming radius no greater than 1" << std::endl;
         LoadHashFunc(&func_argv[0], index->func);
-        std::cout<<"load hash function complete"<<std::endl;
+        std::cout << "load hash function complete" << std::endl;
         LoadBaseCode(&basecode_argv[0], basecode);
-        std::cout<<"load base data code complete"<<std::endl;
+        std::cout << "load base data code complete" << std::endl;
         LoadData(&train_argv[0], index->train);
-        std::cout<<"load base data complete"<<std::endl;
+        std::cout << "load base data complete" << std::endl;
         LoadData(&test_argv[0], index->test);
-        std::cout<<"load query data complete"<<std::endl;
+        std::cout << "load query data complete" << std::endl;
 
         // init hash
         BuildHashTable(index->UpperBits, index->LowerBits, basecode, index->tb);
@@ -771,24 +772,27 @@ namespace weavess {
         std::cout << "convert query code complete" << std::endl;
     }
 
-    void ComponentInitIEH::LoadData(char* filename, Index::Matrix& dataset){
+    void ComponentInitIEH::LoadData(char *filename, Index::Matrix &dataset) {
         std::ifstream in(filename, std::ios::binary);
-        if(!in.is_open()){std::cout<<"open file error"<<std::endl;exit(-1);}
+        if (!in.is_open()) {
+            std::cout << "open file error" << std::endl;
+            exit(-1);
+        }
         unsigned int dim;
-        in.read((char*)&dim,4);
-        std::cout<<"data dimension: "<<dim<<std::endl;
-        in.seekg(0,std::ios::end);
+        in.read((char *) &dim, 4);
+        std::cout << "data dimension: " << dim << std::endl;
+        in.seekg(0, std::ios::end);
         std::ios::pos_type ss = in.tellg();
-        size_t fsize = (size_t)ss;
-        unsigned int num = fsize / (dim+1) / 4;
-        in.seekg(0,std::ios::beg);
-        for(size_t i = 0; i < num; i++){
-            in.seekg(4,std::ios::cur);
+        size_t fsize = (size_t) ss;
+        unsigned int num = fsize / (dim + 1) / 4;
+        in.seekg(0, std::ios::beg);
+        for (size_t i = 0; i < num; i++) {
+            in.seekg(4, std::ios::cur);
             std::vector<float> vtmp(dim);
             vtmp.clear();
-            for(size_t j = 0; j < dim; j++){
+            for (size_t j = 0; j < dim; j++) {
                 float tmp;
-                in.read((char*)&tmp,4);
+                in.read((char *) &tmp, 4);
                 vtmp.push_back(tmp);
             }
             dataset.push_back(vtmp);
@@ -1063,7 +1067,7 @@ namespace weavess {
         index->m_ = index->max_m_;
         index->max_m0_ = index->getParam().get<unsigned>("max_m0");
         auto ef_construction_ = index->getParam().get<unsigned>("ef_construction");
-        if(ef_construction_ > 0) index->ef_construction_ = ef_construction_;
+        if (ef_construction_ > 0) index->ef_construction_ = ef_construction_;
         index->n_threads_ = index->getParam().get<unsigned>("n_threads");
         index->mult = index->getParam().get<int>("mult");
         index->level_mult_ = index->mult > 0 ? index->mult : (1 / log(1.0 * index->m_));
@@ -1430,6 +1434,132 @@ namespace weavess {
 //        std::sort(pool.begin(), pool.end());
     }
 
+    void ComponentInitANNG_new::InitInner() {
+        SetConfigs();
+
+        Build();
+    }
+
+    void ComponentInitANNG_new::SetConfigs() {
+        index->edgeSizeForCreation = index->getParam().get<unsigned>("edgeSizeForCreation");
+
+        index->batchSizeForCreation = index->getParam().get<unsigned>("batchSizeForCreation");
+    }
+
+    unsigned ComponentInitANNG_new::searchMultipleQueryForCreation(unsigned id, Index::InputJobQueue &input) {
+        size_t cnt = 0;
+        for (; id < index->getBaseLen(); id++) {
+            input.pushBack(id);
+            cnt++;
+            if (cnt >= index->batchSizeForCreation) {
+                id++;
+                break;
+            }
+        } // for
+        return cnt;
+    }
+
+    void ComponentInitANNG_new::insertMultipleSearchResults(Index::InputJobQueue &input, Index::OutputJobQueue &output,
+                                                            unsigned cnt) {
+        // compute distances among all of the resultant objects
+        // This processing occupies about 30% of total indexing time when batch size is 200.
+        // Only initial batch objects should be connected for each other.
+        // The number of nodes in the graph is checked to know whether the batch is initial.
+        //size_t size = NeighborhoodGraph::property.edgeSizeForCreation;
+        unsigned size = index->edgeSizeForCreation;
+        // add distances from a current object to subsequence objects to imitate of sequential insertion.
+
+        sort(output.begin(), output.end()); // sort by batchIdx
+
+        for (unsigned idxi = 0; idxi < cnt; idxi++) {
+            // add distances
+            index->getFinalGraph()[output[idxi]].resize(cnt);
+            for (size_t idxj = 0; idxj < idxi; idxj++) {
+                float dist = index->getDist()->compare(index->getBaseData() + index->getBaseDim() * output[idxi],
+                                                       index->getBaseData() + index->getBaseDim() * output[idxj],
+                                                       index->getBaseDim());
+                index->getFinalGraph()[output[idxi]].push_back(Index::SimpleNeighbor(output[idxj], dist));
+            }
+            // sort and cut excess edges
+            std::sort(index->getFinalGraph()[output[idxi]].begin(), index->getFinalGraph()[output[idxi]].end());
+            if (index->getFinalGraph()[output[idxi]].size() > size) {
+                index->getFinalGraph()[output[idxi]].resize(size);
+            }
+        } // for (size_t idxi ....
+
+        // insert resultant objects into the graph as edges
+        for (size_t i = 0; i < cnt; i++) {
+            unsigned gr = output[i];
+            if (gr > index->edgeSizeForCreation &&
+                index->getFinalGraph()[gr].size() < index->edgeSizeForCreation) {
+                std::cerr
+                        << "createIndex: Warning. The specified number of edges could not be acquired, because the pruned parameter [-S] might be set."
+                        << std::endl;
+                std::cerr << "  The node id=" << gr << std::endl;
+                std::cerr << "  The number of edges for the node=" << index->getFinalGraph()[gr].size() << std::endl;
+                std::cerr << "  The pruned parameter (edgeSizeForSearch [-S])=" << index->edgeSizeForSearch
+                          << std::endl;
+            }
+        }
+    }
+
+    void ComponentInitANNG_new::Build() {
+
+        index->getFinalGraph().resize(index->getBaseLen());
+
+        if (index->edgeSizeForCreation == 0) {
+            return;
+        }
+
+        unsigned count = 0;
+
+        unsigned pathAdjustCount = 0;
+
+        Index::OutputJobQueue output;
+        Index::InputJobQueue input;
+
+        unsigned id = 0;
+        for (;;) {
+            size_t cnt = searchMultipleQueryForCreation(id, input);
+
+            if (cnt == 0) {
+                break;
+            }
+
+            input.pushBackEnd();
+            output.setMaxSize(input.pushedSize);
+            input.pushedSize = 0;
+
+            if (output.size() != cnt) {
+                std::cerr << "NNTGIndex::insertGraphIndexByThread: Warning!! Thread response size is wrong."
+                          << std::endl;
+                cnt = output.size();
+            }
+
+            insertMultipleSearchResults(input, output, cnt);
+
+            for (size_t i = 0; i < cnt; i++) {
+                unsigned job = output[i];
+                if (((index->getFinalGraph()[job].size() > 0) && (index->getFinalGraph()[job][0].distance != 0.0)) ||
+                    (index->getFinalGraph()[job].size() == 0)) {
+                    Index::DVPTree::InsertContainer tiobj(index->getBaseData() + index->getBaseDim() * job, job);
+                    index->dvp.insert(tiobj);
+                }
+            } // for
+
+            while (!output.empty()) {
+                output.pop_front();
+            }
+
+            count += cnt;
+//            if (pathAdjustCount > 0 && pathAdjustCount <= count)
+//            {
+//                adjustPathsEffectively();
+//                pathAdjustCount += property.pathAdjustmentInterval;
+//            }
+        }
+    }
+
 
     // SPTAG KDT new
     void ComponentInitSPTAG_KDT_new::InitInner() {
@@ -1453,6 +1583,10 @@ namespace weavess {
 
         index->m_iTreeNumber = index->getParam().get<unsigned>("KDTNumber");
 
+        index->m_iTPTNumber = index->getParam().get<unsigned>("TPTNumber");
+
+        index->m_iTPTLeafSize = index->getParam().get<unsigned>("TPTLeafSize");
+
         index->m_iNeighborhoodSize = index->getParam().get<unsigned>("NeighborhoodSize");
 
         index->m_iNeighborhoodScale = index->getParam().get<unsigned>("GraphNeighborhoodScale");
@@ -1471,8 +1605,7 @@ namespace weavess {
         // 保存 KDT 树根
         index->m_pTreeStart.resize(index->m_iTreeNumber, 0);
 #pragma omp parallel for num_threads(index->numOfThreads)
-        for (int i = 0; i < index->m_iTreeNumber; i++)
-        {
+        for (int i = 0; i < index->m_iTreeNumber; i++) {
             Sleep(i * 100);
             std::srand(clock());
 
@@ -1490,7 +1623,7 @@ namespace weavess {
     }
 
     int ComponentInitSPTAG_KDT_new::rand(int high, int low) {
-        return low + (int)(float(high - low)*(std::rand() / (RAND_MAX + 1.0)));
+        return low + (int) (float(high - low) * (std::rand() / (RAND_MAX + 1.0)));
     }
 
     int ComponentInitSPTAG_KDT_new::SelectDivisionDimension(const std::vector<float> &varianceValues) {
@@ -1498,22 +1631,16 @@ namespace weavess {
         std::vector<int> topind(index->m_numTopDimensionKDTSplit);
         int num = 0;
         // order the variances
-        for (int i = 0; i < (int)varianceValues.size(); i++)
-        {
-            if (num < index->m_numTopDimensionKDTSplit || varianceValues[i] > varianceValues[topind[num - 1]])
-            {
-                if (num < index->m_numTopDimensionKDTSplit)
-                {
+        for (int i = 0; i < (int) varianceValues.size(); i++) {
+            if (num < index->m_numTopDimensionKDTSplit || varianceValues[i] > varianceValues[topind[num - 1]]) {
+                if (num < index->m_numTopDimensionKDTSplit) {
                     topind[num++] = i;
-                }
-                else
-                {
+                } else {
                     topind[num - 1] = i;
                 }
                 int j = num - 1;
                 // order the TOP_DIM variances
-                while (j > 0 && varianceValues[topind[j]] > varianceValues[topind[j - 1]])
-                {
+                while (j > 0 && varianceValues[topind[j]] > varianceValues[topind[j - 1]]) {
                     std::swap(topind[j], topind[j - 1]);
                     j--;
                 }
@@ -1530,26 +1657,21 @@ namespace weavess {
         int end = std::min(first + index->m_iSamples, last);
         int count = end - first + 1;
         // calculate the mean of each dimension
-        for (int j = first; j <= end; j++)
-        {
-            const float* v = index->getBaseData() + index->getBaseDim() * indices[j];
-            for (int k = 0; k < index->getBaseDim(); k++)
-            {
+        for (int j = first; j <= end; j++) {
+            const float *v = index->getBaseData() + index->getBaseDim() * indices[j];
+            for (int k = 0; k < index->getBaseDim(); k++) {
                 meanValues[k] += v[k];
             }
         }
-        for (int k = 0; k < index->getBaseDim(); k++)
-        {
+        for (int k = 0; k < index->getBaseDim(); k++) {
             meanValues[k] /= count;
         }
         // calculate the variance of each dimension
-        for (int j = first; j <= end; j++)
-        {
-            const float* v = index->getBaseData() + index->getBaseDim() * indices[j];
-            for (int k = 0; k < index->getBaseDim(); k++)
-            {
+        for (int j = first; j <= end; j++) {
+            const float *v = index->getBaseData() + index->getBaseDim() * indices[j];
+            for (int k = 0; k < index->getBaseDim(); k++) {
                 float dist = v[k] - meanValues[k];
-                varianceValues[k] += dist*dist;
+                varianceValues[k] += dist * dist;
             }
         }
         // choose the split dimension as one of the dimension inside TOP_DIM maximum variance
@@ -1559,28 +1681,23 @@ namespace weavess {
     }
 
     int ComponentInitSPTAG_KDT_new::Subdivide(const Index::KDTNode &node, std::vector<int> &indices,
-                                               const int first, const int last) {
+                                              const int first, const int last) {
         int i = first;
         int j = last;
         // decide which child one point belongs
-        while (i <= j)
-        {
+        while (i <= j) {
             int ind = indices[i];
-            const float* v = index->getBaseData() + index->getBaseDim() * ind;
+            const float *v = index->getBaseData() + index->getBaseDim() * ind;
             float val = v[node.split_dim];
-            if (val < node.split_value)
-            {
+            if (val < node.split_value) {
                 i++;
-            }
-            else
-            {
+            } else {
                 std::swap(indices[i], indices[j]);
                 j--;
             }
         }
         // if all the points in the node are equal,equally split the node into 2
-        if ((i == first) || (i == last + 1))
-        {
+        if ((i == first) || (i == last + 1)) {
             i = (first + last + 1) / 2;
         }
         return i;
@@ -1590,22 +1707,16 @@ namespace weavess {
                                                 int last, int tree_index, int &iTreeSize) {
         ChooseDivision(index->m_pKDTreeRoots[tree_index], indices, first, last);
         int i = Subdivide(index->m_pKDTreeRoots[tree_index], indices, first, last);
-        if (i - 1 <= first)
-        {
+        if (i - 1 <= first) {
             index->m_pKDTreeRoots[tree_index].left = -indices[first] - 1;
-        }
-        else
-        {
+        } else {
             iTreeSize++;
             index->m_pKDTreeRoots[tree_index].left = iTreeSize;
             DivideTree(indices, first, i - 1, iTreeSize, iTreeSize);
         }
-        if (last == i)
-        {
+        if (last == i) {
             index->m_pKDTreeRoots[tree_index].right = -indices[last] - 1;
-        }
-        else
-        {
+        } else {
             iTreeSize++;
             index->m_pKDTreeRoots[tree_index].right = iTreeSize;
             DivideTree(indices, i, last, iTreeSize, iTreeSize);
@@ -1616,55 +1727,45 @@ namespace weavess {
         return ((lhs.distance < rhs.distance) || ((lhs.distance == rhs.distance) && (lhs.id < rhs.id)));
     }
 
-    void ComponentInitSPTAG_KDT_new::PartitionByTptree(std::vector< int> &indices, const int first,
+    void ComponentInitSPTAG_KDT_new::PartitionByTptree(std::vector<int> &indices, const int first,
                                                        const int last,
                                                        std::vector<std::pair<int, int>> &leaves) {
-        if (last - first <= index->m_iTPTLeafSize)
-        {
+        if (last - first <= index->m_iTPTLeafSize) {
             leaves.emplace_back(first, last);
-        }
-        else
-        {
+        } else {
             std::vector<float> Mean(index->getBaseDim(), 0);
 
             int iIteration = 100;
             int end = std::min(first + index->m_iSamples, last);
             int count = end - first + 1;
             // calculate the mean of each dimension
-            for (int j = first; j <= end; j++)
-            {
-                const float* v = index->getBaseData() + index->getBaseDim() * indices[j];
-                for (int k = 0; k < index->getBaseDim(); k++)
-                {
+            for (int j = first; j <= end; j++) {
+                const float *v = index->getBaseData() + index->getBaseDim() * indices[j];
+                for (int k = 0; k < index->getBaseDim(); k++) {
                     Mean[k] += v[k];
                 }
             }
-            for (int k = 0; k < index->getBaseDim(); k++)
-            {
+            for (int k = 0; k < index->getBaseDim(); k++) {
                 Mean[k] /= count;
             }
             std::vector<Index::SimpleNeighbor> Variance;
             Variance.reserve(index->getBaseDim());
-            for (int j = 0; j < index->getBaseDim(); j++)
-            {
+            for (int j = 0; j < index->getBaseDim(); j++) {
                 Variance.emplace_back(j, 0.0f);
             }
             // calculate the variance of each dimension
-            for (int j = first; j <= end; j++)
-            {
-                const float* v = index->getBaseData() + index->getBaseDim() * indices[j];
-                for (int k = 0; k < index->getBaseDim(); k++)
-                {
+            for (int j = first; j <= end; j++) {
+                const float *v = index->getBaseData() + index->getBaseDim() * indices[j];
+                for (int k = 0; k < index->getBaseDim(); k++) {
                     float dist = v[k] - Mean[k];
-                    Variance[k].distance += dist*dist;
+                    Variance[k].distance += dist * dist;
                 }
             }
             std::sort(Variance.begin(), Variance.end(), ComponentInitSPTAG_KDT_new::Compare);
             std::vector<int> indexs(index->m_numTopDimensionTPTSplit);
             std::vector<float> weight(index->m_numTopDimensionTPTSplit), bestweight(index->m_numTopDimensionTPTSplit);
             float bestvariance = Variance[index->getBaseDim() - 1].distance;
-            for (int i = 0; i < index->m_numTopDimensionTPTSplit; i++)
-            {
+            for (int i = 0; i < index->m_numTopDimensionTPTSplit; i++) {
                 indexs[i] = Variance[index->getBaseDim() - 1 - i].id;
                 bestweight[i] = 0;
             }
@@ -1672,43 +1773,35 @@ namespace weavess {
             float bestmean = Mean[indexs[0]];
 
             std::vector<float> Val(count);
-            for (int i = 0; i < iIteration; i++)
-            {
+            for (int i = 0; i < iIteration; i++) {
                 float sumweight = 0;
-                for (int j = 0; j < index->m_numTopDimensionTPTSplit; j++)
-                {
+                for (int j = 0; j < index->m_numTopDimensionTPTSplit; j++) {
                     weight[j] = float(std::rand() % 10000) / 5000.0f - 1.0f;
                     sumweight += weight[j] * weight[j];
                 }
                 sumweight = sqrt(sumweight);
-                for (int j = 0; j < index->m_numTopDimensionTPTSplit; j++)
-                {
+                for (int j = 0; j < index->m_numTopDimensionTPTSplit; j++) {
                     weight[j] /= sumweight;
                 }
                 float mean = 0;
-                for (int j = 0; j < count; j++)
-                {
+                for (int j = 0; j < count; j++) {
                     Val[j] = 0;
-                    const float* v = index->getBaseData() + index->getBaseDim() * indices[first + j];
-                    for (int k = 0; k < index->m_numTopDimensionTPTSplit; k++)
-                    {
+                    const float *v = index->getBaseData() + index->getBaseDim() * indices[first + j];
+                    for (int k = 0; k < index->m_numTopDimensionTPTSplit; k++) {
                         Val[j] += weight[k] * v[indexs[k]];
                     }
                     mean += Val[j];
                 }
                 mean /= count;
                 float var = 0;
-                for (int j = 0; j < count; j++)
-                {
+                for (int j = 0; j < count; j++) {
                     float dist = Val[j] - mean;
                     var += dist * dist;
                 }
-                if (var > bestvariance)
-                {
+                if (var > bestvariance) {
                     bestvariance = var;
                     bestmean = mean;
-                    for (int j = 0; j < index->m_numTopDimensionTPTSplit; j++)
-                    {
+                    for (int j = 0; j < index->m_numTopDimensionTPTSplit; j++) {
                         bestweight[j] = weight[j];
                     }
                 }
@@ -1716,27 +1809,21 @@ namespace weavess {
             int i = first;
             int j = last;
             // decide which child one point belongs
-            while (i <= j)
-            {
+            while (i <= j) {
                 float val = 0;
-                const float* v = index->getBaseData() + index->getBaseDim() * indices[i];
-                for (int k = 0; k < index->m_numTopDimensionTPTSplit; k++)
-                {
+                const float *v = index->getBaseData() + index->getBaseDim() * indices[i];
+                for (int k = 0; k < index->m_numTopDimensionTPTSplit; k++) {
                     val += bestweight[k] * v[indexs[k]];
                 }
-                if (val < bestmean)
-                {
+                if (val < bestmean) {
                     i++;
-                }
-                else
-                {
+                } else {
                     std::swap(indices[i], indices[j]);
                     j--;
                 }
             }
             // if all the points in the node are equal,equally split the node into 2
-            if ((i == first) || (i == last + 1))
-            {
+            if ((i == first) || (i == last + 1)) {
                 i = (first + last + 1) / 2;
             }
 
@@ -1794,13 +1881,13 @@ namespace weavess {
 
         // 构建 TPTree 和 初始图
         std::vector<std::vector<int>> TptreeDataIndices(index->m_iTPTNumber, std::vector<int>(index->getBaseLen()));
-        std::vector<std::vector<std::pair<int, int>>> TptreeLeafNodes(index->m_iTPTNumber, std::vector<std::pair<int, int>>());
+        std::vector<std::vector<std::pair<int, int>>> TptreeLeafNodes(index->m_iTPTNumber,
+                                                                      std::vector<std::pair<int, int>>());
 
         auto t1 = std::chrono::high_resolution_clock::now();
         std::cout << "Parallel TpTree Partition begin\n";
 #pragma omp parallel for schedule(dynamic)
-        for (int i = 0; i < index->m_iTPTNumber; i++)
-        {
+        for (int i = 0; i < index->m_iTPTNumber; i++) {
             Sleep(i * 100);
             std::srand(clock());
             for (int j = 0; j < index->getBaseLen(); j++) TptreeDataIndices[i][j] = j;
@@ -1810,21 +1897,19 @@ namespace weavess {
         }
         std::cout << "Parallel TpTree Partition done\n";
         auto t2 = std::chrono::high_resolution_clock::now();
-        std::cout << "Build TPTree time (s): " << std::chrono::duration_cast<std::chrono::seconds>(t2 - t1).count() << std::endl;
+        std::cout << "Build TPTree time (s): " << std::chrono::duration_cast<std::chrono::seconds>(t2 - t1).count()
+                  << std::endl;
 
-        for (int i = 0; i < index->m_iTPTNumber; i++)
-        {
+        for (int i = 0; i < index->m_iTPTNumber; i++) {
 #pragma omp parallel for schedule(dynamic)
-            for (int j = 0; j < (int)TptreeLeafNodes[i].size(); j++)
-            {
+            for (int j = 0; j < (int) TptreeLeafNodes[i].size(); j++) {
                 int start_index = TptreeLeafNodes[i][j].first;
                 int end_index = TptreeLeafNodes[i][j].second;
                 if ((j * 5) % TptreeLeafNodes[i].size() == 0)
-                    std::cout << "Processing Tree " << i << " " << static_cast<int>(j * 1.0 / TptreeLeafNodes[i].size() * 100) << std::endl;
-                for (int x = start_index; x < end_index; x++)
-                {
-                    for (int y = x + 1; y <= end_index; y++)
-                    {
+                    std::cout << "Processing Tree " << i << " "
+                              << static_cast<int>(j * 1.0 / TptreeLeafNodes[i].size() * 100) << std::endl;
+                for (int x = start_index; x < end_index; x++) {
+                    for (int y = x + 1; y <= end_index; y++) {
                         int p1 = TptreeDataIndices[i][x];
                         int p2 = TptreeDataIndices[i][y];
                         float dist = index->getDist()->compare(index->getBaseData() + index->getBaseDim() * p1,
@@ -1843,7 +1928,8 @@ namespace weavess {
         TptreeLeafNodes.clear();
 
         auto t3 = std::chrono::high_resolution_clock::now();
-        std::cout << "Process TPTree time (s): " << std::chrono::duration_cast<std::chrono::seconds>(t3 - t2).count() << std::endl;
+        std::cout << "Process TPTree time (s): " << std::chrono::duration_cast<std::chrono::seconds>(t3 - t2).count()
+                  << std::endl;
     }
 
 
@@ -1863,7 +1949,7 @@ namespace weavess {
 
         index->m_iTPTNumber = index->getParam().get<unsigned>("TPTNumber");
 
-        index->m_iTPTLeafSize = index->getParam().get<unsigned >("TPTLeafSize");
+        index->m_iTPTLeafSize = index->getParam().get<unsigned>("TPTLeafSize");
 
         index->m_iNeighborhoodSize = index->getParam().get<unsigned>("NeighborhoodSize");
 
@@ -1968,7 +2054,7 @@ namespace weavess {
 
     void
     ComponentInitSPTAG_KDT::PartitionByTptree(std::vector<unsigned> &indices, const unsigned first, const unsigned last,
-                                          std::vector<std::pair<unsigned, unsigned>> &leaves) {
+                                              std::vector<std::pair<unsigned, unsigned>> &leaves) {
         unsigned m_numTopDimensionTPTSplit = 5;
 
         if (last - first <= index->m_iTPTLeafSize) {
@@ -2248,48 +2334,49 @@ namespace weavess {
     }
 
     int ComponentInitSPTAG_BKT_new::rand(int high, int low) {
-        return low + (int)(float(high - low)*(std::rand() / (RAND_MAX + 1.0)));
+        return low + (int) (float(high - low) * (std::rand() / (RAND_MAX + 1.0)));
     }
 
     float ComponentInitSPTAG_BKT_new::KmeansAssign(std::vector<int> &indices, const int first,
-                                                  const int last, Index::KmeansArgs<float> &args,
-                                                  const bool updateCenters, float lambda) {
+                                                   const int last, Index::KmeansArgs<float> &args,
+                                                   const bool updateCenters, float lambda) {
         float currDist = 0;
         int subsize = (last - first - 1) / args._T + 1;
         const float MaxDist = (std::numeric_limits<float>::max)();
 
 //#pragma omp parallel for num_threads(args._T) shared(index->getBaseData(), indices) reduction(+:currDist)
-        for (int tid = 0; tid < args._T; tid++)
-        {
+        for (int tid = 0; tid < args._T; tid++) {
             int istart = first + tid * subsize;
             int iend = std::min(first + (tid + 1) * subsize, last);
             int *inewCounts = args.newCounts + tid * args._K;
             float *inewCenters = args.newCenters + tid * args._K * args._D;
-            int * iclusterIdx = args.clusterIdx + tid * args._K;
-            float * iclusterDist = args.clusterDist + tid * args._K;
+            int *iclusterIdx = args.clusterIdx + tid * args._K;
+            float *iclusterDist = args.clusterDist + tid * args._K;
             float idist = 0;
             for (int i = istart; i < iend; i++) {
                 int clusterid = 0;
                 float smallestDist = MaxDist;
                 for (int k = 0; k < args._DK; k++) {
-                    float dist = index->getDist()->compare(index->getBaseData() + index->getBaseDim() * indices[i], args.centers + k*args._D, args._D) + lambda*args.counts[k];
+                    float dist = index->getDist()->compare(index->getBaseData() + index->getBaseDim() * indices[i],
+                                                           args.centers + k * args._D, args._D) +
+                                 lambda * args.counts[k];
                     if (dist > -MaxDist && dist < smallestDist) {
-                        clusterid = k; smallestDist = dist;
+                        clusterid = k;
+                        smallestDist = dist;
                     }
                 }
                 args.label[i] = clusterid;
                 inewCounts[clusterid]++;
                 idist += smallestDist;
                 if (updateCenters) {
-                    const float* v = index->getBaseData() + index->getBaseDim() * indices[i];
-                    float* center = inewCenters + clusterid*args._D;
+                    const float *v = index->getBaseData() + index->getBaseDim() * indices[i];
+                    float *center = inewCenters + clusterid * args._D;
                     for (int j = 0; j < args._D; j++) center[j] += v[j];
                     if (smallestDist > iclusterDist[clusterid]) {
                         iclusterDist[clusterid] = smallestDist;
                         iclusterIdx[clusterid] = indices[i];
                     }
-                }
-                else {
+                } else {
                     if (smallestDist <= iclusterDist[clusterid]) {
                         iclusterDist[clusterid] = smallestDist;
                         iclusterIdx[clusterid] = indices[i];
@@ -2301,28 +2388,29 @@ namespace weavess {
 
         for (int i = 1; i < args._T; i++) {
             for (int k = 0; k < args._DK; k++)
-                args.newCounts[k] += args.newCounts[i*args._K + k];
+                args.newCounts[k] += args.newCounts[i * args._K + k];
         }
 
         if (updateCenters) {
             for (int i = 1; i < args._T; i++) {
-                float* currCenter = args.newCenters + i*args._K*args._D;
-                for (size_t j = 0; j < ((size_t)args._DK) * args._D; j++) args.newCenters[j] += currCenter[j];
+                float *currCenter = args.newCenters + i * args._K * args._D;
+                for (size_t j = 0; j < ((size_t) args._DK) * args._D; j++) args.newCenters[j] += currCenter[j];
 
                 for (int k = 0; k < args._DK; k++) {
-                    if (args.clusterIdx[i*args._K + k] != -1 && args.clusterDist[i*args._K + k] > args.clusterDist[k]) {
-                        args.clusterDist[k] = args.clusterDist[i*args._K + k];
-                        args.clusterIdx[k] = args.clusterIdx[i*args._K + k];
+                    if (args.clusterIdx[i * args._K + k] != -1 &&
+                        args.clusterDist[i * args._K + k] > args.clusterDist[k]) {
+                        args.clusterDist[k] = args.clusterDist[i * args._K + k];
+                        args.clusterIdx[k] = args.clusterIdx[i * args._K + k];
                     }
                 }
             }
-        }
-        else {
+        } else {
             for (int i = 1; i < args._T; i++) {
                 for (int k = 0; k < args._DK; k++) {
-                    if (args.clusterIdx[i*args._K + k] != -1 && args.clusterDist[i*args._K + k] <= args.clusterDist[k]) {
-                        args.clusterDist[k] = args.clusterDist[i*args._K + k];
-                        args.clusterIdx[k] = args.clusterIdx[i*args._K + k];
+                    if (args.clusterIdx[i * args._K + k] != -1 &&
+                        args.clusterDist[i * args._K + k] <= args.clusterDist[k]) {
+                        args.clusterDist[k] = args.clusterDist[i * args._K + k];
+                        args.clusterIdx[k] = args.clusterIdx[i * args._K + k];
                     }
                 }
             }
@@ -2341,14 +2429,15 @@ namespace weavess {
         for (int numKmeans = 0; numKmeans < tryIters; numKmeans++) {
             for (int k = 0; k < args._DK; k++) {
                 int randid = ComponentInitSPTAG_BKT_new::rand(last, first);
-                std::memcpy(args.centers + k*args._D, index->getBaseData() + index->getBaseDim() * indices[randid], sizeof(float)*args._D);
+                std::memcpy(args.centers + k * args._D, index->getBaseData() + index->getBaseDim() * indices[randid],
+                            sizeof(float) * args._D);
             }
             args.ClearCounts();
             args.ClearDists(MaxDist);
             currDist = KmeansAssign(indices, first, batchEnd, args, false, 0);
             if (currDist < minClusterDist) {
                 minClusterDist = currDist;
-                memcpy(args.newTCenters, args.centers, sizeof(float)*args._K*args._D);
+                memcpy(args.newTCenters, args.centers, sizeof(float) * args._K * args._D);
                 memcpy(args.counts, args.newCounts, sizeof(int) * args._K);
             }
         }
@@ -2361,41 +2450,39 @@ namespace weavess {
         int maxcluster = -1;
         int maxCount = 0;
         for (int k = 0; k < args._DK; k++) {
-            if(args.clusterIdx[k] == -1) continue;
+            if (args.clusterIdx[k] == -1) continue;
             float dist = index->getDist()->compare(index->getBaseData() + index->getBaseDim() * args.clusterIdx[k],
                                                    args.centers + k * args._D,
                                                    args._D);
-            if (args.counts[k] > maxCount && args.newCounts[k] > 0 && dist > 1e-6)
-            {
+            if (args.counts[k] > maxCount && args.newCounts[k] > 0 && dist > 1e-6) {
                 maxcluster = k;
                 maxCount = args.counts[k];
             }
         }
 
         if (maxcluster != -1 && (args.clusterIdx[maxcluster] < 0 || args.clusterIdx[maxcluster] >= index->getBaseLen()))
-            std::cout << "maxcluster:" << maxcluster << "(" << args.newCounts[maxcluster] << ") Error dist:" << args.clusterDist[maxcluster] << std::endl;
+            std::cout << "maxcluster:" << maxcluster << "(" << args.newCounts[maxcluster] << ") Error dist:"
+                      << args.clusterDist[maxcluster] << std::endl;
 
         float diff = 0;
         for (int k = 0; k < args._DK; k++) {
-            float* TCenter = args.newTCenters + k * args._D;
+            float *TCenter = args.newTCenters + k * args._D;
             if (args.counts[k] == 0) {
                 if (maxcluster != -1) {
                     //int nextid = Utils::rand_int(last, first);
                     //while (args.label[nextid] != maxcluster) nextid = Utils::rand_int(last, first);
                     int nextid = args.clusterIdx[maxcluster];
-                    std::memcpy(TCenter, index->getBaseData() + index->getBaseDim() * nextid, sizeof(float)*args._D);
+                    std::memcpy(TCenter, index->getBaseData() + index->getBaseDim() * nextid, sizeof(float) * args._D);
+                } else {
+                    std::memcpy(TCenter, args.centers + k * args._D, sizeof(float) * args._D);
                 }
-                else {
-                    std::memcpy(TCenter, args.centers + k * args._D, sizeof(float)*args._D);
-                }
-            }
-            else {
-                float* currCenters = args.newCenters + k * args._D;
+            } else {
+                float *currCenters = args.newCenters + k * args._D;
                 for (unsigned j = 0; j < args._D; j++) currCenters[j] /= args.counts[k];
 
-                for (unsigned j = 0; j < args._D; j++) TCenter[j] = (float)(currCenters[j]);
+                for (unsigned j = 0; j < args._D; j++) TCenter[j] = (float) (currCenters[j]);
             }
-            diff += (index->getDist()->compare(args.centers + k*args._D, TCenter, args._D));
+            diff += (index->getDist()->compare(args.centers + k * args._D, TCenter, args._D));
         }
 
         //std::cout << "RefineCenters end" << std::endl;
@@ -2403,8 +2490,8 @@ namespace weavess {
     }
 
     int ComponentInitSPTAG_BKT_new::KmeansClustering(std::vector<int> &indices, const int first,
-                                                      const int last, Index::KmeansArgs<float> &args,
-                                                      int samples) {
+                                                     const int last, Index::KmeansArgs<float> &args,
+                                                     int samples) {
         const float MaxDist = (std::numeric_limits<float>::max)();
 
         //std::cout << "KmeansClustering" << std::endl;
@@ -2416,7 +2503,7 @@ namespace weavess {
         int noImprovement = 0;
         for (int iter = 0; iter < 100; iter++) {
             //std::cout << iter << std::endl;
-            std::memcpy(args.centers, args.newTCenters, sizeof(float)*args._K*args._D);
+            std::memcpy(args.centers, args.newTCenters, sizeof(float) * args._K * args._D);
             std::random_shuffle(indices.begin() + first, indices.begin() + last);
 
             args.ClearCenters();
@@ -2429,8 +2516,7 @@ namespace weavess {
             if (currDist < minClusterDist) {
                 noImprovement = 0;
                 minClusterDist = currDist;
-            }
-            else {
+            } else {
                 noImprovement++;
             }
             currDiff = RefineCenters(args);
@@ -2457,8 +2543,9 @@ namespace weavess {
     }
 
     void ComponentInitSPTAG_BKT_new::BuildTrees() {
-        struct  BKTStackItem {
+        struct BKTStackItem {
             int bkt_index, first, last;
+
             BKTStackItem(int index_, int first_, int last_) : bkt_index(index_), first(first_), last(last_) {}
         };
         std::stack<BKTStackItem> ss;
@@ -2467,36 +2554,36 @@ namespace weavess {
         localindices.resize(index->getBaseLen());
         for (int i = 0; i < localindices.size(); i++) localindices[i] = i;
 
-        Index::KmeansArgs<float> args(index->m_iBKTKmeansK, index->getBaseDim(), (int)localindices.size(), index->numOfThreads);
+        Index::KmeansArgs<float> args(index->m_iBKTKmeansK, index->getBaseDim(), (int) localindices.size(),
+                                      index->numOfThreads);
 
         index->m_pSampleCenterMap.clear();
-        for (char i = 0; i < index->m_iTreeNumber; i++)
-        {
+        for (char i = 0; i < index->m_iTreeNumber; i++) {
             std::random_shuffle(localindices.begin(), localindices.end());
 
-            index->m_pTreeStart.push_back((int)index->m_pBKTreeRoots.size());
-            index->m_pBKTreeRoots.emplace_back((int)localindices.size());
+            index->m_pTreeStart.push_back((int) index->m_pBKTreeRoots.size());
+            index->m_pBKTreeRoots.emplace_back((int) localindices.size());
 
             std::cout << "Start to build BKTree " << i + 1 << std::endl;
 
-            ss.push(BKTStackItem(index->m_pTreeStart[i], 0, (int)localindices.size()));
+            ss.push(BKTStackItem(index->m_pTreeStart[i], 0, (int) localindices.size()));
             while (!ss.empty()) {
                 //std::cout << 1 << std::endl;
-                BKTStackItem item = ss.top(); ss.pop();
-                int newBKTid = (int)index->m_pBKTreeRoots.size();
+                BKTStackItem item = ss.top();
+                ss.pop();
+                int newBKTid = (int) index->m_pBKTreeRoots.size();
                 index->m_pBKTreeRoots[item.bkt_index].childStart = newBKTid;
                 if (item.last - item.first <= index->m_iBKTLeafSize) {
                     for (int j = item.first; j < item.last; j++) {
                         int cid = localindices[j];
                         index->m_pBKTreeRoots.emplace_back(cid);
                     }
-                }
-                else { // clustering the data into BKTKmeansK clusters
+                } else { // clustering the data into BKTKmeansK clusters
                     //std::cout << 3 << std::endl;
                     int numClusters = KmeansClustering(localindices, item.first, item.last, args, index->m_iSamples);
                     //std::cout << 3.5 << std::endl;
                     if (numClusters <= 1) {
-                        int end = std::min(item.last + 1, (int)localindices.size());
+                        int end = std::min(item.last + 1, (int) localindices.size());
                         std::sort(localindices.begin() + item.first, localindices.begin() + end);
                         index->m_pBKTreeRoots[item.bkt_index].centerid = localindices[item.first];
                         index->m_pBKTreeRoots[item.bkt_index].childStart = -index->m_pBKTreeRoots[item.bkt_index].childStart;
@@ -2506,20 +2593,20 @@ namespace weavess {
                             index->m_pSampleCenterMap[cid] = index->m_pBKTreeRoots[item.bkt_index].centerid;
                         }
                         index->m_pSampleCenterMap[-1 - index->m_pBKTreeRoots[item.bkt_index].centerid] = item.bkt_index;
-                    }
-                    else {
+                    } else {
                         for (int k = 0; k < index->m_iBKTKmeansK; k++) {
                             if (args.counts[k] == 0) continue;
                             int cid = localindices[item.first + args.counts[k] - 1];
                             index->m_pBKTreeRoots.emplace_back(cid);
-                            if (args.counts[k] > 1) ss.push(BKTStackItem(newBKTid++, item.first, item.first + args.counts[k] - 1));
+                            if (args.counts[k] > 1)
+                                ss.push(BKTStackItem(newBKTid++, item.first, item.first + args.counts[k] - 1));
                             item.first += args.counts[k];
                         }
                     }
                     //std::cout << 3.55 << std::endl;
                 }
                 //std::cout << 4 << std::endl;
-                index->m_pBKTreeRoots[item.bkt_index].childEnd = (int)index->m_pBKTreeRoots.size();
+                index->m_pBKTreeRoots[item.bkt_index].childEnd = (int) index->m_pBKTreeRoots.size();
             }
             //std::cout << 2 << std::endl;
             index->m_pBKTreeRoots.emplace_back(-1);
@@ -2531,55 +2618,45 @@ namespace weavess {
         return ((lhs.distance < rhs.distance) || ((lhs.distance == rhs.distance) && (lhs.id < rhs.id)));
     }
 
-    void ComponentInitSPTAG_BKT_new::PartitionByTptree(std::vector< int> &indices, const int first,
+    void ComponentInitSPTAG_BKT_new::PartitionByTptree(std::vector<int> &indices, const int first,
                                                        const int last,
                                                        std::vector<std::pair<int, int>> &leaves) {
-        if (last - first <= index->m_iTPTLeafSize)
-        {
+        if (last - first <= index->m_iTPTLeafSize) {
             leaves.emplace_back(first, last);
-        }
-        else
-        {
+        } else {
             std::vector<float> Mean(index->getBaseDim(), 0);
 
             int iIteration = 100;
             int end = std::min(first + index->m_iSamples, last);
             int count = end - first + 1;
             // calculate the mean of each dimension
-            for (int j = first; j <= end; j++)
-            {
-                const float* v = index->getBaseData() + index->getBaseDim() * indices[j];
-                for (int k = 0; k < index->getBaseDim(); k++)
-                {
+            for (int j = first; j <= end; j++) {
+                const float *v = index->getBaseData() + index->getBaseDim() * indices[j];
+                for (int k = 0; k < index->getBaseDim(); k++) {
                     Mean[k] += v[k];
                 }
             }
-            for (int k = 0; k < index->getBaseDim(); k++)
-            {
+            for (int k = 0; k < index->getBaseDim(); k++) {
                 Mean[k] /= count;
             }
             std::vector<Index::SimpleNeighbor> Variance;
             Variance.reserve(index->getBaseDim());
-            for (int j = 0; j < index->getBaseDim(); j++)
-            {
+            for (int j = 0; j < index->getBaseDim(); j++) {
                 Variance.emplace_back(j, 0.0f);
             }
             // calculate the variance of each dimension
-            for (int j = first; j <= end; j++)
-            {
-                const float* v = index->getBaseData() + index->getBaseDim() * indices[j];
-                for (int k = 0; k < index->getBaseDim(); k++)
-                {
+            for (int j = first; j <= end; j++) {
+                const float *v = index->getBaseData() + index->getBaseDim() * indices[j];
+                for (int k = 0; k < index->getBaseDim(); k++) {
                     float dist = v[k] - Mean[k];
-                    Variance[k].distance += dist*dist;
+                    Variance[k].distance += dist * dist;
                 }
             }
             std::sort(Variance.begin(), Variance.end(), ComponentInitSPTAG_BKT_new::Compare);
             std::vector<int> indexs(index->m_numTopDimensionTPTSplit);
             std::vector<float> weight(index->m_numTopDimensionTPTSplit), bestweight(index->m_numTopDimensionTPTSplit);
             float bestvariance = Variance[index->getBaseDim() - 1].distance;
-            for (int i = 0; i < index->m_numTopDimensionTPTSplit; i++)
-            {
+            for (int i = 0; i < index->m_numTopDimensionTPTSplit; i++) {
                 indexs[i] = Variance[index->getBaseDim() - 1 - i].id;
                 bestweight[i] = 0;
             }
@@ -2587,43 +2664,35 @@ namespace weavess {
             float bestmean = Mean[indexs[0]];
 
             std::vector<float> Val(count);
-            for (int i = 0; i < iIteration; i++)
-            {
+            for (int i = 0; i < iIteration; i++) {
                 float sumweight = 0;
-                for (int j = 0; j < index->m_numTopDimensionTPTSplit; j++)
-                {
+                for (int j = 0; j < index->m_numTopDimensionTPTSplit; j++) {
                     weight[j] = float(std::rand() % 10000) / 5000.0f - 1.0f;
                     sumweight += weight[j] * weight[j];
                 }
                 sumweight = sqrt(sumweight);
-                for (int j = 0; j < index->m_numTopDimensionTPTSplit; j++)
-                {
+                for (int j = 0; j < index->m_numTopDimensionTPTSplit; j++) {
                     weight[j] /= sumweight;
                 }
                 float mean = 0;
-                for (int j = 0; j < count; j++)
-                {
+                for (int j = 0; j < count; j++) {
                     Val[j] = 0;
-                    const float* v = index->getBaseData() + index->getBaseDim() * indices[first + j];
-                    for (int k = 0; k < index->m_numTopDimensionTPTSplit; k++)
-                    {
+                    const float *v = index->getBaseData() + index->getBaseDim() * indices[first + j];
+                    for (int k = 0; k < index->m_numTopDimensionTPTSplit; k++) {
                         Val[j] += weight[k] * v[indexs[k]];
                     }
                     mean += Val[j];
                 }
                 mean /= count;
                 float var = 0;
-                for (int j = 0; j < count; j++)
-                {
+                for (int j = 0; j < count; j++) {
                     float dist = Val[j] - mean;
                     var += dist * dist;
                 }
-                if (var > bestvariance)
-                {
+                if (var > bestvariance) {
                     bestvariance = var;
                     bestmean = mean;
-                    for (int j = 0; j < index->m_numTopDimensionTPTSplit; j++)
-                    {
+                    for (int j = 0; j < index->m_numTopDimensionTPTSplit; j++) {
                         bestweight[j] = weight[j];
                     }
                 }
@@ -2631,27 +2700,21 @@ namespace weavess {
             int i = first;
             int j = last;
             // decide which child one point belongs
-            while (i <= j)
-            {
+            while (i <= j) {
                 float val = 0;
-                const float* v = index->getBaseData() + index->getBaseDim() * indices[i];
-                for (int k = 0; k < index->m_numTopDimensionTPTSplit; k++)
-                {
+                const float *v = index->getBaseData() + index->getBaseDim() * indices[i];
+                for (int k = 0; k < index->m_numTopDimensionTPTSplit; k++) {
                     val += bestweight[k] * v[indexs[k]];
                 }
-                if (val < bestmean)
-                {
+                if (val < bestmean) {
                     i++;
-                }
-                else
-                {
+                } else {
                     std::swap(indices[i], indices[j]);
                     j--;
                 }
             }
             // if all the points in the node are equal,equally split the node into 2
-            if ((i == first) || (i == last + 1))
-            {
+            if ((i == first) || (i == last + 1)) {
                 i = (first + last + 1) / 2;
             }
 
@@ -2709,13 +2772,13 @@ namespace weavess {
 
         // 构建 TPTree 和 初始图
         std::vector<std::vector<int>> TptreeDataIndices(index->m_iTPTNumber, std::vector<int>(index->getBaseLen()));
-        std::vector<std::vector<std::pair<int, int>>> TptreeLeafNodes(index->m_iTPTNumber, std::vector<std::pair<int, int>>());
+        std::vector<std::vector<std::pair<int, int>>> TptreeLeafNodes(index->m_iTPTNumber,
+                                                                      std::vector<std::pair<int, int>>());
 
         auto t1 = std::chrono::high_resolution_clock::now();
         std::cout << "Parallel TpTree Partition begin\n";
 #pragma omp parallel for schedule(dynamic)
-        for (int i = 0; i < index->m_iTPTNumber; i++)
-        {
+        for (int i = 0; i < index->m_iTPTNumber; i++) {
             Sleep(i * 100);
             std::srand(clock());
             for (int j = 0; j < index->getBaseLen(); j++) TptreeDataIndices[i][j] = j;
@@ -2725,21 +2788,19 @@ namespace weavess {
         }
         std::cout << "Parallel TpTree Partition done\n";
         auto t2 = std::chrono::high_resolution_clock::now();
-        std::cout << "Build TPTree time (s): " << std::chrono::duration_cast<std::chrono::seconds>(t2 - t1).count() << std::endl;
+        std::cout << "Build TPTree time (s): " << std::chrono::duration_cast<std::chrono::seconds>(t2 - t1).count()
+                  << std::endl;
 
-        for (int i = 0; i < index->m_iTPTNumber; i++)
-        {
+        for (int i = 0; i < index->m_iTPTNumber; i++) {
 #pragma omp parallel for schedule(dynamic)
-            for (int j = 0; j < (int)TptreeLeafNodes[i].size(); j++)
-            {
+            for (int j = 0; j < (int) TptreeLeafNodes[i].size(); j++) {
                 int start_index = TptreeLeafNodes[i][j].first;
                 int end_index = TptreeLeafNodes[i][j].second;
                 if ((j * 5) % TptreeLeafNodes[i].size() == 0)
-                    std::cout << "Processing Tree " << i << " " << static_cast<int>(j * 1.0 / TptreeLeafNodes[i].size() * 100) << std::endl;
-                for (int x = start_index; x < end_index; x++)
-                {
-                    for (int y = x + 1; y <= end_index; y++)
-                    {
+                    std::cout << "Processing Tree " << i << " "
+                              << static_cast<int>(j * 1.0 / TptreeLeafNodes[i].size() * 100) << std::endl;
+                for (int x = start_index; x < end_index; x++) {
+                    for (int y = x + 1; y <= end_index; y++) {
                         int p1 = TptreeDataIndices[i][x];
                         int p2 = TptreeDataIndices[i][y];
                         float dist = index->getDist()->compare(index->getBaseData() + index->getBaseDim() * p1,
@@ -2758,7 +2819,8 @@ namespace weavess {
         TptreeLeafNodes.clear();
 
         auto t3 = std::chrono::high_resolution_clock::now();
-        std::cout << "Process TPTree time (s): " << std::chrono::duration_cast<std::chrono::seconds>(t3 - t2).count() << std::endl;
+        std::cout << "Process TPTree time (s): " << std::chrono::duration_cast<std::chrono::seconds>(t3 - t2).count()
+                  << std::endl;
     }
 
 
@@ -2770,9 +2832,9 @@ namespace weavess {
 
         BuildGraph();
 
-        for(int i = 0; i < 10; i ++) {
+        for (int i = 0; i < 10; i++) {
             std::cout << "len : " << index->getFinalGraph()[i].size() << std::endl;
-            for(int j = 0; j < index->getFinalGraph()[i].size(); j ++){
+            for (int j = 0; j < index->getFinalGraph()[i].size(); j++) {
                 std::cout << index->getFinalGraph()[i][j].id << "|" << index->getFinalGraph()[i][j].distance << " ";
             }
             std::cout << std::endl;
@@ -2804,7 +2866,8 @@ namespace weavess {
         localindices.resize(index->getBaseLen());
         for (unsigned i = 0; i < localindices.size(); i++) localindices[i] = i;
 
-        Index::KmeansArgs<float> args(index->m_iBKTKmeansK, index->getBaseDim(), localindices.size(), index->numOfThreads);
+        Index::KmeansArgs<float> args(index->m_iBKTKmeansK, index->getBaseDim(), localindices.size(),
+                                      index->numOfThreads);
 
         index->m_pSampleCenterMap.clear();
 
@@ -2989,7 +3052,7 @@ namespace weavess {
 //        }
 //        args.Shuffle(indices, first, last);
 //        return numClusters;
-return 0;
+        return 0;
     }
 
     void
@@ -3141,9 +3204,9 @@ return 0;
             unsigned test = -1;
             //std::cout << "k : " << k << " " << args._DK << " " << args.clusterIdx[k] << " " << test << std::endl;
 
-            if(args.clusterIdx[k] < 0 || args.clusterIdx[k] > index->getBaseLen()) continue;
+            if (args.clusterIdx[k] < 0 || args.clusterIdx[k] > index->getBaseLen()) continue;
             float dist = index->getDist()->compare(index->getBaseData() + index->getBaseDim() * args.clusterIdx[k],
-                                                  args.centers + k * args._D,
+                                                   args.centers + k * args._D,
                                                    args._D);
             if (args.counts[k] > maxCount && args.newCounts[k] > 0 && dist > 1e-6) {
                 maxcluster = k;
@@ -3178,7 +3241,7 @@ return 0;
                 for (unsigned j = 0; j < args._D; j++) TCenter[j] = (float) (currCenters[j]);
                 //std::cout << "wtf8" << std::endl;
             }
-            diff += index->getDist()->compare(args.centers + k *args._D, TCenter, args._D);
+            diff += index->getDist()->compare(args.centers + k * args._D, TCenter, args._D);
         }
         return diff;
     }
@@ -3342,12 +3405,12 @@ return 0;
         // G - > final_graph
         index->getFinalGraph().resize(index->getBaseLen());
 
-        for(int i = 0; i < index->getBaseLen(); i ++) {
+        for (int i = 0; i < index->getBaseLen(); i++) {
             std::vector<Index::SimpleNeighbor> tmp;
 
             int degree = G[i].size();
 
-            for(int j = 0; j < degree; j ++) {
+            for (int j = 0; j < degree; j++) {
                 tmp.emplace_back(G[i][j].v2, G[i][j].weight);  // 已排序
             }
             index->getFinalGraph()[i] = tmp;
@@ -3475,14 +3538,14 @@ return 0;
 
         for (size_t i = 0; i < index->getBaseLen(); i++) {
             auto size = index->getFinalGraph()[i].size();
-            long long min_diff =1e6, min_diff_dim = -1;
+            long long min_diff = 1e6, min_diff_dim = -1;
             for (size_t j = 0; j < index->getBaseDim(); j++) {
                 int lnum = 0, rnum = 0;
                 for (size_t k = 0; k < size; k++) {
-                    if ((index->getBaseData() + index->getFinalGraph()[i][k].id * index->getBaseDim())[j] < (index->getBaseData() + i * index->getBaseDim())[j]) {
+                    if ((index->getBaseData() + index->getFinalGraph()[i][k].id * index->getBaseDim())[j] <
+                        (index->getBaseData() + i * index->getBaseDim())[j]) {
                         lnum++;
-                    }
-                    else {
+                    } else {
                         rnum++;
                     }
                 }
@@ -3495,10 +3558,10 @@ return 0;
             }
             index->Tn[i].div_dim = min_diff_dim;
             for (size_t k = 0; k < size; k++) {
-                if ((index->getBaseData() + index->getFinalGraph()[i][k].id * index->getBaseDim())[min_diff_dim] < (index->getBaseData() + i * index->getBaseDim())[min_diff_dim]) {
+                if ((index->getBaseData() + index->getFinalGraph()[i][k].id * index->getBaseDim())[min_diff_dim] <
+                    (index->getBaseData() + i * index->getBaseDim())[min_diff_dim]) {
                     index->Tn[i].left.push_back(index->getFinalGraph()[i][k].id);
-                }
-                else {
+                } else {
                     index->Tn[i].right.push_back(index->getFinalGraph()[i][k].id);
                 }
             }
@@ -3513,7 +3576,8 @@ return 0;
         return distribution(*generator);
     }
 
-    std::tuple<std::vector<std::vector<Index::Edge> >, float> kruskal(std::vector<Index::Edge> &edges, int N, int max_mst_degree) {
+    std::tuple<std::vector<std::vector<Index::Edge> >, float>
+    kruskal(std::vector<Index::Edge> &edges, int N, int max_mst_degree) {
         sort(edges.begin(), edges.end());
         std::vector<std::vector<Index::Edge >> MST(N);
         auto *disjset = new Index::DisjointSet(N);
@@ -3563,75 +3627,82 @@ return 0;
     }
 
     bool check_in_neighbors(int u, std::vector<Index::Edge> &neigh) {
-        for (int i = 0; i < neigh.size(); i++){
+        for (int i = 0; i < neigh.size(); i++) {
             if (neigh[i].v2 == u)
                 return true;
         }
         return false;
     }
 
-    void ComponentInitHCNNG::create_clusters(int *idx_points, int left, int right, std::vector<std::vector<Index::Edge> > &graph,
-                                             int minsize_cl, std::vector<omp_lock_t> &locks, int max_mst_degree){
+    void
+    ComponentInitHCNNG::create_clusters(int *idx_points, int left, int right,
+                                        std::vector<std::vector<Index::Edge> > &graph,
+                                        int minsize_cl, std::vector<omp_lock_t> &locks, int max_mst_degree) {
         int num_points = right - left + 1;
 
-        if(num_points<minsize_cl){
+        if (num_points < minsize_cl) {
             std::vector<std::vector<Index::Edge> > mst = create_exact_mst(idx_points, left, right, max_mst_degree);
-            for(int i=0; i<num_points; i++){
+            for (int i = 0; i < num_points; i++) {
                 //std::cout << "w1" << " " << mst.size() << std::endl;
                 //std::cout << "w2" << " " << mst[2].size() <<std::endl;
-                for(int j=0; j<mst[i].size(); j++){
-                    omp_set_lock(&locks[idx_points[left+i]]);
-                    if(!check_in_neighbors(idx_points[left+mst[i][j].v2], graph[idx_points[left+i]])){
-                        graph[idx_points[left+i]].push_back(Index::Edge(idx_points[left+i], idx_points[left+mst[i][j].v2], mst[i][j].weight));
+                for (int j = 0; j < mst[i].size(); j++) {
+                    omp_set_lock(&locks[idx_points[left + i]]);
+                    if (!check_in_neighbors(idx_points[left + mst[i][j].v2], graph[idx_points[left + i]])) {
+                        graph[idx_points[left + i]].push_back(
+                                Index::Edge(idx_points[left + i], idx_points[left + mst[i][j].v2], mst[i][j].weight));
                     }
 
-                    omp_unset_lock(&locks[idx_points[left+i]]);
+                    omp_unset_lock(&locks[idx_points[left + i]]);
                 }
             }
-        }else{
+        } else {
             // 随机抽取两点进行分簇
             int x = rand_int(left, right);
             int y = rand_int(left, right);
-            while(y==x) y = rand_int(left, right);
+            while (y == x) y = rand_int(left, right);
 
-            std::vector<std::pair<float,int> > dx(num_points);
-            std::vector<std::pair<float,int> > dy(num_points);
+            std::vector<std::pair<float, int> > dx(num_points);
+            std::vector<std::pair<float, int> > dy(num_points);
             std::unordered_set<int> taken;
-            for(int i=0; i<num_points; i++){
-                dx[i] = std::make_pair(index->getDist()->compare(index->getBaseData() + index->getBaseDim() * idx_points[x],
-                                                                 index->getBaseData() + index->getBaseDim() * idx_points[left+i],
-                                                                 index->getBaseDim()), idx_points[left+i]);
-                dy[i] = std::make_pair(index->getDist()->compare(index->getBaseData() + index->getBaseDim() * idx_points[y],
-                                                                 index->getBaseData() + index->getBaseDim() * idx_points[left+i],
-                                                                 index->getBaseDim()), idx_points[left+i]);
+            for (int i = 0; i < num_points; i++) {
+                dx[i] = std::make_pair(
+                        index->getDist()->compare(index->getBaseData() + index->getBaseDim() * idx_points[x],
+                                                  index->getBaseData() +
+                                                  index->getBaseDim() * idx_points[left + i],
+                                                  index->getBaseDim()), idx_points[left + i]);
+                dy[i] = std::make_pair(
+                        index->getDist()->compare(index->getBaseData() + index->getBaseDim() * idx_points[y],
+                                                  index->getBaseData() +
+                                                  index->getBaseDim() * idx_points[left + i],
+                                                  index->getBaseDim()), idx_points[left + i]);
             }
             sort(dx.begin(), dx.end());
             sort(dy.begin(), dy.end());
             int i = 0, j = 0, turn = rand_int(0, 1), p = left, q = right;
-            while(i<num_points || j<num_points){
-                if(turn == 0){
-                    if(i<num_points){
-                        if(not_in_set(dx[i].second, taken)){
+            while (i < num_points || j < num_points) {
+                if (turn == 0) {
+                    if (i < num_points) {
+                        if (not_in_set(dx[i].second, taken)) {
                             idx_points[p] = dx[i].second;
                             taken.insert(dx[i].second);
                             p++;
-                            turn = (turn+1)%2;
+                            turn = (turn + 1) % 2;
                         }
                         i++;
-                    }else{
-                        turn = (turn+1)%2;
+                    } else {
+                        turn = (turn + 1) % 2;
                     }
-                }else{
-                    if(j<num_points){
-                        if(not_in_set(dy[j].second, taken)){
+                } else {
+                    if (j < num_points) {
+                        if (not_in_set(dy[j].second, taken)) {
                             idx_points[q] = dy[j].second;
                             taken.insert(dy[j].second);
                             q--;
-                            turn = (turn+1)%2;
+                            turn = (turn + 1) % 2;
                         }
                         j++;
-                    }else{
-                        turn = (turn+1)%2;
+                    } else {
+                        turn = (turn + 1) % 2;
                     }
                 }
             }
@@ -3639,10 +3710,10 @@ return 0;
             dx.clear();
             dy.clear();
             taken.clear();
-            std::vector<std::pair<float,int> >().swap(dx);
-            std::vector<std::pair<float,int> >().swap(dy);
+            std::vector<std::pair<float, int> >().swap(dx);
+            std::vector<std::pair<float, int> >().swap(dy);
 
-            create_clusters(idx_points, left, p-1, graph, minsize_cl, locks, max_mst_degree);
+            create_clusters(idx_points, left, p - 1, graph, minsize_cl, locks, max_mst_degree);
             create_clusters(idx_points, p, right, graph, minsize_cl, locks, max_mst_degree);
         }
     }
@@ -3708,7 +3779,7 @@ return 0;
 
     // kdt
     void ComponentInitHCNNG::meanSplit(std::mt19937 &rng, unsigned *indices, unsigned count, unsigned &index1,
-                                     unsigned &cutdim, float &cutval) {
+                                       unsigned &cutdim, float &cutval) {
         float *mean_ = new float[index->getBaseDim()];
         float *var_ = new float[index->getBaseDim()];
         memset(mean_, 0, index->getBaseDim() * sizeof(float));
@@ -3760,8 +3831,9 @@ return 0;
         delete[] var_;
     }
 
-    void ComponentInitHCNNG::planeSplit(unsigned *indices, unsigned count, unsigned cutdim, float cutval, unsigned &lim1,
-                                      unsigned &lim2) {
+    void
+    ComponentInitHCNNG::planeSplit(unsigned *indices, unsigned count, unsigned cutdim, float cutval, unsigned &lim1,
+                                   unsigned &lim2) {
         /* Move vector indices for left subtree to front of list. */
         int left = 0;
         int right = count - 1;
@@ -3829,7 +3901,7 @@ return 0;
     }
 
     void ComponentInitHCNNG::DFSbuild(Index::EFANNA::Node *node, std::mt19937 &rng, unsigned *indices, unsigned count,
-                                    unsigned offset) {
+                                      unsigned offset) {
         //omp_set_lock(&rootlock);
         //std::cout<<node->treeid<<":"<<offset<<":"<<count<<std::endl;
         //omp_unset_lock(&rootlock);

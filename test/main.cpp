@@ -211,6 +211,18 @@ void NGT(std::string base_path, std::string query_path, std::string ground_path)
     std::cout << "Time cost: " << builder->GetBuildTime().count() << std::endl;
 }
 
+void ANNG(std::string base_path, std::string query_path, std::string ground_path) {
+    weavess::Parameters parameters;
+    parameters.set<unsigned>("edgeSizeForCreation", 10);
+    parameters.set<unsigned>("batchSizeForCreation", 200);
+
+    auto *builder = new weavess::IndexBuilder();
+    builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
+            -> init(weavess::INIT_ANNG);
+
+    std::cout << "Time cost: " << builder->GetBuildTime().count() << std::endl;
+}
+
 void HCNNG(std::string base_path, std::string query_path, std::string ground_path) {
     weavess::Parameters parameters;
     parameters.set<unsigned>("minsize_cl", 1000);
@@ -316,13 +328,11 @@ int main() {
     //IEH(base_path, query_path, ground_path);
     //HCNNG(base_path, query_path, ground_path);
     //SPTAG_KDT_new(base_path, query_path, ground_path);
-    SPTAG_BKT_new(base_path, query_path, ground_path);
+    //SPTAG_BKT_new(base_path, query_path, ground_path);
 
     //EFANNA(base_path, query_path, ground_path);
     //NSW(base_path, query_path, ground_path);
     //HNSW(base_path, query_path, ground_path);
-
-    //NGT(base_path, query_path, ground_path);
 
     return 0;
 }
