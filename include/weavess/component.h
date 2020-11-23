@@ -175,6 +175,30 @@ namespace weavess {
         void Search(unsigned startId, unsigned query, std::vector<Index::SimpleNeighbor> &pool);
     };
 
+    class ComponentInitANNG_new : public ComponentInit {
+    public:
+        explicit ComponentInitANNG_new(Index *index) : ComponentInit(index) {}
+
+        void InitInner() override;
+
+    private:
+        void SetConfigs();
+
+        void Build();
+
+        unsigned searchMultipleQueryForCreation(unsigned id, Index::InputJobQueue &input);
+
+        void insertMultipleSearchResults(Index::InputJobQueue &input, Index::OutputJobQueue &output, unsigned cnt);
+
+        void InsertNode(unsigned id);
+
+        bool addEdge(unsigned target, unsigned addID, float dist);
+
+        void truncateEdgesOptimally(unsigned id, size_t truncationSize);
+
+        void Search(unsigned startId, unsigned query, std::vector<Index::SimpleNeighbor> &pool);
+    };
+
     class ComponentInitSPTAG_KDT : public ComponentInit {
     public:
         explicit ComponentInitSPTAG_KDT(Index *index) : ComponentInit(index) {}

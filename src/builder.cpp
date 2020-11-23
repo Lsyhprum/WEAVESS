@@ -67,7 +67,7 @@ namespace weavess {
             a = new ComponentInitHNSW(final_index_);
         } else if (type == INIT_ANNG) {
             std::cout << "__INIT : ANNG__" << std::endl;
-            a = new ComponentInitANNG(final_index_);
+            a = new ComponentInitANNG_new(final_index_);
         } else if (type == INIT_SPTAG_KDT) {
             std::cout << "__INIT : SPTAG_KDT__" << std::endl;
             a = new ComponentInitSPTAG_KDT_new(final_index_);
