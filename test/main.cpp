@@ -195,30 +195,55 @@ void HNSW(std::string base_path, std::string query_path, std::string ground_path
     std::cout << "Time cost: " << builder->GetBuildTime().count() << std::endl;
 }
 
-void NGT(std::string base_path, std::string query_path, std::string ground_path) {
+//void ANNG(std::string base_path, std::string query_path, std::string ground_path) {
+//    weavess::Parameters parameters;
+//    parameters.set<unsigned>("edgeSizeForCreation", 10); // 初始化边数阈值
+//    parameters.set<unsigned>("truncationThreshold", 10);
+//    parameters.set<unsigned>("edgeSizeForSearch", 10);
+//    parameters.set<unsigned>("size", 10);
+//
+//    auto *builder = new weavess::IndexBuilder();
+//    builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
+//            -> init(weavess::INIT_ANNG)
+//            -> refine(weavess::REFINE_ONNG, false);
+//    //-> search(weavess::SEARCH_ENTRY_NONE, weavess::ROUTER_NGT);
+//
+//    std::cout << "Time cost: " << builder->GetBuildTime().count() << std::endl;
+//}
+
+void ONNG(std::string base_path, std::string query_path, std::string ground_path) {
     weavess::Parameters parameters;
     parameters.set<unsigned>("edgeSizeForCreation", 10); // 初始化边数阈值
     parameters.set<unsigned>("truncationThreshold", 10);
     parameters.set<unsigned>("edgeSizeForSearch", 10);
     parameters.set<unsigned>("size", 10);
 
+    parameters.set<unsigned>("numOfOutgoingEdges", 10);
+    parameters.set<unsigned>("numOfIncomingEdges", 100);
+    parameters.set<unsigned>("numOfQueries", 200);
+    parameters.set<unsigned>("numOfResultantObjects", 20);
+
     auto *builder = new weavess::IndexBuilder();
     builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
-            -> init(weavess::INIT_ANNG);
-            //-> refine(weavess::REFINE_ONNG, false)
+            -> init(weavess::INIT_ANNG)
+            -> refine(weavess::REFINE_ONNG, false);
             //-> search(weavess::SEARCH_ENTRY_NONE, weavess::ROUTER_NGT);
 
     std::cout << "Time cost: " << builder->GetBuildTime().count() << std::endl;
 }
 
-void ANNG(std::string base_path, std::string query_path, std::string ground_path) {
+void PANNG(std::string base_path, std::string query_path, std::string ground_path) {
     weavess::Parameters parameters;
-    parameters.set<unsigned>("edgeSizeForCreation", 10);
-    parameters.set<unsigned>("batchSizeForCreation", 200);
+    parameters.set<unsigned>("NN", 10);          // K
+    parameters.set<unsigned>("ef_construction", 50);        //L
+    parameters.set<unsigned>("n_threads_", 1);
+    //parameters.set<unsigned>("batchSizeForCreation", 200);
 
     auto *builder = new weavess::IndexBuilder();
     builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
-            -> init(weavess::INIT_ANNG);
+            -> init(weavess::INIT_ANNG)
+            -> refine(weavess::REFINE_ONNG, false)
+            -> search(weavess::SEARCH_ENTRY_VPT, weavess::ROUTER_NGT);
 
     std::cout << "Time cost: " << builder->GetBuildTime().count() << std::endl;
 }
@@ -319,16 +344,22 @@ int main() {
     std::string query_path = R"(G:\ANNS\dataset\siftsmall\siftsmall_query.fvecs)";
     std::string ground_path = R"(G:\ANNS\dataset\siftsmall\siftsmall_groundtruth.ivecs)";
 
+//    std::string base_path = R"(G:\ANNS\dataset\sift1M\sift_base.fvecs)";
+//    std::string query_path = R"(G:\ANNS\dataset\sift1M\sift_query.fvecs)";
+//    std::string ground_path = R"(G:\ANNS\dataset\sift1M\sift_groundtruth.ivecs)";
+
     //KGraph(base_path, query_path, ground_path);
+    //FANNG(base_path, query_path, ground_path);
     //NSG(base_path, query_path, ground_path);
     //SSG(base_path, query_path, ground_path);
     //DPG(base_path, query_path, ground_path);
     //VAMANA(base_path, query_path, ground_path);
-    //FANNG(base_path, query_path, ground_path);
     //IEH(base_path, query_path, ground_path);
     //HCNNG(base_path, query_path, ground_path);
     //SPTAG_KDT_new(base_path, query_path, ground_path);
     //SPTAG_BKT_new(base_path, query_path, ground_path);
+    PANNG(base_path, query_path, ground_path);
+    //ONNG(base_path, query_path, ground_path);
 
     //EFANNA(base_path, query_path, ground_path);
     //NSW(base_path, query_path, ground_path);

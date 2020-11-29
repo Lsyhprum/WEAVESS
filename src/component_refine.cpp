@@ -879,9 +879,134 @@ namespace weavess {
     /**
      * ONNG Refine :
      *  PRUNE      : ONNG
+     *  根据 id 排序
      */
     void ComponentRefineONNG::RefineInner() {
+        std::vector<std::vector<Index::SimpleNeighbor>> tmpGraph;
+        for (size_t id = 0; id < index->getBaseLen(); id++) {
+            std::vector<Index::SimpleNeighbor> node = index->getFinalGraph()[id];
+            tmpGraph.push_back(node);
+            node.clear();
+        }
 
+        std::vector<std::vector<std::pair<uint32_t, uint32_t> > > removeCandidates(tmpGraph.size());
+        int removeCandidateCount = 0;
+#ifdef _OPENMP
+#pragma omp parallel for
+#endif
+        for (size_t idx = 0; idx < tmpGraph.size(); ++idx) {
+            auto it = tmpGraph.begin() + idx;
+            size_t id = idx + 1;
+            std::vector<Index::SimpleNeighbor> srcNode = *it;
+            std::unordered_map<uint32_t, std::pair<size_t, double> > neighbors;
+            for (size_t sni = 0; sni < srcNode.size(); ++sni) {
+                neighbors[srcNode[sni].id] = std::pair<size_t, double>(sni, srcNode[sni].distance);
+            }
+
+            std::vector<std::pair<int, std::pair<uint32_t, uint32_t> > > candidates;
+            for (size_t sni = 0; sni < srcNode.size(); sni++) {
+                std::vector<Index::SimpleNeighbor> pathNode = tmpGraph[srcNode[sni].id];
+                for (size_t pni = 0; pni < pathNode.size(); pni++) {
+                    auto dstNodeID = pathNode[pni].id;
+                    auto dstNode = neighbors.find(dstNodeID);
+                    if (dstNode != neighbors.end()
+                        && srcNode[sni].distance < (*dstNode).second.second
+                        && pathNode[pni].distance < (*dstNode).second.second
+                            ) {
+                        candidates.push_back(std::pair<int, std::pair<uint32_t, uint32_t> >((*dstNode).second.first, std::pair<uint32_t, uint32_t>(srcNode[sni].id, dstNodeID)));
+                        removeCandidateCount++;
+                    }
+                }
+            }
+            sort(candidates.begin(), candidates.end(), std::greater<std::pair<int, std::pair<uint32_t, uint32_t>>>());
+            removeCandidates[id].reserve(candidates.size());
+            for (size_t i = 0; i < candidates.size(); i++) {
+                removeCandidates[id].push_back(candidates[i].second);
+            }
+        }
+
+        std::list<size_t> ids;
+        for (size_t idx = 0; idx < tmpGraph.size(); ++idx) {
+            ids.push_back(idx);
+        }
+
+        int removeCount = 0;
+        removeCandidateCount = 0;
+        for (size_t rank = 0; ids.size() != 0; rank++) {
+            for (auto it = ids.begin(); it != ids.end(); ) {
+                size_t id = *it;
+                size_t idx = id;
+                std::vector<Index::SimpleNeighbor> srcNode = tmpGraph[idx];
+                if (rank >= srcNode.size()) {
+                    if (!removeCandidates[idx].empty()) {
+                        std::cerr << "Something wrong! ID=" << id << " # of remaining candidates=" << removeCandidates[idx].size() << std::endl;
+                        abort();
+                    }
+                    it = ids.erase(it);
+                    continue;
+                }
+                if (removeCandidates[idx].size() > 0) {
+                    removeCandidateCount++;
+                    bool pathExist = false;
+                    while (!removeCandidates[idx].empty() && (removeCandidates[idx].back().second == srcNode[rank].id)) {
+                        size_t path = removeCandidates[idx].back().first;
+                        size_t dst = removeCandidates[idx].back().second;
+                        removeCandidates[idx].pop_back();
+                        if (removeCandidates[idx].empty()) {
+                            std::vector<std::pair<uint32_t, uint32_t>> empty;
+                            removeCandidates[idx] = empty;
+                        }
+                        if ((hasEdge(id, path)) && (hasEdge(path, dst))) {
+                            pathExist = true;
+                            while (!removeCandidates[idx].empty() && (removeCandidates[idx].back().second == srcNode[rank].id)) {
+                                removeCandidates[idx].pop_back();
+                                if (removeCandidates[idx].empty()) {
+                                    std::vector<std::pair<uint32_t, uint32_t>> empty;
+                                    removeCandidates[idx] = empty;
+                                }
+                            }
+                            break;
+                        }
+                    }
+                    if (pathExist) {
+                        removeCount++;
+                        it++;
+                        continue;
+                    }
+                }
+                auto outSrcNode = index->getFinalGraph()[id];
+                insert(outSrcNode, srcNode[rank].id, srcNode[rank].distance);
+                it++;
+            }
+        }
+
+        for(int i = 0; i < index->getBaseLen(); i ++) {
+            sort(index->getFinalGraph()[i].begin(), index->getFinalGraph()[i].end());
+        }
+
+//        for (size_t id = 1; id < outGraph.repository.size(); id++) {
+//            try {
+//                NGT::GraphNode &node = *outGraph.getNode(id);
+//                std::sort(node.begin(), node.end());
+//            } catch(...) {}
+//        }
+    }
+
+    static bool edgeComp(Index::SimpleNeighbor a, Index::SimpleNeighbor b) {
+        return a.id < b.id;
+    }
+
+    bool ComponentRefineONNG::hasEdge(size_t srcNodeID, size_t dstNodeID)
+    {
+        std::vector<Index::SimpleNeighbor> srcNode = index->getFinalGraph()[srcNodeID];
+        auto ni = std::lower_bound(srcNode.begin(), srcNode.end(), Index::SimpleNeighbor(dstNodeID, 0.0), edgeComp);
+        return (ni != srcNode.end()) && ((*ni).id == dstNodeID);
+    }
+
+    void ComponentRefineONNG::insert(std::vector<Index::SimpleNeighbor> node, size_t edgeID, float edgeDistance) {
+        Index::SimpleNeighbor edge(edgeID, edgeDistance);
+        auto ni = std::lower_bound(node.begin(), node.end(), edge, edgeComp);
+        node.insert(ni, edge);
     }
 
 
@@ -1064,6 +1189,10 @@ namespace weavess {
             }
             std::cout << std::endl;
         }
+        // ANNG : NSW（范围搜索）
+
+        // ONNG : ANNG -> 出入度调整
+        // PANNG : ANNG -> 裁边 路径调整
     }
 
     void ComponentRefineSPTAG_KDT::Link(Index::SimpleNeighbor *cut_graph_) {

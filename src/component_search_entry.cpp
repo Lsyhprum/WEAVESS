@@ -297,10 +297,121 @@ namespace weavess {
 
     /**
      * 获取入口点空方法
-     * @param query
-     * @param pool
+     * @param query 查询点
+     * @param pool 候选池
      */
     void ComponentSearchEntryNone::SearchEntryInner(unsigned int query, std::vector<Index::Neighbor> &pool) { }
+
+
+    /**
+     * VP-tree 获取近邻
+     * @param query 查询点
+     * @param pool 候选池
+     */
+    void ComponentSearchEntryVPT::SearchEntryInner(unsigned int query, std::vector<Index::Neighbor> &pool) {
+        float cq = static_cast<float>(FLT_MAX);
+        //float cq = 100;
+        std::multimap<float, unsigned> result_found;
+        Search(query, NGT_SEED_SIZE, result_found, index->vp_tree.get_root(), cq);
+
+        for(auto it : result_found) {
+            pool.emplace_back(it.second, it.first, true);
+        }
+    }
+
+
+    void ComponentSearchEntryVPT::Search(const unsigned& query_value, const size_t count, std::multimap<float, unsigned> &pool,
+                const Index::VPNodePtr& node, float& q)
+    {
+        assert(node.get());
+
+        if(node->get_leaf_node())
+        {
+            for(size_t c_pos = 0; c_pos < node->m_objects_list.size(); ++c_pos)
+            {
+                //m_stat.distance_threshold_count++;
+                float c_distance = index->getDist()->compare(index->getQueryData() + index->getQueryDim() * query_value,
+                                                             index->getBaseData() + index->getBaseDim() * node->m_objects_list[c_pos],
+                                                             index->getBaseDim());
+                if( c_distance <= q)
+                {
+                    pool.insert(std::pair<float, unsigned>(c_distance, node->m_objects_list[c_pos]));
+
+                    while(pool.size() > count)
+                    {
+                        typename std::multimap<float, unsigned>::iterator it_last = pool.end();
+
+                        pool.erase(--it_last);
+                    }
+
+                    if(pool.size() == count)
+                        q = (*pool.rbegin()).first;
+                }
+            }
+
+        }else
+        {
+            float dist = 0; //m_get_distance(node->get_value(), query_value);
+
+            // Search flag
+            size_t c_mu_pos = index->vp_tree.m_non_leaf_branching_factor;
+            if(node->m_mu_list.size() == 1)
+            {
+                c_mu_pos = 0;
+                //m_stat.distance_threshold_count++;
+                //dist = m_get_distance(node->get_value(), query_value, node->m_mu_list[c_mu_pos] + q);
+                dist = index->getDist()->compare(index->getBaseData() + index->getBaseDim() * node->get_value(),
+                                                 index->getQueryData() + index->getQueryDim() * query_value,
+                                                 index->getBaseDim());
+            }else
+            {
+                //m_stat.distance_count++;
+                dist = index->getDist()->compare(index->getBaseData() + index->getBaseDim() * node->get_value(),
+                                                 index->getQueryData() + index->getQueryDim() * query_value,
+                                                 index->getBaseDim());
+                //dist = m_get_distance(node->get_value(), query_value);
+                for(size_t c_pos = 0; c_pos < node->m_mu_list.size() -1 ; ++c_pos)
+                {
+                    if(dist > node->m_mu_list[c_pos] && dist < node->m_mu_list[c_pos + 1] )
+                    {
+                        c_mu_pos = c_pos;
+                        break;
+                    }
+                }
+            }
+
+            if(c_mu_pos != index->vp_tree.m_non_leaf_branching_factor)
+            {
+                float c_mu = node->m_mu_list[c_mu_pos];
+                if(dist < c_mu)
+                {
+                    if(dist < c_mu + q)
+                    {
+                        //m_stat.search_jump++;
+                        Search(query_value, count, pool, node->m_child_list[c_mu_pos], q);
+                    }
+                    if(dist >= c_mu - q)
+                    {
+                        //m_stat.search_jump++;
+                        Search(query_value, count, pool, node->m_child_list[c_mu_pos + 1], q);
+                    }
+                }else
+                {
+                    if(dist >= c_mu - q)
+                    {
+                        //m_stat.search_jump++;
+                        Search(query_value, count, pool, node->m_child_list[c_mu_pos + 1], q);
+                    }
+                    if(dist < c_mu + q)
+                    {
+                        //m_stat.search_jump++;
+                        Search(query_value, count, pool, node->m_child_list[c_mu_pos], q);
+                    }
+                }
+            }
+        }
+
+    }
 
 
 }

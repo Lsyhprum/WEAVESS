@@ -66,8 +66,8 @@ namespace weavess {
             std::cout << "__INIT : HNSW__" << std::endl;
             a = new ComponentInitHNSW(final_index_);
         } else if (type == INIT_ANNG) {
-            std::cout << "__INIT : ANNG__" << std::endl;
-            a = new ComponentInitANNG_new(final_index_);
+            std::cout << "__INIT : PANNG__" << std::endl;
+            a = new ComponentInitPANNG(final_index_);
         } else if (type == INIT_SPTAG_KDT) {
             std::cout << "__INIT : SPTAG_KDT__" << std::endl;
             a = new ComponentInitSPTAG_KDT_new(final_index_);
@@ -197,6 +197,9 @@ namespace weavess {
         } else if (entry_type == SEARCH_ENTRY_HASH) {
             std::cout << "__SEARCH ENTRY : HASH__" << std::endl;
             a = new ComponentSearchEntryHash(final_index_);
+        } else if (entry_type == SEARCH_ENTRY_VPT) {
+            std::cout << "__SEARCH ENTRY : VPT__" << std::endl;
+            a = new ComponentSearchEntryVPT(final_index_);
         } else {
             std::cerr << "__SEARCH ENTRY : WRONG TYPE__" << std::endl;
             exit(-1);
@@ -228,6 +231,9 @@ namespace weavess {
         } else if (route_type == ROUTER_SPTAG_BKT) {
             std::cout << "__ROUTER : SPTAG_BKT__" << std::endl;
             b = new ComponentSearchRouteSPTAG_BKT_new(final_index_);
+        } else if (route_type == ROUTER_NGT) {
+            std::cout << "__ROUTER : NGT__" << std::endl;
+            b = new ComponentSearchRouteNGT(final_index_);
         } else {
             std::cerr << "__ROUTER : WRONG TYPE__" << std::endl;
             exit(-1);
@@ -255,16 +261,19 @@ namespace weavess {
 
                 a->SearchEntryInner(i, pool);
 
-//                for(unsigned j = 0; j < pool.size(); j ++) {
-//                    std::cout << pool[j].id << "|" << pool[j].distance << " ";
-//                }
-//                std::cout << std::endl;
+                for(unsigned j = 0; j < pool.size(); j ++) {
+                    std::cout << pool[j].id << "|" << pool[j].distance << " ";
+                }
+                std::cout << std::endl;
+
+                std::cout << pool.size() << std::endl;
 
                 b->RouteInner(i, pool, res[i]);
 
 //                for(unsigned j = 0; j < res[i].size(); j ++) {
 //                    std::cout << res[i][j] << " ";
 //                }
+//                std::cout << std::endl;
             }
 
             auto e1 = std::chrono::high_resolution_clock::now();

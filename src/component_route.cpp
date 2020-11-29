@@ -1139,4 +1139,108 @@ namespace weavess {
         }
         std::cout << std::endl;
     }
+
+
+    /**
+     * NGT 搜索
+     * @param query 查询点
+     * @param pool 入口点
+     * @param res 结果集
+     */
+    void ComponentSearchRouteNGT::RouteInner(unsigned int query, std::vector<Index::Neighbor> &pool,
+                                             std::vector<unsigned int> &res) {
+        const auto L = index->getParam().get<unsigned>("L_search");
+        const auto K = index->getParam().get<unsigned>("K_search");
+
+        float radius = static_cast<float>(FLT_MAX);
+
+        // setup edgeSize
+        size_t edgeSize = pool.size();
+
+        std::priority_queue<Index::Neighbor, std::vector<Index::Neighbor>, std::greater<Index::Neighbor>> unchecked;
+        Index::DistanceCheckedSet distanceChecked;
+
+        std::priority_queue<Index::Neighbor, std::vector<Index::Neighbor>, std::less<Index::Neighbor>> results;
+        //setupDistances(sc, seeds);
+
+        //setupSeeds(sc, seeds, results, unchecked, distanceChecked);
+        std::sort(pool.begin(), pool.end());
+
+        for (auto ri = pool.begin(); ri != pool.end(); ri++){
+            if ((results.size() < L) && ((*ri).distance <= radius)){
+                results.push((*ri));
+            }else{
+                break;
+            }
+        }
+
+        if (results.size() >= L){
+            radius = results.top().distance;
+        }
+
+        for (auto ri = pool.begin(); ri != pool.end(); ri++){
+            distanceChecked.insert((*ri).id);
+            unchecked.push(*ri);
+        }
+
+        float explorationRadius = index->explorationCoefficient * radius;
+
+        while (!unchecked.empty()){
+            //std::cout << "radius: " << explorationRadius << std::endl;
+            Index::Neighbor target = unchecked.top();
+
+            unchecked.pop();
+            if (target.distance > explorationRadius){
+                break;
+            }
+            std::vector<Index::SimpleNeighbor> neighbors = index->getFinalGraph()[target.id];
+            if (neighbors.empty()){
+                continue;
+            }
+
+            for (unsigned neighborptr = 0; neighborptr < neighbors.size(); ++neighborptr){
+                //sc.visitCount++;
+                Index::SimpleNeighbor neighbor = index->getFinalGraph()[target.id][neighborptr];
+                if (distanceChecked[neighbor.id]){
+                    continue;
+                }
+                distanceChecked.insert(neighbor.id);
+
+                float distance = index->getDist()->compare(index->getQueryData() + index->getQueryDim() * query,
+                                                           index->getBaseData() + index->getBaseDim() * neighbor.id,
+                                                           index->getBaseDim());
+                //sc.distanceComputationCount++;
+                if (distance <= explorationRadius){
+                    unchecked.push(Index::Neighbor(neighbor.id, distance, true));
+                    if (distance <= radius){
+                        results.push(Index::Neighbor(neighbor.id, distance, true));
+                        if (results.size() >= L){
+                            if (results.top().distance >= distance){
+                                if (results.size() > L){
+                                    results.pop();
+                                }
+                                radius = results.top().distance;
+                                explorationRadius = index->explorationCoefficient * radius;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        //std::cout << "res : " << results.size() << std::endl;
+        while(!results.empty()) {
+            std::cout << results.top().id << "|" << results.top().distance << " ";
+            if(results.size() <= K) {
+                res.push_back(results.top().id);
+            }
+
+            results.pop();
+        }
+        std::cout << std::endl;
+
+        sort(res.begin(), res.end());
+
+        //sc.distanceComputationCount = so.distanceComputationCount;
+        //sc.visitCount = so.visitCount;
+    }
 }
