@@ -186,9 +186,9 @@ namespace weavess {
 
         void Build();
 
-        unsigned searchMultipleQueryForCreation(unsigned id, Index::InputJobQueue &input);
+        unsigned searchMultipleQueryForCreation(unsigned &id, Index::OutputJobQueue &output);
 
-        void insertMultipleSearchResults(Index::InputJobQueue &input, Index::OutputJobQueue &output, unsigned cnt);
+        void insertMultipleSearchResults(Index::OutputJobQueue &output, unsigned cnt);
 
         void InsertNode(unsigned id);
 
@@ -197,6 +197,90 @@ namespace weavess {
         void truncateEdgesOptimally(unsigned id, size_t truncationSize);
 
         void Search(unsigned startId, unsigned query, std::vector<Index::SimpleNeighbor> &pool);
+
+        // VP-tree
+        void Insert(const unsigned& new_value);
+
+        void Insert(const unsigned& new_value, Index::VPNodePtr& root);
+
+        void MakeVPTree(const std::vector<unsigned>& objects);
+
+        void SplitLeafNode(const Index::VPNodePtr& parent_node, const size_t child_id, const unsigned& new_value);
+
+        void InsertSplitLeafRoot(Index::VPNodePtr& root, const unsigned& new_value);
+
+        void CollectObjects(const Index::VPNodePtr& node, std::vector<unsigned>& S);
+
+        void RedistributeAmongLeafNodes(const Index::VPNodePtr& parent_node, const unsigned& new_value);
+
+        const float MedianSumm(const std::vector<unsigned>& SS1, const std::vector<unsigned>& SS2, const unsigned& v) const;
+
+        float Median(const unsigned& value, const std::vector<unsigned>::const_iterator it_begin,
+                                            const std::vector<unsigned>::const_iterator it_end);
+
+        void RedistributeAmongNonLeafNodes(const Index::VPNodePtr& parent_node, const size_t k_id,
+                                                                  const size_t k1_id, const unsigned& new_value);
+
+        void Remove(const unsigned& query_value, const Index::VPNodePtr& node);
+
+        void InsertSplitRoot(Index::VPNodePtr& root, const unsigned& new_value);
+
+        void SplitNonLeafNode(const Index::VPNodePtr& parent_node, const size_t child_id, const unsigned& new_value);
+
+        Index::VPNodePtr MakeVPTree(const std::vector<unsigned>& objects, const Index::VPNodePtr& parent);
+
+        const unsigned& SelectVP(const std::vector<unsigned>& objects);
+    };
+
+    class ComponentInitPANNG : public ComponentInit {
+    public:
+        explicit ComponentInitPANNG(Index *index) : ComponentInit(index) {}
+
+        void InitInner() override;
+
+    private:
+        void SetConfigs();
+
+        void InsertNode(Index::HnswNode *qnode, Index::VisitedList *visited_list);
+
+        void Link(Index::HnswNode *source, Index::HnswNode *target, int level);
+
+        void SearchAtLayer(Index::HnswNode *qnode, Index::HnswNode *enterpoint, int level,
+                                                      Index::VisitedList *visited_list,
+                                                      std::priority_queue<Index::FurtherFirst> &result);
+
+        // VP-tree
+        void Insert(const unsigned& new_value);
+
+        void Insert(const unsigned& new_value, Index::VPNodePtr& root);
+
+        void MakeVPTree(const std::vector<unsigned>& objects);
+
+        void SplitLeafNode(const Index::VPNodePtr& parent_node, const size_t child_id, const unsigned& new_value);
+
+        void InsertSplitLeafRoot(Index::VPNodePtr& root, const unsigned& new_value);
+
+        void CollectObjects(const Index::VPNodePtr& node, std::vector<unsigned>& S);
+
+        void RedistributeAmongLeafNodes(const Index::VPNodePtr& parent_node, const unsigned& new_value);
+
+        const float MedianSumm(const std::vector<unsigned>& SS1, const std::vector<unsigned>& SS2, const unsigned& v) const;
+
+        float Median(const unsigned& value, const std::vector<unsigned>::const_iterator it_begin,
+                     const std::vector<unsigned>::const_iterator it_end);
+
+        void RedistributeAmongNonLeafNodes(const Index::VPNodePtr& parent_node, const size_t k_id,
+                                           const size_t k1_id, const unsigned& new_value);
+
+        void Remove(const unsigned& query_value, const Index::VPNodePtr& node);
+
+        void InsertSplitRoot(Index::VPNodePtr& root, const unsigned& new_value);
+
+        void SplitNonLeafNode(const Index::VPNodePtr& parent_node, const size_t child_id, const unsigned& new_value);
+
+        Index::VPNodePtr MakeVPTree(const std::vector<unsigned>& objects, const Index::VPNodePtr& parent);
+
+        const unsigned& SelectVP(const std::vector<unsigned>& objects);
     };
 
     class ComponentInitSPTAG_KDT : public ComponentInit {
@@ -496,6 +580,11 @@ namespace weavess {
         explicit ComponentRefineONNG(Index *index) : ComponentRefine(index) {}
 
         void RefineInner() override;
+
+    private:
+        bool hasEdge(size_t srcNodeID, size_t dstNodeID);
+
+        void insert(std::vector<Index::SimpleNeighbor> node, size_t edgeID, float edgeDistance);
     };
 
     class ComponentRefineSPTAG_BKT : public ComponentRefine {
@@ -832,6 +921,17 @@ namespace weavess {
         void SearchEntryInner(unsigned query, std::vector<Index::Neighbor> &pool) override;
     };
 
+    class ComponentSearchEntryVPT : public ComponentSearchEntry {
+    public:
+        explicit ComponentSearchEntryVPT(Index *index) : ComponentSearchEntry(index) {}
+
+        void SearchEntryInner(unsigned query, std::vector<Index::Neighbor> &pool) override;
+
+    private:
+        void Search(const unsigned& query_value, const size_t count, std::multimap<float, unsigned> &pool,
+                                             const Index::VPNodePtr& node, float& q);
+    };
+
 
     // search route
     class ComponentSearchRoute : public Component {
@@ -941,6 +1041,12 @@ namespace weavess {
         void RouteInner(unsigned query, std::vector<Index::Neighbor> &pool, std::vector<unsigned> &res) override;
     };
 
+    class ComponentSearchRouteNGT : public ComponentSearchRoute {
+    public:
+        explicit ComponentSearchRouteNGT(Index *index) : ComponentSearchRoute(index) {}
+
+        void RouteInner(unsigned query, std::vector<Index::Neighbor> &pool, std::vector<unsigned> &res) override;
+    };
 }
 
 #endif //WEAVESS_COMPONENT_H

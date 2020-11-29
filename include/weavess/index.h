@@ -20,6 +20,10 @@
 // HCNNG
 #define not_in_set(_elto, _set) (_set.find(_elto)==_set.end())
 
+// NGT
+#define NGT_SEED_SIZE 5
+#define NGT_EXPLORATION_COEFFICIENT 1.1
+
 #include <omp.h>
 #include <mutex>
 #include <queue>
@@ -36,6 +40,7 @@
 #include <algorithm>
 #include <unordered_set>
 #include <boost/dynamic_bitset.hpp>
+#include <boost/shared_ptr.hpp>
 #include <boost/heap/d_ary_heap.hpp>
 #include "util.h"
 #include "policy.h"
@@ -64,6 +69,10 @@ namespace weavess {
 
             inline bool operator<(const Neighbor &other) const {
                 return distance < other.distance;
+            }
+
+            inline bool operator>(const Neighbor &other) const {
+                return distance > other.distance;
             }
         };
 
@@ -565,925 +574,304 @@ namespace weavess {
             }
         };
 
-        template <class TYPE>
-        class Repository : public std::vector<TYPE *>
-        {
+        class VPNode {
         public:
-            static TYPE *allocate() { return new TYPE; }
+            typedef boost::shared_ptr<VPNode> VPNodePtr;
+            typedef std::vector<VPNodePtr> ChildList;
+            typedef std::vector<float> DistanceList;
+            typedef std::vector<unsigned> ObjectsList; // Objects, if this is the leaf node
 
-            size_t push(TYPE *n)
+        public:
+            VPNode(): m_leaf_node(false)
+                    , m_branches_count(0)
             {
-                if (std::vector<TYPE *>::size() == 0)
-                {
-                    std::vector<TYPE *>::push_back(0);
-                }
-                std::vector<TYPE *>::push_back(n);
-                return std::vector<TYPE *>::size() - 1;
             }
 
-            size_t insert(TYPE *n)
+
+            VPNode(const VPNode& orig): m_leaf_node(false)
+                    , m_branches_count(0)
             {
-#ifdef ADVANCED_USE_REMOVED_LIST
-                if (!removedList.empty())
-      {
-        size_t idx = removedList.top();
-        removedList.pop();
-        put(idx, n);
-        return idx;
-      }
-#endif
-                return push(n);
             }
 
-            bool isEmpty(size_t idx)
+            VPNode(const unsigned& value): m_leaf_node(true)
+                    , m_branches_count(0)
+                    , m_value(value)
             {
-                if (idx < std::vector<TYPE *>::size())
+                //m_objects_list.push_back(value);
+            }
+
+            virtual ~VPNode(){
+            }
+
+            bool get_leaf_node() const{
+                return m_leaf_node;
+            }
+
+            void set_leaf_node(const bool leaf_node){
+                m_leaf_node = leaf_node;
+            }
+
+            size_t get_branches_count() const{
+                return m_branches_count;
+            }
+
+            void set_branches_count(size_t new_size){
+                m_branches_count = new_size;
+            }
+
+            size_t get_objects_count() const{
+                return m_objects_list.size();
+            }
+
+            const VPNodePtr& get_parent() const{
+                return m_parent;
+            }
+            void set_parent(const VPNodePtr& parent){
+                m_parent = parent;
+            }
+
+            void AddChild(const size_t child_pos, const VPNodePtr& child){
+                /*
+                if(m_child_list.size() <= child_pos)
                 {
-                    return (*this)[idx] == 0;
+                    m_child_list.reserve(child_pos + 1);
+                    m_mu_list.reserve(child_pos + 1);
                 }
-                else
+                */
+                //m_child_list[child_pos] = child;
+                m_child_list.push_back(child);
+
+                //(*m_child_list.rbegin())->set_parent(shared_from_this());
+
+                if(get_branches_count() != 1)
+                    m_mu_list.push_back(static_cast<float>(0));
+
+                ++m_branches_count;
+            }
+
+            void AddObject(const unsigned& new_object){
+                m_leaf_node = true;
+                m_objects_list.push_back(new_object);
+            }
+            bool DeleteObject(const unsigned& object){
+                typename ObjectsList::iterator it_find = std::find(m_objects_list.begin(),
+                                                                   m_objects_list.end(),
+                                                                   object);
+                if(it_find != m_objects_list.end())
                 {
+                    m_objects_list.erase(it_find);
                     return true;
                 }
+
+                return false;
             }
 
-            void put(size_t idx, TYPE *n)
-            {
-                if (std::vector<TYPE *>::size() <= idx)
-                {
-                    std::vector<TYPE *>::resize(idx + 1, 0);
-                }
-                if ((*this)[idx] != 0)
-                {
-                    std::cout << "put: Not empty" << std::endl;
-                }
-                (*this)[idx] = n;
+            const unsigned& get_value() const{
+                return m_value;
+            }
+            void set_value(const unsigned& new_value){
+                m_value = new_value;
             }
 
-            void erase(size_t idx)
-            {
-                if (isEmpty(idx))
-                {
-                    std::cout << "erase: Not in-memory or invalid id" << std::endl;
-                }
-                delete (*this)[idx];
-                (*this)[idx] = 0;
-            }
 
-            void remove(size_t idx)
-            {
-                erase(idx);
-#ifdef ADVANCED_USE_REMOVED_LIST
-                removedList.push(idx);
-#endif
-            }
-
-            TYPE **getPtr() { return &(*this)[0]; }
-
-            inline TYPE *get(size_t idx)
-            {
-                if (isEmpty(idx))
-                {
-                    std::stringstream msg;
-                    msg << "get: Not in-memory or invalid offset of node. idx=" << idx << " size=" << this->size();
-                    std::cout << msg.str() << std::endl;
-                }
-                return (*this)[idx];
-            }
-
-            inline TYPE *getWithoutCheck(size_t idx) { return (*this)[idx]; }
-
-            void deleteAll()
-            {
-                for (size_t i = 0; i < this->size(); i++)
-                {
-                    if ((*this)[i] != 0)
-                    {
-                        delete (*this)[i];
-                        (*this)[i] = 0;
-                    }
-                }
-                this->clear();
-#ifdef ADVANCED_USE_REMOVED_LIST
-                while (!removedList.empty())
-      {
-        removedList.pop();
-      };
-#endif
-            }
-
-            void set(size_t idx, TYPE *n)
-            {
-                (*this)[idx] = n;
-            }
-
-#ifdef ADVANCED_USE_REMOVED_LIST
-            size_t count()
-    {
-      return std::vector<TYPE *>::size() == 0 ? 0 : std::vector<TYPE *>::size() - removedList.size() - 1;
-    }
-
-  protected:
-    std::priority_queue<size_t, std::vector<size_t>, std::greater<size_t>> removedList;
-#endif
-        };
-
-        typedef unsigned int ObjectID;
-        typedef unsigned int NodeID;
-        class ID {
         public:
-            enum Type {
-                Leaf		= 1,
-                Internal	= 0
-            };
-            ID():id(0) {}
-            ID &operator=(const ID &n) {
-                id = n.id;
-                return *this;
-            }
-            ID &operator=(int i) {
-                setID(i);
-                return *this;
-            }
-            bool operator==(ID &n) { return id == n.id; }
-            bool operator<(ID &n) { return id < n.id; }
-            Type getType() { return (Type)((0x80000000 & id) >> 31); }
-            NodeID getID() { return 0x7fffffff & id; }
-            NodeID get() { return id; }
-            void setID(NodeID i) { id = (0x80000000 & id) | i; }
-            void setType(Type t) { id = (t << 31) | getID(); }
-            void setRaw(NodeID i) { id = i; }
-            void setNull() { id = 0; }
-        protected:
-            NodeID id;
-        };
+            DistanceList m_mu_list;		// "mu"  and child lists for vp-tree like
+            ChildList m_child_list;		// |chld| MU |chld| MU |chld|
+            VPNodePtr m_parent;
 
-        class Node {
-        public:
-
-            class Object {
-            public:
-                Object():object(0) {}
-                bool operator<(const Object &o) const { return distance < o.distance; }
-                static const double	Pivot;
-                ObjectID		id;
-                float	*object;
-                float		distance;
-                float		leafDistance;
-                int		clusterID;
-            };
-
-            typedef std::vector<Object>	Objects;
-
-            Node() {
-                parent.setNull();
-                id.setNull();
-            }
-
-            virtual ~Node() {}
-
-            Node &operator=(const Node &n) {
-                id = n.id;
-                parent = n.parent;
-                return *this;
-            }
-
-            void setPivot(float	*f) {
-                pivot = f;
-            }
-            float* getPivot() { return pivot; }
-            void deletePivot() {
-                delete pivot;
-            }
-
-            bool pivotIsEmpty() {
-                return pivot == 0;
-            }
-
-            ID		id;
-            ID		parent;
-
-            float		*pivot;
-
-        };
-
-        class InternalNode : public Node {
-        public:
-            InternalNode(size_t csize) : childrenSize(csize) { initialize(); }
-            InternalNode(NGT::ObjectSpace *os = 0) : childrenSize(5) { initialize(); }
-
-            ~InternalNode() {
-            }
-
-            void initialize() {
-                id = 0;
-                id.setType(ID::Internal);
-                pivot = 0;
-                children = new ID[childrenSize];
-                for (size_t i = 0; i < childrenSize; i++) {
-                    getChildren()[i] = 0;
-                }
-                borders = new Distance[childrenSize - 1];
-                for (size_t i = 0; i < childrenSize - 1; i++) {
-                    getBorders()[i] = 0;
-                }
-            }
-
-            void updateChild(DVPTree &dvptree, ID src, ID dst);
-
-//#ifdef NGT_SHARED_MEMORY_ALLOCATOR
-//            ID *getChildren(SharedMemoryAllocator &allocator) { return (ID*)allocator.getAddr(children); }
-//    Distance *getBorders(SharedMemoryAllocator &allocator) { return (Distance*)allocator.getAddr(borders); }
-//#else // NGT_SHARED_MEMORY_ALLOCATOR
-//            ID *getChildren() { return children; }
-//            Distance *getBorders() { return borders; }
-//#endif // NGT_SHARED_MEMORY_ALLOCATOR
-//
-//#if defined(NGT_SHARED_MEMORY_ALLOCATOR)
-//            void serialize(std::ofstream &os, SharedMemoryAllocator &allocator, ObjectSpace *objectspace = 0) {
-//#else
-//            void serialize(std::ofstream &os, ObjectSpace *objectspace = 0) {
-//#endif
-//                Node::serialize(os);
-//                if (pivot == 0) {
-//                    NGTThrowException("Node::write: pivot is null!");
-//                }
-//                assert(objectspace != 0);
-//#if defined(NGT_SHARED_MEMORY_ALLOCATOR)
-//                getPivot(*objectspace).serialize(os, allocator, objectspace);
-//#else
-//                getPivot().serialize(os, objectspace);
-//#endif
-//                NGT::Serializer::write(os, childrenSize);
-//                for (size_t i = 0; i < childrenSize; i++) {
-//#if defined(NGT_SHARED_MEMORY_ALLOCATOR)
-//                    getChildren(allocator)[i].serialize(os);
-//#else
-//                    getChildren()[i].serialize(os);
-//#endif
-//                }
-//                for (size_t i = 0; i < childrenSize - 1; i++) {
-//#if defined(NGT_SHARED_MEMORY_ALLOCATOR)
-//                    NGT::Serializer::write(os, getBorders(allocator)[i]);
-//#else
-//                    NGT::Serializer::write(os, getBorders()[i]);
-//#endif
-//                }
-//            }
-//            void deserialize(std::ifstream &is, ObjectSpace *objectspace = 0) {
-//                Node::deserialize(is);
-//                if (pivot == 0) {
-//#ifdef NGT_SHARED_MEMORY_ALLOCATOR
-//                    pivot = PersistentObject::allocate(*objectspace);
-//#else
-//                    pivot = PersistentObject::allocate(*objectspace);
-//#endif
-//                }
-//                assert(objectspace != 0);
-//#if defined(NGT_SHARED_MEMORY_ALLOCATOR)
-//                std::cerr << "not implemented" << std::endl;
-//      assert(0);
-//#else
-//                getPivot().deserialize(is, objectspace);
-//#endif
-//                NGT::Serializer::read(is, childrenSize);
-//                assert(children != 0);
-//                for (size_t i = 0; i < childrenSize; i++) {
-//#if defined(NGT_SHARED_MEMORY_ALLOCATOR)
-//                    assert(0);
-//#else
-//                    getChildren()[i].deserialize(is);
-//#endif
-//                }
-//                assert(borders != 0);
-//                for (size_t i = 0; i < childrenSize - 1; i++) {
-//#if defined(NGT_SHARED_MEMORY_ALLOCATOR)
-//                    assert(0);
-//#else
-//                    NGT::Serializer::read(is, getBorders()[i]);
-//#endif
-//                }
-//            }
-//
-//#if defined(NGT_SHARED_MEMORY_ALLOCATOR)
-//            void serializeAsText(std::ofstream &os, SharedMemoryAllocator &allocator, ObjectSpace *objectspace = 0) {
-//#else
-//            void serializeAsText(std::ofstream &os, ObjectSpace *objectspace = 0) {
-//#endif
-//                Node::serializeAsText(os);
-//                if (pivot == 0) {
-//                    NGTThrowException("Node::write: pivot is null!");
-//                }
-//                os << " ";
-//                assert(objectspace != 0);
-//#if defined(NGT_SHARED_MEMORY_ALLOCATOR)
-//                getPivot(*objectspace).serializeAsText(os, objectspace);
-//#else
-//                getPivot().serializeAsText(os, objectspace);
-//#endif
-//                os << " ";
-//                NGT::Serializer::writeAsText(os, childrenSize);
-//                os << " ";
-//                for (size_t i = 0; i < childrenSize; i++) {
-//#if defined(NGT_SHARED_MEMORY_ALLOCATOR)
-//                    getChildren(allocator)[i].serializeAsText(os);
-//#else
-//                    getChildren()[i].serializeAsText(os);
-//#endif
-//                    os << " ";
-//                }
-//                for (size_t i = 0; i < childrenSize - 1; i++) {
-//#if defined(NGT_SHARED_MEMORY_ALLOCATOR)
-//                    NGT::Serializer::writeAsText(os, getBorders(allocator)[i]);
-//#else
-//                    NGT::Serializer::writeAsText(os, getBorders()[i]);
-//#endif
-//                    os << " ";
-//                }
-//            }
-//#if defined(NGT_SHARED_MEMORY_ALLOCATOR)
-//            void deserializeAsText(std::ifstream &is, SharedMemoryAllocator &allocator, ObjectSpace *objectspace = 0) {
-//#else
-//            void deserializeAsText(std::ifstream &is, ObjectSpace *objectspace = 0) {
-//#endif
-//                Node::deserializeAsText(is);
-//                if (pivot == 0) {
-//#ifdef NGT_SHARED_MEMORY_ALLOCATOR
-//                    pivot = PersistentObject::allocate(*objectspace);
-//#else
-//                    pivot = PersistentObject::allocate(*objectspace);
-//#endif
-//                }
-//                assert(objectspace != 0);
-//#if defined(NGT_SHARED_MEMORY_ALLOCATOR)
-//                getPivot(*objectspace).deserializeAsText(is, objectspace);
-//#else
-//                getPivot().deserializeAsText(is, objectspace);
-//#endif
-//                size_t csize;
-//                NGT::Serializer::readAsText(is, csize);
-//                assert(children != 0);
-//                assert(childrenSize == csize);
-//                for (size_t i = 0; i < childrenSize; i++) {
-//#if defined(NGT_SHARED_MEMORY_ALLOCATOR)
-//                    getChildren(allocator)[i].deserializeAsText(is);
-//#else
-//                    getChildren()[i].deserializeAsText(is);
-//#endif
-//                }
-//                assert(borders != 0);
-//                for (size_t i = 0; i < childrenSize - 1; i++) {
-//#if defined(NGT_SHARED_MEMORY_ALLOCATOR)
-//                    NGT::Serializer::readAsText(is, getBorders(allocator)[i]);
-//#else
-//                    NGT::Serializer::readAsText(is, getBorders()[i]);
-//#endif
-//                }
-//            }
-//
-//            void show() {
-//                std::cout << "Show internal node " << childrenSize << ":";
-//                for (size_t i = 0; i < childrenSize; i++) {
-//#if defined(NGT_SHARED_MEMORY_ALLOCATOR)
-//                    assert(0);
-//#else
-//                    std::cout << getChildren()[i].getID() << " ";
-//#endif
-//                }
-//                std::cout << std::endl;
-//            }
-//
-//#if defined(NGT_SHARED_MEMORY_ALLOCATOR)
-//            bool verify(PersistentRepository<InternalNode> &internalNodes, PersistentRepository<LeafNode> &leafNodes,
-//		SharedMemoryAllocator &allocator);
-//#else
-//            bool verify(Repository<InternalNode> &internalNodes, Repository<LeafNode> &leafNodes);
-//#endif
-
-            static const int InternalChildrenSizeMax	= 5;
-            const size_t	childrenSize;
-            ID			*children;
-            Distance		*borders;
-        };
-
-
-        class LeafNode : public Node {
-        public:
-            LeafNode(NGT::ObjectSpace *os = 0) {
-                id = 0;
-                id.setType(ID::Leaf);
-                pivot = 0;
-#ifdef NGT_NODE_USE_VECTOR
-                objectIDs.reserve(LeafObjectsSizeMax);
-#else
-                objectSize = 0;
-                objectIDs = new NGT::ObjectDistance[LeafObjectsSizeMax];
-#endif
-            }
-
-//            ~LeafNode() {
-//#ifndef NGT_SHARED_MEMORY_ALLOCATOR
-//#ifndef NGT_NODE_USE_VECTOR
-//                if (objectIDs != 0) {
-//                    delete[] objectIDs;
-//                }
-//#endif
-//#endif
-//            }
-//
-//            static int
-//            selectPivotByMaxDistance(Container &iobj, Node::Objects &fs);
-//
-//            static int
-//            selectPivotByMaxVariance(Container &iobj, Node::Objects &fs);
-//
-//            static void
-//            splitObjects(Container &insertedObject, Objects &splitObjectSet, int pivot);
-//
-//#if defined(NGT_SHARED_MEMORY_ALLOCATOR)
-//            void removeObject(size_t id, size_t replaceId, SharedMemoryAllocator &allocator);
-//#else
-//            void removeObject(size_t id, size_t replaceId);
-//#endif
-//
-//#ifdef NGT_SHARED_MEMORY_ALLOCATOR
-//            #ifndef NGT_NODE_USE_VECTOR
-//    NGT::ObjectDistance *getObjectIDs(SharedMemoryAllocator &allocator) {
-//      return (NGT::ObjectDistance *)allocator.getAddr(objectIDs);
-//    }
-//#endif
-//#else // NGT_SHARED_MEMORY_ALLOCATOR
-//            NGT::ObjectDistance *getObjectIDs() { return objectIDs; }
-//#endif // NGT_SHARED_MEMORY_ALLOCATOR
-//
-//            void serialize(std::ofstream &os, ObjectSpace *objectspace = 0) {
-//                Node::serialize(os);
-//#ifdef NGT_NODE_USE_VECTOR
-//                NGT::Serializer::write(os, objectIDs);
-//#else
-//                NGT::Serializer::write(os, objectSize);
-//                for (int i = 0; i < objectSize; i++) {
-//#ifdef NGT_SHARED_MEMORY_ALLOCATOR
-//                    std::cerr << "not implemented" << std::endl;
-//	assert(0);
-//#else
-//                    objectIDs[i].serialize(os);
-//#endif
-//                }
-//#endif // NGT_NODE_USE_VECTOR
-//                if (pivot == 0) {
-//                    // Before insertion, parent ID == 0 and object size == 0, that indicates an empty index
-//                    if (parent.getID() != 0 || objectSize != 0) {
-//                        NGTThrowException("Node::write: pivot is null!");
-//                    }
-//                } else {
-//#ifdef NGT_SHARED_MEMORY_ALLOCATOR
-//                    std::cerr << "not implemented" << std::endl;
-//	assert(0);
-//#else
-//                    assert(objectspace != 0);
-//                    pivot->serialize(os, objectspace);
-//#endif
-//                }
-//            }
-//            void deserialize(std::ifstream &is, ObjectSpace *objectspace = 0) {
-//                Node::deserialize(is);
-//
-//#ifdef NGT_NODE_USE_VECTOR
-//                objectIDs.clear();
-//      NGT::Serializer::read(is, objectIDs);
-//#else
-//                assert(objectIDs != 0);
-//                NGT::Serializer::read(is, objectSize);
-//                for (int i = 0; i < objectSize; i++) {
-//#if defined(NGT_SHARED_MEMORY_ALLOCATOR)
-//                    std::cerr << "not implemented" << std::endl;
-//	assert(0);
-//#else
-//                    getObjectIDs()[i].deserialize(is);
-//#endif
-//                }
-//#endif
-//                if (parent.getID() == 0 && objectSize == 0) {
-//                    // The index is empty
-//                    return;
-//                }
-//                if (pivot == 0) {
-//#ifdef NGT_SHARED_MEMORY_ALLOCATOR
-//                    pivot = PersistentObject::allocate(*objectspace);
-//#else
-//                    pivot = PersistentObject::allocate(*objectspace);
-//                    assert(pivot != 0);
-//#endif
-//                }
-//                assert(objectspace != 0);
-//#if defined(NGT_SHARED_MEMORY_ALLOCATOR)
-//                std::cerr << "not implemented" << std::endl;
-//      assert(0);
-//#else
-//                getPivot().deserialize(is, objectspace);
-//#endif
-//            }
-//
-//#if defined(NGT_SHARED_MEMORY_ALLOCATOR)
-//            void serializeAsText(std::ofstream &os, SharedMemoryAllocator &allocator, ObjectSpace *objectspace = 0) {
-//#else
-//            void serializeAsText(std::ofstream &os, ObjectSpace *objectspace = 0) {
-//#endif
-//                Node::serializeAsText(os);
-//                os << " ";
-//                if (pivot == 0) {
-//                    NGTThrowException("Node::write: pivot is null!");
-//                }
-//#ifdef NGT_SHARED_MEMORY_ALLOCATOR
-//                    getPivot(*objectspace).serializeAsText(os, objectspace);
-//#else
-//                assert(pivot != 0);
-//                assert(objectspace != 0);
-//#if defined(NGT_SHARED_MEMORY_ALLOCATOR)
-//                pivot->serializeAsText(os, allocator, objectspace);
-//#else
-//                pivot->serializeAsText(os, objectspace);
-//#endif
-//#endif
-//                os << " ";
-//#ifdef NGT_NODE_USE_VECTOR
-//                NGT::Serializer::writeAsText(os, objectIDs);
-//#else
-//                NGT::Serializer::writeAsText(os, objectSize);
-//                for (int i = 0; i < objectSize; i++) {
-//                    os << " ";
-//#ifdef NGT_SHARED_MEMORY_ALLOCATOR
-//                    getObjectIDs(allocator)[i].serializeAsText(os);
-//#else
-//                    objectIDs[i].serializeAsText(os);
-//#endif
-//                }
-//#endif
-//            }
-//
-//#if defined(NGT_SHARED_MEMORY_ALLOCATOR)
-//            void deserializeAsText(std::ifstream &is, SharedMemoryAllocator &allocator, ObjectSpace *objectspace = 0) {
-//#else
-//            void deserializeAsText(std::ifstream &is, ObjectSpace *objectspace = 0) {
-//#endif
-//                Node::deserializeAsText(is);
-//                if (pivot == 0) {
-//#ifdef NGT_SHARED_MEMORY_ALLOCATOR
-//                    pivot = PersistentObject::allocate(*objectspace);
-//#else
-//                    pivot = PersistentObject::allocate(*objectspace);
-//#endif
-//                }
-//                assert(objectspace != 0);
-//#if defined(NGT_SHARED_MEMORY_ALLOCATOR)
-//                getPivot(*objectspace).deserializeAsText(is, objectspace);
-//#else
-//                getPivot().deserializeAsText(is, objectspace);
-//#endif
-//#ifdef NGT_NODE_USE_VECTOR
-//                objectIDs.clear();
-//      NGT::Serializer::readAsText(is, objectIDs);
-//#else
-//                assert(objectIDs != 0);
-//                NGT::Serializer::readAsText(is, objectSize);
-//                for (int i = 0; i < objectSize; i++) {
-//#if defined(NGT_SHARED_MEMORY_ALLOCATOR)
-//                    getObjectIDs(allocator)[i].deserializeAsText(is);
-//#else
-//                    getObjectIDs()[i].deserializeAsText(is);
-//#endif
-//                }
-//#endif
-//            }
-//
-//            void show() {
-//                std::cout << "Show leaf node " << objectSize << ":";
-//                for (int i = 0; i < objectSize; i++) {
-//#if defined(NGT_SHARED_MEMORY_ALLOCATOR)
-//                    std::cerr << "not implemented" << std::endl;
-//	assert(0);
-//#else
-//                    std::cout << getObjectIDs()[i].id << "," << getObjectIDs()[i].distance << " ";
-//#endif
-//                }
-//                std::cout << std::endl;
-//            }
-//
-//#if defined(NGT_SHARED_MEMORY_ALLOCATOR)
-//            bool verify(size_t nobjs, std::vector<uint8_t> &status, SharedMemoryAllocator &allocator);
-//#else
-//            bool verify(size_t nobjs, std::vector<uint8_t> &status);
-//#endif
-//
-//
-//#ifdef NGT_NODE_USE_VECTOR
-//            size_t getObjectSize() { return objectIDs.size(); }
-//#else
-//            size_t getObjectSize() { return objectSize; }
-//#endif
-//
-//            static const size_t LeafObjectsSizeMax		= 100;
-//
-//#ifdef NGT_NODE_USE_VECTOR
-//            std::vector<Object>	objectIDs;
-//#else
-//            unsigned short	objectSize;
-//#ifdef NGT_SHARED_MEMORY_ALLOCATOR
-//            off_t		objectIDs;
-//#else
-//            ObjectDistance	*objectIDs;
-//#endif
-//#endif
-        };
-
-
-    class ObjectDistance
-        {
-        public:
-            ObjectDistance() : id(0), distance(0.0) {}
-            ObjectDistance(unsigned int i, float d) : id(i), distance(d) {}
-            inline bool operator==(const ObjectDistance &o) const
-            {
-                return (distance == o.distance) && (id == o.id);
-            }
-            inline void set(unsigned int i, float d)
-            {
-                id = i;
-                distance = d;
-            }
-            inline bool operator<(const ObjectDistance &o) const
-            {
-                if (distance == o.distance)
-                {
-                    return id < o.id;
-                }
-                else
-                {
-                    return distance < o.distance;
-                }
-            }
-            inline bool operator>(const ObjectDistance &o) const
-            {
-                if (distance == o.distance)
-                {
-                    return id > o.id;
-                }
-                else
-                {
-                    return distance > o.distance;
-                }
-            }
-
-            friend std::ostream &operator<<(std::ostream &os, const ObjectDistance &o)
-            {
-                os << o.id << " " << o.distance;
-                return os;
-            }
-            friend std::istream &operator>>(std::istream &is, ObjectDistance &o)
-            {
-                is >> o.id;
-                is >> o.distance;
-                return is;
-            }
-            uint32_t id;
-            float distance;
-        };
-
-        class ObjectDistances : public std::vector<ObjectDistance> {
-        public:
-            ObjectDistances() {}
-
-            void moveFrom(std::priority_queue<ObjectDistance, std::vector<ObjectDistance>, std::less<ObjectDistance> > &pq) {
-                this->clear();
-                this->resize(pq.size());
-                for (int i = pq.size() - 1; i >= 0; i--) {
-                    (*this)[i] = pq.top();
-                    pq.pop();
-                }
-                assert(pq.size() == 0);
-            }
-
-            void moveFrom(std::priority_queue<ObjectDistance, std::vector<ObjectDistance>, std::less<ObjectDistance> > &pq, double (&f)(double)) {
-                this->clear();
-                this->resize(pq.size());
-                for (int i = pq.size() - 1; i >= 0; i--) {
-                    (*this)[i] = pq.top();
-                    (*this)[i].distance = f((*this)[i].distance);
-                    pq.pop();
-                }
-                assert(pq.size() == 0);
-            }
-
-            void moveFrom(std::priority_queue<ObjectDistance, std::vector<ObjectDistance>, std::less<ObjectDistance> > &pq, unsigned int id) {
-                this->clear();
-                if (pq.size() == 0) {
-                    return;
-                }
-                this->resize(id == 0 ? pq.size() : pq.size() - 1);
-                int i = this->size() - 1;
-                while (pq.size() != 0 && i >= 0) {
-                    if (pq.top().id != id) {
-                        (*this)[i] = pq.top();
-                        i--;
-                    }
-                    pq.pop();
-                }
-                if (pq.size() != 0 && pq.top().id != id) {
-                    std::cerr << "moveFrom: Fatal error: somethig wrong! " << pq.size() << ":" << this->size() << ":" << id << ":" << pq.top().id << std::endl;
-                    assert(pq.size() == 0 || pq.top().id == id);
-                }
-            }
-
-            ObjectDistances &operator=(ObjectDistances &objs);
-        };
-
-        class Container
-        {
-        public:
-            Container(float *o, unsigned i) : object(o), id(i) {}
-            Container(Container &c) : object(c.object), id(c.id) {}
-            float *object;
-            unsigned id;
-        };
-
-        typedef std::priority_queue<ObjectDistance, std::vector<ObjectDistance>, std::less<ObjectDistance>> ResultPriorityQueue;
-
-        class SearchContainer : public Container
-        {
-        public:
-            SearchContainer(float *f, unsigned i) : Container(f, i) { initialize(); }
-            SearchContainer(float *f) : Container(f, 0) { initialize(); }
-            SearchContainer(SearchContainer &sc, float *f) : Container(f, sc.id) { *this = sc; }
-
-            SearchContainer &operator=(SearchContainer &sc)
-            {
-                size = sc.size;
-                radius = sc.radius;
-                explorationCoefficient = sc.explorationCoefficient;
-                result = sc.result;
-                distanceComputationCount = sc.distanceComputationCount;
-                edgeSize = sc.edgeSize;
-                workingResult = sc.workingResult;
-                useAllNodesInLeaf = sc.useAllNodesInLeaf;
-                expectedAccuracy = sc.expectedAccuracy;
-                visitCount = sc.visitCount;
-                return *this;
-            }
-            virtual ~SearchContainer() {}
-            virtual void initialize()
-            {
-                size = 10;
-                radius = FLT_MAX;
-                explorationCoefficient = 1.1;
-                result = 0;
-                edgeSize = -1; // dynamically prune the edges during search. -1 means following the index property. 0 means using all edges.
-                useAllNodesInLeaf = false;
-                expectedAccuracy = -1.0;
-            }
-            void setSize(size_t s) { size = s; };
-            void setResults(ObjectDistances *r) { result = r; }
-            void setRadius(float r) { radius = r; }
-            void setEpsilon(float e) { explorationCoefficient = e + 1.0; }
-            void setEdgeSize(int e) { edgeSize = e; }
-            void setExpectedAccuracy(float a) { expectedAccuracy = a; }
-
-            inline bool resultIsAvailable() { return result != 0; }
-            ObjectDistances &getResult()
-            {
-                if (result == 0)
-                {
-                    std::cout << "Inner error: results is not set" << std::endl;
-                }
-                return *result;
-            }
-
-            ResultPriorityQueue &getWorkingResult() { return workingResult; }
-
-            size_t size;
-            float radius;
-            float explorationCoefficient;
-            int edgeSize;
-            size_t distanceComputationCount;
-            ResultPriorityQueue workingResult;
-            bool useAllNodesInLeaf;
-            size_t visitCount;
-            float expectedAccuracy;
+            ObjectsList m_objects_list;		// Objects, if this is the leaf node
 
         private:
-            ObjectDistances *result;
+            bool m_leaf_node;	// Is leaf node
+            size_t m_branches_count;	// Number of internal branches
+            unsigned m_value;	// Storage value
         };
 
-        class DVPTree {
+        struct TreeStatistic{
+            uint64_t distance_count;
+            uint64_t distance_threshold_count;
+            uint64_t search_jump;
+
+            void clear()
+            {
+                distance_count = 0;
+                distance_threshold_count = 0;
+                search_jump = 0;
+            }
+
+            TreeStatistic()
+                    : distance_count(0)
+                    , distance_threshold_count(0)
+                    , search_jump(0)
+            {
+            }
+        };
+
+        template <typename ValType, typename DistanceObtainer>
+        class ValueSorter
+        {
         public:
-            enum SplitMode {
-                MaxDistance	= 0,
-                MaxVariance	= 1
-            };
-
-            class Container : public NGT::Container {
-            public:
-                Container(float *f, unsigned i):NGT::Container(f, i) {}
-                DVPTree			*vptree;
-            };
-
-            class SearchContainer : public NGT::SearchContainer {
-            public:
-                enum Mode {
-                    SearchLeaf	= 0,
-                    SearchObject	= 1
-                };
-
-                SearchContainer(float *f, ObjectID i):NGT::SearchContainer(f, i) {}
-                SearchContainer(float *f):NGT::SearchContainer(f, 0) {}
-
-                DVPTree			*vptree;
-
-                Mode		mode;
-                ID	nodeID;
-            };
-            class InsertContainer : public Container {
-            public:
-                InsertContainer(float *f, ObjectID i):Container(f, i) {}
-            };
-
-            DVPTree() {
-                leafObjectsSize = LeafNode::LeafObjectsSizeMax;
-                internalChildrenSize = InternalNode::InternalChildrenSizeMax;
-                splitMode = MaxVariance;
+            ValueSorter(const ValType& main_val, const DistanceObtainer& distancer)
+                    : m_main_val(main_val)
+                    , m_get_distance(distancer)
+            {
             }
 
-            Node *getNode(ID &id) {
-                Node *n = 0;
-                NodeID idx = id.getID();
-                if (id.getType() == ID::Leaf) {
-                    n = leafNodes.get(idx);
-                } else {
-                    n = internalNodes.get(idx);
+            bool operator()(const ValType& val1, const ValType& val2)
+            {
+                return m_get_distance(m_main_val, val1) < m_get_distance(m_main_val, val2);
+            }
+        private:
+            const ValType& m_main_val;
+            const DistanceObtainer& m_get_distance;
+        };
+
+        class VPTree
+        {
+        public:
+            typedef VPNode VPNodeType;
+            typedef boost::shared_ptr<VPNodeType> VPNodePtr;
+
+            typedef std::vector<unsigned> ObjectsList;	// Objects, at leaf node
+
+            typedef std::pair<float, unsigned> SearchResult;
+            typedef std::multimap<float, unsigned> SearchResultMap;
+            typedef std::vector<float> DistanceObtainer;
+
+            typedef ValueSorter<unsigned, DistanceObtainer> ValueSorterType;
+        public:
+
+            VPTree(const size_t non_leaf_branching_factor = 2, const size_t leaf_branching_factor = 2)
+                    : m_root(new VPNodeType())
+                    , m_non_leaf_branching_factor(non_leaf_branching_factor)
+                    , m_leaf_branching_factor(leaf_branching_factor)
+                    , m_out(NULL)
+            {
+            }
+
+
+            VPTree(const VPTree& orig)
+                    : m_non_leaf_branching_factor(3)
+                    , m_leaf_branching_factor(3)
+                    , m_out(NULL)
+            {
+                if(&orig == this)
+                    return;
+
+                m_root = VPNodePtr(new VPNodeType());
+            }
+
+            virtual ~VPTree()
+            {
+            }
+
+            void set_non_leaf_branching_factor(const size_t branching_factor)
+            {
+                m_non_leaf_branching_factor = branching_factor;
+            }
+
+            void set_leaf_branching_factor(const size_t branching_factor)
+            {
+                m_leaf_branching_factor = branching_factor;
+            }
+
+            const VPNodePtr& get_root() const
+            {
+                return m_root;
+            }
+
+            void set_info_output(std::ostream* stream)
+            {
+                m_out = stream;
+            }
+
+            size_t get_object_count() const
+            {
+                return get_object_count(m_root);
+            }
+
+            void ClearStatistic()
+            {
+                m_stat.clear();
+            }
+
+            const TreeStatistic& statistic() const
+            {
+                return m_stat;
+            }
+
+            size_t get_object_count(const VPNodePtr& node) const
+            {
+                size_t c_count = 0;
+                get_object_count(c_count, node);
+                return c_count;
+            }
+
+            void get_object_count(size_t& obj_count, const VPNodePtr& node) const
+            {
+                if(node->get_leaf_node())
+                    obj_count += node->get_objects_count();
+                else
+                {
+                    for (size_t c_pos = 0; c_pos < node->get_branches_count(); ++c_pos)
+                        get_object_count(obj_count, node->m_child_list[c_pos]);
                 }
-                return n;
             }
 
-            void search(SearchContainer &sc) {
-                ((SearchContainer&)sc).vptree = this;
-                Node *root = getRootNode();
-                assert(root != 0);
-                if (sc.mode == DVPTree::SearchContainer::SearchLeaf) {
-                    if (root->id.getType() == ID::Leaf) {
-                        sc.nodeID.setRaw(root->id.get());
-                        return;
-                    }
-                }
 
-                UncheckedNode uncheckedNode;
-                uncheckedNode.push(root->id);
-
-                while (!uncheckedNode.empty()) {
-                    ID nodeid = uncheckedNode.top();
-                    uncheckedNode.pop();
-                    Node *cnode = getNode(nodeid);
-                    if (cnode == 0) {
-                        std::cerr << "Error! child node is null. but continue." << std::endl;
-                        continue;
-                    }
-                    if (cnode->id.getType() == ID::Internal) {
-                        search(sc, (InternalNode&)*cnode, uncheckedNode);
-                    } else if (cnode->id.getType() == ID::Leaf) {
-                        search(sc, (LeafNode&)*cnode, uncheckedNode);
-                    } else {
-                        std::cerr << "Tree: Inner fatal error!: Node type error!" << std::endl;
-                        abort();
-                    }
-                }
-            }
-
-            void insert(InsertContainer &iobj) {
-                SearchContainer q(iobj.object);
-                q.mode = SearchContainer::SearchLeaf;
-                q.vptree = this;
-                q.radius = 0.0;
-
-                search(q);
-
-                iobj.vptree = this;
-
-                assert(q.nodeID.getType() == ID::Leaf);
-                LeafNode *ln = (LeafNode*)getNode(q.nodeID);
-                insert(iobj, ln);
-
-                return;
-            }
+//            void InsertSplitLeafRoot(VPNodePtr& root, const unsigned& new_value)
+//            {
+//                if(m_out) *m_out << "	spit leaf root" << std::endl;
+//                // Split the root node if root is the leaf
+//                //
+//                VPNodePtr s1(new VPNodeType);
+//                VPNodePtr s2(new VPNodeType);
+//
+//                // Set vantage point to root
+//                root->set_value(root->m_objects_list[0]);
+//                //root->m_objects_list.clear();
+//
+//                //s1->AddObject(root->get_value());
+//
+//                root->AddChild(0, s1);
+//                s1->set_parent(root);
+//                s1->set_leaf_node(true);
+//
+//                root->AddChild(1, s2);
+//                s2->set_parent(root);
+//                s2->set_leaf_node(true);
+//
+//                root->set_leaf_node(false);
+//
+//                for(size_t c_pos = 0; c_pos < root->get_objects_count(); ++c_pos)
+//                    Insert(root->m_objects_list[c_pos], root);
+//
+//                root->m_objects_list.clear();
+//
+//                Insert(new_value, root);
+//
+//                //RedistributeAmongLeafNodes(root, new_value);
+//
+//                //m_root->m_mu_list[0] = 0;
+//                //m_root->set_value(new_value); // Set Vantage Point
+//            }
 
         public:
-            int		internalChildrenSize;
-            int		leafObjectsSize;
+            VPNodePtr m_root;
+            DistanceObtainer m_get_distance;
 
-            SplitMode		splitMode;
+            size_t m_non_leaf_branching_factor;
+            size_t m_leaf_branching_factor;
 
-            std::string		name;
+            std::ostream* m_out;
 
-            Repository<LeafNode>	leafNodes;
-            Repository<InternalNode>	internalNodes;
+            // Statistic
+            TreeStatistic m_stat;
+        };
+
+        class DistanceCheckedSet : public std::unordered_set<unsigned> {
+        public:
+            bool operator[](unsigned id) { return find(id) != end(); }
         };
 
         unsigned edgeSizeForCreation;
@@ -1495,7 +883,10 @@ namespace weavess {
         unsigned size;
         float explorationCoefficient = 1.1;
 
-        DVPTree dvp;
+        typedef VPNode VPNodeType;
+        typedef boost::shared_ptr<VPNodeType> VPNodePtr;
+
+        VPTree vp_tree;
     };
 
     class SPTAG {

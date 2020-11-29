@@ -1434,22 +1434,864 @@ namespace weavess {
 //        std::sort(pool.begin(), pool.end());
     }
 
+
+    // ANNG_new_new
+    void ComponentInitPANNG::InitInner() {
+        SetConfigs();
+
+        index->nodes_.resize(index->getBaseLen());
+        Index::HnswNode *first = new Index::HnswNode(0, 0, index->NN_, index->NN_);
+        index->nodes_[0] = first;
+        index->enterpoint_ = first;
+        std::vector<unsigned> obj = {0};
+        MakeVPTree(obj);
+#pragma omp parallel num_threads(index->n_threads_)
+        {
+            auto *visited_list = new Index::VisitedList(index->getBaseLen());
+#pragma omp for schedule(dynamic, 128)
+            for (size_t i = 1; i < index->getBaseLen(); ++i) {
+                auto *qnode = new Index::HnswNode(i, 0, index->NN_, index->NN_);
+                index->nodes_[i] = qnode;
+                InsertNode(qnode, visited_list);
+                Insert(i);
+            }
+            delete visited_list;
+        }
+
+        index->getFinalGraph().resize(index->getBaseLen());
+
+        for(int i = 0; i < index->nodes_.size(); i ++) {
+            for(auto node : index->nodes_[i]->GetFriends(0)) {
+                float dist = index->getDist()->compare(index->getBaseData() + index->getBaseDim() * i,
+                                                       index->getBaseData() + index->getBaseDim() * node->GetId(),
+                                                       index->getBaseDim());
+                index->getFinalGraph()[i].emplace_back(node->GetId(), dist);
+            }
+        }
+    }
+
+    void ComponentInitPANNG::SetConfigs() {
+        index->NN_ = index->getParam().get<unsigned>("NN");
+        index->ef_construction_ = index->getParam().get<unsigned>("ef_construction");
+        index->n_threads_ = index->getParam().get<unsigned>("n_threads_");
+    }
+
+    void ComponentInitPANNG::InsertNode(Index::HnswNode *qnode, Index::VisitedList *visited_list) {
+        Index::HnswNode *enterpoint = index->enterpoint_;
+
+        std::priority_queue<Index::FurtherFirst> result;
+        std::priority_queue<Index::CloserFirst> tmp;
+
+        // CANDIDATE
+        SearchAtLayer(qnode, enterpoint, 0, visited_list, result);
+
+        while (!result.empty()) {
+            tmp.push(Index::CloserFirst(result.top().GetNode(), result.top().GetDistance()));
+            result.pop();
+        }
+
+        int pos = 0;
+        while (!tmp.empty() && pos < index->NN_) {
+            auto *top_node = tmp.top().GetNode();
+            tmp.pop();
+            Link(top_node, qnode, 0);
+            pos++;
+        }
+    }
+
+    void ComponentInitPANNG::SearchAtLayer(Index::HnswNode *qnode, Index::HnswNode *enterpoint, int level,
+                                         Index::VisitedList *visited_list,
+                                         std::priority_queue<Index::FurtherFirst> &result) {
+
+        float radius = static_cast<float>(FLT_MAX);
+        std::priority_queue<Index::CloserFirst> candidates;
+
+        float d = index->getDist()->compare(index->getBaseData() + qnode->GetId() * index->getBaseDim(),
+                                            index->getBaseData() + enterpoint->GetId() * index->getBaseDim(),
+                                            index->getBaseDim());
+        result.emplace(enterpoint, d);
+        candidates.emplace(enterpoint, d);
+
+        visited_list->Reset();
+        visited_list->MarkAsVisited(enterpoint->GetId());
+
+        float explorationRadius = index->explorationCoefficient * radius;
+
+        while (!candidates.empty()) {
+            const Index::CloserFirst &candidate = candidates.top();
+            if (candidate.GetDistance() > explorationRadius)
+                break;
+
+            Index::HnswNode *candidate_node = candidate.GetNode();
+            const std::vector<Index::HnswNode *> &neighbors = candidate_node->GetFriends(level);
+            candidates.pop();
+            for (const auto &neighbor : neighbors) {
+                int id = neighbor->GetId();
+                if (visited_list->NotVisited(id)) {
+                    visited_list->MarkAsVisited(id);
+                    d = index->getDist()->compare(index->getBaseData() + qnode->GetId() * index->getBaseDim(),
+                                                  index->getBaseData() + neighbor->GetId() * index->getBaseDim(),
+                                                  index->getBaseDim());
+                    //sc.distanceComputationCount++;
+                    if (d <= explorationRadius){
+                        candidates.emplace(neighbor, d);
+                        if (d <= radius){
+                            result.emplace(neighbor, d);
+                            if (result.size() > index->ef_construction_){
+                                if(result.top().GetDistance() >= d) {
+                                    if(result.size() > index->ef_construction_) {
+                                        result.pop();
+                                    }
+                                    radius = result.top().GetDistance();
+                                    explorationRadius = index->explorationCoefficient * radius;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    void ComponentInitPANNG::Link(Index::HnswNode *source, Index::HnswNode *target, int level) {
+        std::unique_lock<std::mutex> lock(source->GetAccessGuard());
+        std::vector<Index::HnswNode *> &neighbors = source->GetFriends(level);
+        neighbors.push_back(target);
+        bool shrink = (level > 0 && neighbors.size() > source->GetMaxM()) ||
+                      (level <= 0 && neighbors.size() > source->GetMaxM0());
+        if (!shrink) return;
+
+        std::priority_queue<Index::FurtherFirst> tempres;
+        for (const auto &neighbor : neighbors) {
+            float tmp = index->getDist()->compare(index->getBaseData() + source->GetId() * index->getBaseDim(),
+                                                  index->getBaseData() + neighbor->GetId() * index->getBaseDim(),
+                                                  index->getBaseDim());
+            tempres.push(Index::FurtherFirst(neighbor, tmp));
+        }
+        std::priority_queue<Index::FurtherFirst>().swap(tempres);
+    }
+
+    // Construct the tree from given objects set
+    void ComponentInitPANNG::MakeVPTree(const std::vector<unsigned>& objects)
+    {
+        index->vp_tree.m_root.reset();
+
+#pragma omp parallel
+        {
+#pragma omp single
+#pragma omp task
+            index->vp_tree.m_root = MakeVPTree(objects, index->vp_tree.m_root);
+        }
+    }
+
+    void ComponentInitPANNG::InsertSplitLeafRoot(Index::VPNodePtr& root, const unsigned& new_value)
+    {
+        //std::cout << "	spit leaf root" << std::endl;
+        // Split the root node if root is the leaf
+        //
+        Index::VPNodePtr s1(new Index::VPNodeType);
+        Index::VPNodePtr s2(new Index::VPNodeType);
+
+        // Set vantage point to root
+        root->set_value(root->m_objects_list[0]);
+        //root->m_objects_list.clear();
+
+        //s1->AddObject(root->get_value());
+
+        root->AddChild(0, s1);
+        s1->set_parent(root);
+        s1->set_leaf_node(true);
+
+        root->AddChild(1, s2);
+        s2->set_parent(root);
+        s2->set_leaf_node(true);
+
+        root->set_leaf_node(false);
+
+        for(size_t c_pos = 0; c_pos < root->get_objects_count(); ++c_pos)
+            Insert(root->m_objects_list[c_pos], root);
+
+        root->m_objects_list.clear();
+
+        Insert(new_value, root);
+
+        //RedistributeAmongLeafNodes(root, new_value);
+
+        //m_root->m_mu_list[0] = 0;
+        //m_root->set_value(new_value); // Set Vantage Point
+    }
+
+    // Recursively collect data from subtree, and push them into S
+    void ComponentInitPANNG::CollectObjects(const Index::VPNodePtr& node, std::vector<unsigned>& S)
+    {
+        if(node->get_leaf_node())
+            S.insert(S.end(), node->m_objects_list.begin(), node->m_objects_list.end() );
+        else
+        {
+            for (size_t c_pos = 0; c_pos < node->get_branches_count(); ++c_pos)
+                CollectObjects(node->m_child_list[c_pos], S);
+        }
+    }
+
+    // (max{d(v, sj) | sj c SS1} + min{d(v, sj) | sj c SS2}) / 2
+    const float ComponentInitPANNG::MedianSumm(const std::vector<unsigned>& SS1, const std::vector<unsigned>& SS2, const unsigned& v) const
+    {
+        float c_max_distance = 0;
+        float c_min_distance = 0;
+        float c_current_distance = 0;
+
+        if(!SS1.empty())
+        {
+            // max{d(v, sj) | sj c SSj}
+            typename std::vector<unsigned>::const_iterator it_obj = SS1.begin();
+            c_max_distance = index->getDist()->compare(index->getBaseData() + index->getBaseDim() * (*it_obj),
+                                                       index->getBaseData() + index->getBaseDim() * v,
+                                                       index->getBaseDim());
+            ++it_obj;
+            c_current_distance = c_max_distance;
+            while(it_obj != SS1.end())
+            {
+                c_current_distance = index->getDist()->compare(index->getBaseData() + index->getBaseDim() * (*it_obj),
+                                                               index->getBaseData() + index->getBaseDim() * v,
+                                                               index->getBaseDim());
+                if(c_current_distance > c_max_distance)
+                    c_max_distance = c_current_distance;
+
+                ++it_obj;
+            }
+        }
+
+        if(!SS2.empty())
+        {
+            // min{d(v, sj) | sj c SSj}
+            typename std::vector<unsigned>::const_iterator it_obj = SS2.begin();
+            c_min_distance = index->getDist()->compare(index->getBaseData() + index->getBaseDim() * (*it_obj),
+                                                       index->getBaseData() + index->getBaseDim() * v,
+                                                       index->getBaseDim());
+            ++it_obj;
+            c_current_distance = c_min_distance;
+            while(it_obj != SS2.end())
+            {
+                c_current_distance = index->getDist()->compare(index->getBaseData() + index->getBaseDim() * (*it_obj),
+                                                               index->getBaseData() + index->getBaseDim() * v,
+                                                               index->getBaseDim());
+                if(c_current_distance < c_min_distance)
+                    c_min_distance = c_current_distance;
+
+                ++it_obj;
+            }
+        }
+
+        return (c_max_distance + c_min_distance) / static_cast<float>(2);
+    }
+
+    // Calc the median value for object set
+    float ComponentInitPANNG::Median(const unsigned& value, const std::vector<unsigned>::const_iterator it_begin,
+                                        const std::vector<unsigned>::const_iterator it_end)
+    {
+        std::vector<unsigned>::const_iterator it_obj = it_begin;
+        float current_distance = 0;
+        size_t count = 0;
+        while(it_obj != it_end)
+        {
+            current_distance += index->getDist()->compare(index->getBaseData() + index->getBaseDim() * (*it_obj),
+                                                          index->getBaseData() + index->getBaseDim() * value,
+                                                          index->getBaseDim());
+            ++it_obj;
+            ++count;
+        }
+        return current_distance / static_cast<float>(count);
+    }
+
+    // If any sibling leaf node of L(eaf) is not full,
+    // redistribute all objects under P(arent), among the leaf nodes
+    void ComponentInitPANNG::RedistributeAmongLeafNodes(const Index::VPNodePtr& parent_node, const unsigned& new_value)
+    {
+        //std::cout << "	redistribute among leaf nodes" << std::endl;
+        // F - number of leaf nodes under P(arent)
+        // F should be greater then 1
+        //size_t F = parent_node->m_child_list.size();
+        const size_t F = parent_node->get_branches_count();
+
+        Index::VPNodePtr c_node;
+        std::vector<unsigned> S; // Set of leaf objects + new one;
+
+        // Create Set of whole objects from leaf nodes
+        CollectObjects(parent_node, S);
+        S.push_back(new_value);
+
+        unsigned m_main_val = parent_node->get_value();
+        Index *tmp_index = index;
+
+        // Order the objects in S with respect to their distances from P's vantage point
+        //Index::NGT::VPTree::ValueSorterType val_sorter(parent_node->get_value(), m_get_distance);
+        std::sort(S.begin(), S.end(), [m_main_val, tmp_index](unsigned val1, unsigned val2) {
+            float dist1 = tmp_index->getDist()->compare(tmp_index->getBaseData() + tmp_index->getBaseDim() * m_main_val,
+                                                        tmp_index->getBaseData() + tmp_index->getBaseDim() * val1,
+                                                        tmp_index->getBaseDim());
+            float dist2 = tmp_index->getDist()->compare(tmp_index->getBaseData() + tmp_index->getBaseDim() * m_main_val,
+                                                        tmp_index->getBaseData() + tmp_index->getBaseDim() * val2,
+                                                        tmp_index->getBaseDim());
+            return dist1 < dist2;
+        });
+
+        // Devide S into F groups of equal cardinality
+        size_t c_whole_count = S.size();
+        typename std::vector<unsigned>::const_iterator it_obj = S.begin();
+        for (size_t c_pos = 0; c_pos < F; ++c_pos)
+        {
+            size_t c_equal_count = c_whole_count / (F - c_pos);
+            c_whole_count -= c_equal_count;
+
+            c_node = parent_node->m_child_list[c_pos];
+            c_node->m_objects_list.clear();
+
+            c_node->m_objects_list.insert(c_node->m_objects_list.begin(),
+                                          it_obj, it_obj + c_equal_count);
+            c_node->set_leaf_node(true);
+            it_obj += c_equal_count;
+        }
+
+        // Update the boundary distance values
+        for (size_t c_pos = 0; c_pos < F - 1; ++c_pos)
+        {
+            const std::vector<unsigned>& SS1 = parent_node->m_child_list[c_pos]->m_objects_list;
+            const std::vector<unsigned>& SS2 = parent_node->m_child_list[c_pos + 1]->m_objects_list;
+
+            parent_node->m_mu_list[c_pos] = MedianSumm(SS1, SS2, parent_node->get_value());
+        }
+
+    }
+
+    // If L(eaf) node has a P(arent) node and P has room for one more child,
+    // split the leaf node L
+    void ComponentInitPANNG::SplitLeafNode(const Index::VPNodePtr& parent_node, const size_t child_id, const unsigned& new_value)
+    {
+        //std::cout << "	split leaf node" << std::endl;
+        // F - number of leaf nodes under P(arent)
+        //
+        const size_t F = parent_node->get_branches_count();
+        const size_t k = child_id;
+
+        assert(child_id < parent_node->m_child_list.size());
+
+        Index::VPNodePtr c_leaf_node = parent_node->m_child_list[child_id];
+
+        std::vector<unsigned> S = c_leaf_node->m_objects_list; // Set of leaf objects + new one
+        S.push_back(new_value);
+
+        unsigned m_main_val = parent_node->get_value();
+        Index *tmp_index = index;
+
+        // Order the objects in S with respect to their distances from P's vantage point
+        //NGT::VPTree::ValueSorterType val_sorter(parent_node->get_value(), m_get_distance);
+        std::sort(S.begin(), S.end(), [m_main_val, tmp_index](unsigned val1, unsigned val2) {
+            float dist1 = tmp_index->getDist()->compare(tmp_index->getBaseData() + tmp_index->getBaseDim() * m_main_val,
+                                                        tmp_index->getBaseData() + tmp_index->getBaseDim() * val1,
+                                                        tmp_index->getBaseDim());
+            float dist2 = tmp_index->getDist()->compare(tmp_index->getBaseData() + tmp_index->getBaseDim() * m_main_val,
+                                                        tmp_index->getBaseData() + tmp_index->getBaseDim() * val2,
+                                                        tmp_index->getBaseDim());
+            return dist1 < dist2;
+        });
+
+        // Divide S into 2 groups of equal cardinality
+        Index::VPNodePtr ss1_node(new Index::VPNodeType);
+        Index::VPNodePtr ss2_node = c_leaf_node;
+        ss2_node->m_objects_list.clear();
+
+        parent_node->AddChild(parent_node->get_branches_count(), ss1_node);
+        ss1_node->set_parent(parent_node);
+
+        size_t c_half_count = S.size() / 2;
+        for(size_t c_pos = 0; c_pos < S.size(); ++c_pos)
+        {
+            if(c_pos < c_half_count)
+                ss1_node->AddObject(S[c_pos]);
+            else
+                ss2_node->AddObject(S[c_pos]);
+        }
+
+        // insertion/shift process
+        for(size_t c_pos = F-2; c_pos >= k; --c_pos)
+        {
+            parent_node->m_mu_list[c_pos+1] = parent_node->m_mu_list[c_pos];
+            if(!c_pos) // !!! hack :(
+                break;
+        }
+
+        const std::vector<unsigned>& SS1 = ss1_node->m_objects_list;
+        const std::vector<unsigned>& SS2 = ss2_node->m_objects_list;
+        parent_node->m_mu_list[k] = MedianSumm(SS1, SS2, parent_node->get_value());
+
+        // !! --c_pos
+        for(size_t c_pos = F-1; c_pos >= k+1; --c_pos)
+            parent_node->m_child_list[c_pos + 1] = parent_node->m_child_list[c_pos];
+
+        parent_node->m_child_list[k] = ss1_node;
+        parent_node->m_child_list[k + 1] = ss2_node;
+    }
+
+    void ComponentInitPANNG::Remove(const unsigned& query_value, const Index::VPNodePtr& node)
+    {
+        if(node->get_leaf_node())
+            node->DeleteObject(query_value);
+        else
+        {
+            for (size_t c_pos = 0; c_pos < node->get_branches_count(); ++c_pos)
+                Remove(query_value, node->m_child_list[c_pos]);
+        }
+    }
+
+    // 3.a. Redistribute, among the sibling subtrees
+    void ComponentInitPANNG::RedistributeAmongNonLeafNodes(const Index::VPNodePtr& parent_node, const size_t k_id,
+                                                              const size_t k1_id, const unsigned& new_value)
+    {
+        //std::cout << "	redistribute among nodes(subtrees)" << std::endl;
+        assert(k_id != k1_id);
+
+        size_t num_k = index->vp_tree.get_object_count(parent_node->m_child_list[k_id]);
+        size_t num_k1 = index->vp_tree.get_object_count(parent_node->m_child_list[k1_id]);
+
+        size_t average = (num_k + num_k1) / 2;
+
+        if(num_k > num_k1)
+        {
+            // Create Set of objects from leaf nodes K-th subtree
+            std::vector<unsigned> S; // Set of leaf objects + new one;
+            CollectObjects(parent_node->m_child_list[k_id], S);
+            //S.push_back(new_value);
+
+            unsigned m_main_val = parent_node->get_value();
+            Index *tmp_index = index;
+
+            //Index::ValueSorterType val_sorter(parent_node->get_value(), m_get_distance);
+            std::sort(S.begin(), S.end(), [m_main_val, tmp_index](unsigned val1, unsigned val2) {
+                float dist1 = tmp_index->getDist()->compare(tmp_index->getBaseData() + tmp_index->getBaseDim() * m_main_val,
+                                                            tmp_index->getBaseData() + tmp_index->getBaseDim() * val1,
+                                                            tmp_index->getBaseDim());
+                float dist2 = tmp_index->getDist()->compare(tmp_index->getBaseData() + tmp_index->getBaseDim() * m_main_val,
+                                                            tmp_index->getBaseData() + tmp_index->getBaseDim() * val2,
+                                                            tmp_index->getBaseDim());
+                return dist1 < dist2;
+            });
+
+            size_t w = num_k - average;
+
+            std::vector<unsigned> SS1(S.begin(), S.begin() + num_k - w);
+            std::vector<unsigned> SS2(S.begin() + num_k - w, S.end());
+
+            SS1.push_back(new_value);
+
+            typename std::vector<unsigned>::const_iterator it_obj = SS2.begin();
+            for(;it_obj != SS2.end(); ++it_obj)
+                Remove(*it_obj, parent_node->m_child_list[k_id]);
+
+            parent_node->m_mu_list[k_id] = MedianSumm(SS1, SS2, parent_node->get_value());
+
+            for(it_obj = SS2.begin(); it_obj != SS2.end(); ++it_obj)
+                Insert(*it_obj, parent_node->m_child_list[k1_id]);
+
+        }else
+        {
+            // Create Set of objects from leaf nodes K-th subtree
+            std::vector<unsigned> S; // Set of leaf objects + new one;
+            CollectObjects(parent_node->m_child_list[k1_id], S);
+            //S.push_back(new_value);
+            unsigned m_main_val = parent_node->get_value();
+            Index *tmp_index = index;
+            //ValueSorterType val_sorter(parent_node->get_value(), m_get_distance);
+            std::sort(S.begin(), S.end(), [m_main_val, tmp_index](unsigned val1, unsigned val2) {
+                float dist1 = tmp_index->getDist()->compare(tmp_index->getBaseData() + tmp_index->getBaseDim() * m_main_val,
+                                                            tmp_index->getBaseData() + tmp_index->getBaseDim() * val1,
+                                                            tmp_index->getBaseDim());
+                float dist2 = tmp_index->getDist()->compare(tmp_index->getBaseData() + tmp_index->getBaseDim() * m_main_val,
+                                                            tmp_index->getBaseData() + tmp_index->getBaseDim() * val2,
+                                                            tmp_index->getBaseDim());
+                return dist1 < dist2;
+            });
+
+            size_t w = num_k1 - average;
+
+            std::vector<unsigned> SS1(S.begin(), S.begin() + w);
+            std::vector<unsigned> SS2(S.begin() + w, S.end());
+            SS2.push_back(new_value);
+
+            typename std::vector<unsigned>::const_iterator it_obj = SS1.begin();
+            for(;it_obj != SS1.end(); ++it_obj)
+                Remove(*it_obj, parent_node->m_child_list[k1_id]);
+
+            parent_node->m_mu_list[k_id] = MedianSumm(SS1, SS2, parent_node->get_value());
+
+            for(it_obj = SS1.begin(); it_obj != SS1.end(); ++it_obj)
+                Insert(*it_obj, parent_node->m_child_list[k_id]);
+        }
+
+        num_k = index->vp_tree.get_object_count(parent_node->m_child_list[k_id]);
+        num_k1 = index->vp_tree.get_object_count(parent_node->m_child_list[k1_id]);
+
+        num_k = 0;
+    }
+
+    void ComponentInitPANNG::InsertSplitRoot(Index::VPNodePtr& root, const unsigned& new_value)
+    {
+        //std::cout << "	split root" << std::endl;
+        // Split the root node into 2 new nodes s1 and s2 and insert new data
+        // according to the strategy SplitLeafNode() or RedistributeAmongLeafNodes()
+
+        Index::VPNodePtr new_root(new Index::VPNodeType);
+        Index::VPNodePtr s2_node(new Index::VPNodeType);
+
+        new_root->set_value(root->get_value());
+        //new_root->set_value(new_value);
+        new_root->AddChild(0, root);
+        //new_root->AddChild(0, s2_node);
+
+        root->set_parent(new_root);
+        //s2_node->set_parent(new_root);
+        //s2_node->set_leaf_node(true);
+
+        root = new_root;
+
+        //Insert(new_value, root);
+        //Insert(new_value);
+
+        SplitNonLeafNode(root, 0, new_value);
+    }
+
+    // Obtain the best vantage point for objects set
+    const unsigned& ComponentInitPANNG::SelectVP(const std::vector<unsigned>& objects) {
+        assert(!objects.empty());
+
+        return *objects.begin();
+    }
+
+    // Construct the tree from given objects set
+    Index::VPNodePtr ComponentInitPANNG::MakeVPTree(const std::vector<unsigned>& objects, const Index::VPNodePtr& parent){
+
+        if(objects.empty())
+            return Index::VPNodePtr(new Index::VPNodeType);
+
+        Index::VPNodePtr new_node(new Index::VPNodeType);
+
+        new_node->set_parent(parent);
+
+        // Set the VP
+        new_node->set_value(SelectVP(objects));
+
+        if(objects.size() <= index->vp_tree.m_non_leaf_branching_factor * index->vp_tree.m_leaf_branching_factor)
+        {
+            for(size_t c_pos = 0; c_pos < index->vp_tree.m_leaf_branching_factor; ++c_pos)
+            {
+                new_node->AddChild(0, Index::VPNodePtr(new Index::VPNodeType));
+                new_node->m_child_list[c_pos]->set_leaf_node(true);
+                new_node->m_child_list[c_pos]->set_parent(new_node);
+            }
+
+            new_node->m_child_list[0]->m_objects_list.insert(new_node->m_child_list[0]->m_objects_list.begin(), objects.begin()+1, objects.end());
+
+            RedistributeAmongLeafNodes(new_node, *objects.begin());
+
+            return new_node;
+        }
+
+        // Init children
+        new_node->AddChild(0, Index::VPNodePtr(new Index::VPNodeType));
+        new_node->AddChild(0, Index::VPNodePtr(new Index::VPNodeType));
+
+        float median = Median(new_node->get_value(), objects.begin(), objects.end());
+        new_node->m_mu_list[0] = median;
+
+        size_t objects_count = objects.size();
+        if(median == 0)
+            objects_count = 0;
+
+        bool c_left = false;
+
+        // 60% of size
+        size_t reserved_memory = static_cast<size_t>(static_cast<double>(objects_count) * 0.6);
+        std::vector<unsigned> s_left, s_right;
+        s_left.reserve(reserved_memory);
+        s_right.reserve(reserved_memory);
+
+        typename std::vector<unsigned>::const_iterator it_obj = objects.begin();
+        while(it_obj != objects.end())
+        {
+            float dist = index->getDist()->compare(index->getBaseData() + index->getBaseDim() * new_node->get_value(),
+                                                   index->getBaseData() + index->getBaseDim() * (*it_obj),
+                                                   index->getBaseDim());
+            if(dist < new_node->m_mu_list[0] || (dist == 0  && !c_left))
+            {
+                s_left.push_back(*it_obj);
+                c_left = true;
+            }else
+            {
+                s_right.push_back(*it_obj);
+                c_left = false;
+            }
+            ++it_obj;
+        }
+
+        size_t left_count = s_left.size();
+        size_t right_count = s_right.size();
+
+        // 8( for 2 only now
+        new_node->set_branches_count(2);
+
+        Index::VPNodePtr new_node_l(new Index::VPNodeType);
+        Index::VPNodePtr new_node_r(new Index::VPNodeType);
+
+        Index::VPNodePtr new_node_lc(new Index::VPNodeType);
+        Index::VPNodePtr new_node_rc(new Index::VPNodeType);
+
+#pragma omp task shared(new_node)
+        new_node->m_child_list[0] = MakeVPTree(s_left, new_node);
+#pragma omp task shared(new_node)
+        new_node->m_child_list[1] = MakeVPTree(s_right, new_node);
+
+#pragma omp taskwait
+
+        return new_node;
+    }
+
+    // 3.b. If Parent-Parent node is not full, spleat non-leaf node
+    void ComponentInitPANNG::SplitNonLeafNode(const Index::VPNodePtr& parent_node, const size_t child_id, const unsigned& new_value)
+    {
+        //std::cout << "	split node" << std::endl;
+        assert(child_id < parent_node->m_child_list.size());
+
+        const size_t k = child_id;
+        const size_t F = parent_node->get_branches_count();
+
+        Index::VPNodePtr c_split_node = parent_node->m_child_list[child_id];
+        Index::VPNodePtr c_node;
+
+        std::vector<unsigned> S; // Set of leaf objects + new one;
+
+        // Create Set of whole objects from leaf nodes at sub tree
+        CollectObjects(c_split_node, S);
+        S.push_back(new_value);
+
+        // Order the objects in S with respect to their distances from P's vantage point
+        unsigned m_main_val = parent_node->get_value();
+        Index *tmp_index = index;
+        //Index::ValueSorterType val_sorter(parent_node->get_value(), m_get_distance);
+        std::sort(S.begin(), S.end(), [m_main_val, tmp_index](unsigned val1, unsigned val2) {
+            float dist1 = tmp_index->getDist()->compare(tmp_index->getBaseData() + tmp_index->getBaseDim() * m_main_val,
+                                                        tmp_index->getBaseData() + tmp_index->getBaseDim() * val1,
+                                                        tmp_index->getBaseDim());
+            float dist2 = tmp_index->getDist()->compare(tmp_index->getBaseData() + tmp_index->getBaseDim() * m_main_val,
+                                                        tmp_index->getBaseData() + tmp_index->getBaseDim() * val2,
+                                                        tmp_index->getBaseDim());
+            return dist1 < dist2;
+        });
+
+        // Create free room for instance
+        Index::VPNodePtr s2_node(new Index::VPNodeType);
+        s2_node->set_parent(parent_node);
+        parent_node->AddChild(0, s2_node);
+
+        std::vector<unsigned> SS1(S.begin(), S.begin() + S.size() / 2);
+        std::vector<unsigned> SS2(S.begin() + S.size() / 2, S.end());
+
+
+        // Shift data at parent node
+
+        if(F > 1)
+            for(size_t c_pos = F-2; c_pos >= k; --c_pos)
+            {
+                parent_node->m_mu_list[c_pos+1] = parent_node->m_mu_list[c_pos];
+                if(!c_pos) // !!! hack :(
+                    break;
+            }
+
+        parent_node->m_mu_list[k] = MedianSumm(SS1, SS2, parent_node->get_value());
+        for(size_t c_pos = F-1; c_pos >= k+1; --c_pos)
+            parent_node->m_child_list[c_pos + 1] = parent_node->m_child_list[c_pos];
+
+
+        // Construct new vp-tree
+        Index::VPNodePtr ss1_node;
+        Index::VPNodePtr ss2_node;
+
+#pragma omp task shared(ss1_node)
+        ss1_node = MakeVPTree(SS1, ss1_node);
+#pragma omp task shared(ss2_node)
+        ss2_node = MakeVPTree(SS2, ss2_node);
+
+#pragma omp taskwait
+
+        ss1_node->set_parent(parent_node);
+        ss2_node->set_parent(parent_node);
+
+        parent_node->m_child_list[k] = ss1_node;
+        parent_node->m_child_list[k+1] = ss2_node;
+    }
+
+    void ComponentInitPANNG::Insert(const unsigned& new_value, Index::VPNodePtr& root) {
+        assert(root.get());
+        // 4.  L is the empty root Node
+        if(!root->get_branches_count() && !root->get_leaf_node()){
+            // At first insertion make root as a leaf node
+            //InsertSplitRoot(new_value)
+            root->AddObject(new_value);
+        }else {
+            // Traverse the tree, choosing the subtree Si, until the L(eaf) node
+            // is found
+
+            size_t c_current_node_parent_id = 0;
+            Index::VPNodePtr c_parent_node;
+            // Go through the tree, searching leaf node
+            Index::VPNodePtr c_current_node = c_parent_node = root;
+            while (!c_current_node->get_leaf_node() && c_current_node.get()) {
+                c_parent_node = c_current_node;
+                // test all distances at node
+                for (size_t c_pos = 0; c_pos < c_current_node->m_mu_list.size(); ++c_pos) {
+                    // test new_value with node vantage point
+                    float dist = index->getDist()->compare(index->getBaseData() + index->getBaseDim() * new_value,
+                                                           index->getBaseData() + index->getBaseDim() * c_current_node->get_value(),
+                                                           index->getBaseDim());
+                    if (dist < c_current_node->m_mu_list[c_pos]) {
+                        c_current_node = c_current_node->m_child_list[c_pos];
+                        c_current_node_parent_id = c_pos;
+                        break;
+                    }
+                }
+
+                if (c_parent_node == c_current_node)
+                    c_current_node = *c_current_node->m_child_list.rbegin();
+            }
+
+            // Assume c_current_node - Leaf node
+            // Have found leaf node, analize ancestros
+
+            // 0. If there is a room at L(eaf) node - insert data
+            if (c_current_node->get_objects_count() < index->vp_tree.m_leaf_branching_factor) {
+                c_current_node->AddObject(new_value);
+                return;
+            }
+
+            // Second node - we split the root
+            if (c_current_node == root &&
+                c_current_node->get_objects_count() >= index->vp_tree.m_leaf_branching_factor) {
+                InsertSplitLeafRoot(c_current_node, new_value);
+                return;
+            }
+
+            // 1. If any sibling leaf node of L(eaf) is not full,
+            // redistribute all objects under P(arent), among the leaf nodes
+            // Analize sibling nodes
+            for (size_t c_pos = 0; c_pos < c_parent_node->get_branches_count(); ++c_pos) {
+                if (c_parent_node->m_child_list[c_pos]->get_objects_count() < index->vp_tree.m_leaf_branching_factor) {
+                    RedistributeAmongLeafNodes(c_parent_node, new_value);
+                    return;
+                }
+            }
+
+
+            // 2. If Parent has a room for one more child - split the leaf node
+            if (c_parent_node->get_branches_count() < index->vp_tree.m_non_leaf_branching_factor) {
+                SplitLeafNode(c_parent_node, c_current_node_parent_id, new_value);
+                return;
+            }
+
+            // 3.a. Redistribute, among the sibling subtrees
+            Index::VPNodePtr c_ancestor = c_parent_node->m_parent;
+            if (c_ancestor.get()) {
+                // found an id of full leaf node parent
+                size_t c_found_free_subtree_id = index->vp_tree.m_leaf_branching_factor;
+                size_t c_full_subtree_id = index->vp_tree.m_leaf_branching_factor;
+                for (size_t c_anc_pos = 0; c_anc_pos < c_ancestor->get_branches_count(); ++c_anc_pos)
+                    if (c_ancestor->m_child_list[c_anc_pos] == c_current_node->m_parent)
+                        c_full_subtree_id = c_anc_pos;
+
+                //assert(c_full_subtree_id != m_leaf_branching_factor);
+
+                if (c_full_subtree_id != index->vp_tree.m_leaf_branching_factor)
+                    for (size_t c_anc_pos = 0; c_anc_pos < c_ancestor->get_branches_count(); ++c_anc_pos) {
+                        Index::VPNodePtr c_parent = c_ancestor->m_child_list[c_anc_pos];
+
+                        if (c_parent == c_current_node->m_parent)
+                            continue;
+
+                        for (size_t c_par_pos = 0; c_par_pos < c_parent->get_branches_count(); ++c_par_pos) {
+                            if (c_parent->m_child_list[c_par_pos]->get_leaf_node() &&
+                                c_parent->m_child_list[c_par_pos]->m_objects_list.size() < index->vp_tree.m_leaf_branching_factor) {
+                                c_found_free_subtree_id = c_anc_pos;
+                                break;
+                            }
+                        }
+                        if (c_found_free_subtree_id < index->vp_tree.m_leaf_branching_factor) {
+                            // Found free subtree - redistribute data
+                            if (c_found_free_subtree_id > c_full_subtree_id)
+                                RedistributeAmongNonLeafNodes(c_ancestor, c_full_subtree_id, c_found_free_subtree_id,
+                                                              new_value);
+                            else
+                                RedistributeAmongNonLeafNodes(c_ancestor, c_found_free_subtree_id, c_full_subtree_id,
+                                                              new_value);
+
+                            Insert(new_value, c_ancestor);
+
+                            return;
+                        }
+                    }
+            }
+
+            // 3.b. If Parent-Parent node is not full, spleat non-leaf node
+            if (c_current_node->m_parent.get() && c_current_node->m_parent->m_parent.get()) {
+                Index::VPNodePtr c_ancestor = c_current_node->m_parent->m_parent; // A
+                Index::VPNodePtr c_current_parent = c_current_node->m_parent; // B
+
+                size_t c_found_free_subtree_id = index->vp_tree.m_non_leaf_branching_factor;
+                for (size_t c_pos = 0; c_pos < c_ancestor->get_branches_count(); ++c_pos)
+                    if (c_ancestor->m_child_list[c_pos] == c_current_parent)
+                        c_found_free_subtree_id = c_pos;
+
+                if (c_found_free_subtree_id != index->vp_tree.m_non_leaf_branching_factor &&
+                    c_ancestor->get_branches_count() < index->vp_tree.m_non_leaf_branching_factor) {
+                    SplitNonLeafNode(c_ancestor, c_found_free_subtree_id, new_value);
+                    return;
+                }
+            }
+
+            // 4. Cannot find any ancestor, that is not full -> split the root
+            // into two new nodes s1 and s2
+            InsertSplitRoot(root, new_value);
+        }
+    }
+
+    void ComponentInitPANNG::Insert(const unsigned int &new_value) {
+        //std::cout << "Insert data to vptree.root" << std::endl;
+
+        Insert(new_value, index->vp_tree.m_root);
+    }
+
+
+    // ANNG_new
     void ComponentInitANNG_new::InitInner() {
         SetConfigs();
 
         Build();
+
+        for(int i = 0; i < 100; i ++) {
+            for(int j = 0; j < index->getFinalGraph()[i].size(); j ++) {
+                std::cout << index->getFinalGraph()[i][j].id << "|" << index->getFinalGraph()[i][j].distance << " ";
+            }
+            std::cout << std::endl;
+        }
     }
 
     void ComponentInitANNG_new::SetConfigs() {
         index->edgeSizeForCreation = index->getParam().get<unsigned>("edgeSizeForCreation");
 
-        index->batchSizeForCreation = index->getParam().get<unsigned>("batchSizeForCreation");
+        index->batchSizeForCreation = 200;
+        //index->batchSizeForCreation = index->getParam().get<unsigned>("batchSizeForCreation");
     }
 
-    unsigned ComponentInitANNG_new::searchMultipleQueryForCreation(unsigned id, Index::InputJobQueue &input) {
+    unsigned ComponentInitANNG_new::searchMultipleQueryForCreation(unsigned &id, Index::OutputJobQueue &output) {
         size_t cnt = 0;
         for (; id < index->getBaseLen(); id++) {
-            input.pushBack(id);
+            output.pushBack(id);
             cnt++;
             if (cnt >= index->batchSizeForCreation) {
                 id++;
@@ -1459,8 +2301,20 @@ namespace weavess {
         return cnt;
     }
 
-    void ComponentInitANNG_new::insertMultipleSearchResults(Index::InputJobQueue &input, Index::OutputJobQueue &output,
-                                                            unsigned cnt) {
+//    bool addEdge(ObjectID target, ObjectID addID, Distance addDistance, bool identityCheck = true)
+//    {
+//        size_t minsize = 0;
+//        GraphNode &node = property.truncationThreshold == 0 ? *getNode(target) : *getNode(target, minsize);
+//        addEdge(node, addID, addDistance, identityCheck);
+//        if ((size_t)property.truncationThreshold != 0 && node.size() - minsize >
+//                                                         (size_t)property.truncationThreshold)
+//        {
+//            return true;
+//        }
+//        return false;
+//    }
+//
+    void ComponentInitANNG_new::insertMultipleSearchResults(Index::OutputJobQueue &output, unsigned cnt) {
         // compute distances among all of the resultant objects
         // This processing occupies about 30% of total indexing time when batch size is 200.
         // Only initial batch objects should be connected for each other.
@@ -1473,8 +2327,8 @@ namespace weavess {
 
         for (unsigned idxi = 0; idxi < cnt; idxi++) {
             // add distances
-            index->getFinalGraph()[output[idxi]].resize(cnt);
-            for (size_t idxj = 0; idxj < idxi; idxj++) {
+            std::vector<Index::SimpleNeighbor> tmp;
+            for (unsigned idxj = 0; idxj < idxi; idxj++) {
                 float dist = index->getDist()->compare(index->getBaseData() + index->getBaseDim() * output[idxi],
                                                        index->getBaseData() + index->getBaseDim() * output[idxj],
                                                        index->getBaseDim());
@@ -1486,21 +2340,38 @@ namespace weavess {
                 index->getFinalGraph()[output[idxi]].resize(size);
             }
         } // for (size_t idxi ....
-
         // insert resultant objects into the graph as edges
-        for (size_t i = 0; i < cnt; i++) {
-            unsigned gr = output[i];
-            if (gr > index->edgeSizeForCreation &&
-                index->getFinalGraph()[gr].size() < index->edgeSizeForCreation) {
-                std::cerr
-                        << "createIndex: Warning. The specified number of edges could not be acquired, because the pruned parameter [-S] might be set."
-                        << std::endl;
-                std::cerr << "  The node id=" << gr << std::endl;
-                std::cerr << "  The number of edges for the node=" << index->getFinalGraph()[gr].size() << std::endl;
-                std::cerr << "  The pruned parameter (edgeSizeForSearch [-S])=" << index->edgeSizeForSearch
-                          << std::endl;
+        for(size_t i = 0; i < cnt; i ++) {
+            std::queue<unsigned> truncateQueue;
+            for (auto ri = index->getFinalGraph()[output[i]].begin(); ri != index->getFinalGraph()[output[i]].end(); ri++)
+            {
+                assert(output[i] != (*ri).id);
+                //if (addEdge((*ri).id, id, (*ri).distance))
+                {
+                    truncateQueue.push((*ri).id);
+                }
+            }
+            while (!truncateQueue.empty())
+            {
+                //ObjectID tid = truncateQueue.front();
+                //truncateEdges(tid);
+                truncateQueue.pop();
             }
         }
+//        for (size_t i = 0; i < cnt; i++) {
+//            unsigned gr = output[i];
+//            std::cout << "gr " << gr << " " << index->getFinalGraph()[gr].size() << std::endl;
+//            if (gr > index->edgeSizeForCreation &&
+//                index->getFinalGraph()[gr].size() < size) {
+//                std::cerr
+//                        << "createIndex: Warning. The specified number of edges could not be acquired, because the pruned parameter [-S] might be set."
+//                        << std::endl;
+//                std::cerr << "  The node id=" << gr << std::endl;
+//                std::cerr << "  The number of edges for the node=" << index->getFinalGraph()[gr].size() << std::endl;
+//                std::cerr << "  The pruned parameter (edgeSizeForSearch [-S])=" << index->edgeSizeForSearch
+//                          << std::endl;
+//            }
+//        }
     }
 
     void ComponentInitANNG_new::Build() {
@@ -1516,19 +2387,16 @@ namespace weavess {
         unsigned pathAdjustCount = 0;
 
         Index::OutputJobQueue output;
-        Index::InputJobQueue input;
 
         unsigned id = 0;
         for (;;) {
-            size_t cnt = searchMultipleQueryForCreation(id, input);
+            size_t cnt = searchMultipleQueryForCreation(id, output);
+
+//            std::cout << id << std::endl;
 
             if (cnt == 0) {
                 break;
             }
-
-            input.pushBackEnd();
-            output.setMaxSize(input.pushedSize);
-            input.pushedSize = 0;
 
             if (output.size() != cnt) {
                 std::cerr << "NNTGIndex::insertGraphIndexByThread: Warning!! Thread response size is wrong."
@@ -1536,16 +2404,25 @@ namespace weavess {
                 cnt = output.size();
             }
 
-            insertMultipleSearchResults(input, output, cnt);
+            insertMultipleSearchResults(output, cnt);
 
-            for (size_t i = 0; i < cnt; i++) {
-                unsigned job = output[i];
-                if (((index->getFinalGraph()[job].size() > 0) && (index->getFinalGraph()[job][0].distance != 0.0)) ||
-                    (index->getFinalGraph()[job].size() == 0)) {
-                    Index::DVPTree::InsertContainer tiobj(index->getBaseData() + index->getBaseDim() * job, job);
-                    index->dvp.insert(tiobj);
+            if(id == index->batchSizeForCreation) {
+                std::vector<unsigned> obj;
+                for(int i = 0; i < cnt; i ++) {
+                    obj.push_back(output[i]);
                 }
-            } // for
+                MakeVPTree(obj);
+            } else {
+                for (size_t i = 0; i < cnt; i++) {
+                    unsigned job = output[i];
+                    if (((index->getFinalGraph()[job].size() > 0) && (index->getFinalGraph()[job][0].distance != 0.0)) ||
+                        (index->getFinalGraph()[job].size() == 0)) {
+                        Insert(job);
+//                        Index::DVPTree::InsertContainer tiobj(index->getBaseData() + index->getBaseDim() * job, job);
+//                        index->dvp.insert(tiobj);
+                    }
+                } // for
+            }
 
             while (!output.empty()) {
                 output.pop_front();
@@ -1558,6 +2435,701 @@ namespace weavess {
 //                pathAdjustCount += property.pathAdjustmentInterval;
 //            }
         }
+    }
+
+    // Construct the tree from given objects set
+    void ComponentInitANNG_new::MakeVPTree(const std::vector<unsigned>& objects)
+    {
+        index->vp_tree.m_root.reset();
+
+#pragma omp parallel
+        {
+#pragma omp single
+#pragma omp task
+            index->vp_tree.m_root = MakeVPTree(objects, index->vp_tree.m_root);
+        }
+    }
+
+    void ComponentInitANNG_new::InsertSplitLeafRoot(Index::VPNodePtr& root, const unsigned& new_value)
+    {
+        //std::cout << "	spit leaf root" << std::endl;
+        // Split the root node if root is the leaf
+        //
+        Index::VPNodePtr s1(new Index::VPNodeType);
+        Index::VPNodePtr s2(new Index::VPNodeType);
+
+        // Set vantage point to root
+        root->set_value(root->m_objects_list[0]);
+        //root->m_objects_list.clear();
+
+        //s1->AddObject(root->get_value());
+
+        root->AddChild(0, s1);
+        s1->set_parent(root);
+        s1->set_leaf_node(true);
+
+        root->AddChild(1, s2);
+        s2->set_parent(root);
+        s2->set_leaf_node(true);
+
+        root->set_leaf_node(false);
+
+        for(size_t c_pos = 0; c_pos < root->get_objects_count(); ++c_pos)
+            Insert(root->m_objects_list[c_pos], root);
+
+        root->m_objects_list.clear();
+
+        Insert(new_value, root);
+
+        //RedistributeAmongLeafNodes(root, new_value);
+
+        //m_root->m_mu_list[0] = 0;
+        //m_root->set_value(new_value); // Set Vantage Point
+    }
+
+    // Recursively collect data from subtree, and push them into S
+    void ComponentInitANNG_new::CollectObjects(const Index::VPNodePtr& node, std::vector<unsigned>& S)
+    {
+        if(node->get_leaf_node())
+            S.insert(S.end(), node->m_objects_list.begin(), node->m_objects_list.end() );
+        else
+        {
+            for (size_t c_pos = 0; c_pos < node->get_branches_count(); ++c_pos)
+                CollectObjects(node->m_child_list[c_pos], S);
+        }
+    }
+
+    // (max{d(v, sj) | sj c SS1} + min{d(v, sj) | sj c SS2}) / 2
+    const float ComponentInitANNG_new::MedianSumm(const std::vector<unsigned>& SS1, const std::vector<unsigned>& SS2, const unsigned& v) const
+    {
+        float c_max_distance = 0;
+        float c_min_distance = 0;
+        float c_current_distance = 0;
+
+        if(!SS1.empty())
+        {
+            // max{d(v, sj) | sj c SSj}
+            typename std::vector<unsigned>::const_iterator it_obj = SS1.begin();
+            c_max_distance = index->getDist()->compare(index->getBaseData() + index->getBaseDim() * (*it_obj),
+                                                       index->getBaseData() + index->getBaseDim() * v,
+                                                       index->getBaseDim());
+            ++it_obj;
+            c_current_distance = c_max_distance;
+            while(it_obj != SS1.end())
+            {
+                c_current_distance = index->getDist()->compare(index->getBaseData() + index->getBaseDim() * (*it_obj),
+                                                               index->getBaseData() + index->getBaseDim() * v,
+                                                               index->getBaseDim());
+                if(c_current_distance > c_max_distance)
+                    c_max_distance = c_current_distance;
+
+                ++it_obj;
+            }
+        }
+
+        if(!SS2.empty())
+        {
+            // min{d(v, sj) | sj c SSj}
+            typename std::vector<unsigned>::const_iterator it_obj = SS2.begin();
+            c_min_distance = index->getDist()->compare(index->getBaseData() + index->getBaseDim() * (*it_obj),
+                                                       index->getBaseData() + index->getBaseDim() * v,
+                                                       index->getBaseDim());
+            ++it_obj;
+            c_current_distance = c_min_distance;
+            while(it_obj != SS2.end())
+            {
+                c_current_distance = index->getDist()->compare(index->getBaseData() + index->getBaseDim() * (*it_obj),
+                                                               index->getBaseData() + index->getBaseDim() * v,
+                                                               index->getBaseDim());
+                if(c_current_distance < c_min_distance)
+                    c_min_distance = c_current_distance;
+
+                ++it_obj;
+            }
+        }
+
+        return (c_max_distance + c_min_distance) / static_cast<float>(2);
+    }
+
+    // Calc the median value for object set
+    float ComponentInitANNG_new::Median(const unsigned& value, const std::vector<unsigned>::const_iterator it_begin,
+                 const std::vector<unsigned>::const_iterator it_end)
+    {
+        std::vector<unsigned>::const_iterator it_obj = it_begin;
+        float current_distance = 0;
+        size_t count = 0;
+        while(it_obj != it_end)
+        {
+            current_distance += index->getDist()->compare(index->getBaseData() + index->getBaseDim() * (*it_obj),
+                                                          index->getBaseData() + index->getBaseDim() * value,
+                                                          index->getBaseDim());
+            ++it_obj;
+            ++count;
+        }
+        return current_distance / static_cast<float>(count);
+    }
+
+    // If any sibling leaf node of L(eaf) is not full,
+    // redistribute all objects under P(arent), among the leaf nodes
+    void ComponentInitANNG_new::RedistributeAmongLeafNodes(const Index::VPNodePtr& parent_node, const unsigned& new_value)
+    {
+        //std::cout << "	redistribute among leaf nodes" << std::endl;
+        // F - number of leaf nodes under P(arent)
+        // F should be greater then 1
+        //size_t F = parent_node->m_child_list.size();
+        const size_t F = parent_node->get_branches_count();
+
+        Index::VPNodePtr c_node;
+        std::vector<unsigned> S; // Set of leaf objects + new one;
+
+        // Create Set of whole objects from leaf nodes
+        CollectObjects(parent_node, S);
+        S.push_back(new_value);
+
+        unsigned m_main_val = parent_node->get_value();
+        Index *tmp_index = index;
+
+        // Order the objects in S with respect to their distances from P's vantage point
+        //Index::NGT::VPTree::ValueSorterType val_sorter(parent_node->get_value(), m_get_distance);
+        std::sort(S.begin(), S.end(), [m_main_val, tmp_index](unsigned val1, unsigned val2) {
+            float dist1 = tmp_index->getDist()->compare(tmp_index->getBaseData() + tmp_index->getBaseDim() * m_main_val,
+                                                        tmp_index->getBaseData() + tmp_index->getBaseDim() * val1,
+                                                        tmp_index->getBaseDim());
+            float dist2 = tmp_index->getDist()->compare(tmp_index->getBaseData() + tmp_index->getBaseDim() * m_main_val,
+                                                        tmp_index->getBaseData() + tmp_index->getBaseDim() * val2,
+                                                        tmp_index->getBaseDim());
+            return dist1 < dist2;
+        });
+
+        // Devide S into F groups of equal cardinality
+        size_t c_whole_count = S.size();
+        typename std::vector<unsigned>::const_iterator it_obj = S.begin();
+        for (size_t c_pos = 0; c_pos < F; ++c_pos)
+        {
+            size_t c_equal_count = c_whole_count / (F - c_pos);
+            c_whole_count -= c_equal_count;
+
+            c_node = parent_node->m_child_list[c_pos];
+            c_node->m_objects_list.clear();
+
+            c_node->m_objects_list.insert(c_node->m_objects_list.begin(),
+                                          it_obj, it_obj + c_equal_count);
+            c_node->set_leaf_node(true);
+            it_obj += c_equal_count;
+        }
+
+        // Update the boundary distance values
+        for (size_t c_pos = 0; c_pos < F - 1; ++c_pos)
+        {
+            const std::vector<unsigned>& SS1 = parent_node->m_child_list[c_pos]->m_objects_list;
+            const std::vector<unsigned>& SS2 = parent_node->m_child_list[c_pos + 1]->m_objects_list;
+
+            parent_node->m_mu_list[c_pos] = MedianSumm(SS1, SS2, parent_node->get_value());
+        }
+
+    }
+
+    // If L(eaf) node has a P(arent) node and P has room for one more child,
+    // split the leaf node L
+    void ComponentInitANNG_new::SplitLeafNode(const Index::VPNodePtr& parent_node, const size_t child_id, const unsigned& new_value)
+    {
+        //std::cout << "	split leaf node" << std::endl;
+        // F - number of leaf nodes under P(arent)
+        //
+        const size_t F = parent_node->get_branches_count();
+        const size_t k = child_id;
+
+        assert(child_id < parent_node->m_child_list.size());
+
+        Index::VPNodePtr c_leaf_node = parent_node->m_child_list[child_id];
+
+        std::vector<unsigned> S = c_leaf_node->m_objects_list; // Set of leaf objects + new one
+        S.push_back(new_value);
+
+        unsigned m_main_val = parent_node->get_value();
+        Index *tmp_index = index;
+
+        // Order the objects in S with respect to their distances from P's vantage point
+        //NGT::VPTree::ValueSorterType val_sorter(parent_node->get_value(), m_get_distance);
+        std::sort(S.begin(), S.end(), [m_main_val, tmp_index](unsigned val1, unsigned val2) {
+            float dist1 = tmp_index->getDist()->compare(tmp_index->getBaseData() + tmp_index->getBaseDim() * m_main_val,
+                                                        tmp_index->getBaseData() + tmp_index->getBaseDim() * val1,
+                                                        tmp_index->getBaseDim());
+            float dist2 = tmp_index->getDist()->compare(tmp_index->getBaseData() + tmp_index->getBaseDim() * m_main_val,
+                                                        tmp_index->getBaseData() + tmp_index->getBaseDim() * val2,
+                                                        tmp_index->getBaseDim());
+            return dist1 < dist2;
+        });
+
+        // Divide S into 2 groups of equal cardinality
+        Index::VPNodePtr ss1_node(new Index::VPNodeType);
+        Index::VPNodePtr ss2_node = c_leaf_node;
+        ss2_node->m_objects_list.clear();
+
+        parent_node->AddChild(parent_node->get_branches_count(), ss1_node);
+        ss1_node->set_parent(parent_node);
+
+        size_t c_half_count = S.size() / 2;
+        for(size_t c_pos = 0; c_pos < S.size(); ++c_pos)
+        {
+            if(c_pos < c_half_count)
+                ss1_node->AddObject(S[c_pos]);
+            else
+                ss2_node->AddObject(S[c_pos]);
+        }
+
+        // insertion/shift process
+        for(size_t c_pos = F-2; c_pos >= k; --c_pos)
+        {
+            parent_node->m_mu_list[c_pos+1] = parent_node->m_mu_list[c_pos];
+            if(!c_pos) // !!! hack :(
+                break;
+        }
+
+        const std::vector<unsigned>& SS1 = ss1_node->m_objects_list;
+        const std::vector<unsigned>& SS2 = ss2_node->m_objects_list;
+        parent_node->m_mu_list[k] = MedianSumm(SS1, SS2, parent_node->get_value());
+
+        // !! --c_pos
+        for(size_t c_pos = F-1; c_pos >= k+1; --c_pos)
+            parent_node->m_child_list[c_pos + 1] = parent_node->m_child_list[c_pos];
+
+        parent_node->m_child_list[k] = ss1_node;
+        parent_node->m_child_list[k + 1] = ss2_node;
+    }
+
+    void ComponentInitANNG_new::Remove(const unsigned& query_value, const Index::VPNodePtr& node)
+    {
+        if(node->get_leaf_node())
+            node->DeleteObject(query_value);
+        else
+        {
+            for (size_t c_pos = 0; c_pos < node->get_branches_count(); ++c_pos)
+                Remove(query_value, node->m_child_list[c_pos]);
+        }
+    }
+
+    // 3.a. Redistribute, among the sibling subtrees
+    void ComponentInitANNG_new::RedistributeAmongNonLeafNodes(const Index::VPNodePtr& parent_node, const size_t k_id,
+                                       const size_t k1_id, const unsigned& new_value)
+    {
+        //std::cout << "	redistribute among nodes(subtrees)" << std::endl;
+        assert(k_id != k1_id);
+
+        size_t num_k = index->vp_tree.get_object_count(parent_node->m_child_list[k_id]);
+        size_t num_k1 = index->vp_tree.get_object_count(parent_node->m_child_list[k1_id]);
+
+        size_t average = (num_k + num_k1) / 2;
+
+        if(num_k > num_k1)
+        {
+            // Create Set of objects from leaf nodes K-th subtree
+            std::vector<unsigned> S; // Set of leaf objects + new one;
+            CollectObjects(parent_node->m_child_list[k_id], S);
+            //S.push_back(new_value);
+
+            unsigned m_main_val = parent_node->get_value();
+            Index *tmp_index = index;
+
+            //Index::ValueSorterType val_sorter(parent_node->get_value(), m_get_distance);
+            std::sort(S.begin(), S.end(), [m_main_val, tmp_index](unsigned val1, unsigned val2) {
+                float dist1 = tmp_index->getDist()->compare(tmp_index->getBaseData() + tmp_index->getBaseDim() * m_main_val,
+                                                            tmp_index->getBaseData() + tmp_index->getBaseDim() * val1,
+                                                            tmp_index->getBaseDim());
+                float dist2 = tmp_index->getDist()->compare(tmp_index->getBaseData() + tmp_index->getBaseDim() * m_main_val,
+                                                            tmp_index->getBaseData() + tmp_index->getBaseDim() * val2,
+                                                            tmp_index->getBaseDim());
+                return dist1 < dist2;
+            });
+
+            size_t w = num_k - average;
+
+            std::vector<unsigned> SS1(S.begin(), S.begin() + num_k - w);
+            std::vector<unsigned> SS2(S.begin() + num_k - w, S.end());
+
+            SS1.push_back(new_value);
+
+            typename std::vector<unsigned>::const_iterator it_obj = SS2.begin();
+            for(;it_obj != SS2.end(); ++it_obj)
+                Remove(*it_obj, parent_node->m_child_list[k_id]);
+
+            parent_node->m_mu_list[k_id] = MedianSumm(SS1, SS2, parent_node->get_value());
+
+            for(it_obj = SS2.begin(); it_obj != SS2.end(); ++it_obj)
+                Insert(*it_obj, parent_node->m_child_list[k1_id]);
+
+        }else
+        {
+            // Create Set of objects from leaf nodes K-th subtree
+            std::vector<unsigned> S; // Set of leaf objects + new one;
+            CollectObjects(parent_node->m_child_list[k1_id], S);
+            //S.push_back(new_value);
+            unsigned m_main_val = parent_node->get_value();
+            Index *tmp_index = index;
+            //ValueSorterType val_sorter(parent_node->get_value(), m_get_distance);
+            std::sort(S.begin(), S.end(), [m_main_val, tmp_index](unsigned val1, unsigned val2) {
+                float dist1 = tmp_index->getDist()->compare(tmp_index->getBaseData() + tmp_index->getBaseDim() * m_main_val,
+                                                            tmp_index->getBaseData() + tmp_index->getBaseDim() * val1,
+                                                            tmp_index->getBaseDim());
+                float dist2 = tmp_index->getDist()->compare(tmp_index->getBaseData() + tmp_index->getBaseDim() * m_main_val,
+                                                            tmp_index->getBaseData() + tmp_index->getBaseDim() * val2,
+                                                            tmp_index->getBaseDim());
+                return dist1 < dist2;
+            });
+
+            size_t w = num_k1 - average;
+
+            std::vector<unsigned> SS1(S.begin(), S.begin() + w);
+            std::vector<unsigned> SS2(S.begin() + w, S.end());
+            SS2.push_back(new_value);
+
+            typename std::vector<unsigned>::const_iterator it_obj = SS1.begin();
+            for(;it_obj != SS1.end(); ++it_obj)
+                Remove(*it_obj, parent_node->m_child_list[k1_id]);
+
+            parent_node->m_mu_list[k_id] = MedianSumm(SS1, SS2, parent_node->get_value());
+
+            for(it_obj = SS1.begin(); it_obj != SS1.end(); ++it_obj)
+                Insert(*it_obj, parent_node->m_child_list[k_id]);
+        }
+
+        num_k = index->vp_tree.get_object_count(parent_node->m_child_list[k_id]);
+        num_k1 = index->vp_tree.get_object_count(parent_node->m_child_list[k1_id]);
+
+        num_k = 0;
+    }
+
+    void ComponentInitANNG_new::InsertSplitRoot(Index::VPNodePtr& root, const unsigned& new_value)
+    {
+        //std::cout << "	split root" << std::endl;
+        // Split the root node into 2 new nodes s1 and s2 and insert new data
+        // according to the strategy SplitLeafNode() or RedistributeAmongLeafNodes()
+
+        Index::VPNodePtr new_root(new Index::VPNodeType);
+        Index::VPNodePtr s2_node(new Index::VPNodeType);
+
+        new_root->set_value(root->get_value());
+        //new_root->set_value(new_value);
+        new_root->AddChild(0, root);
+        //new_root->AddChild(0, s2_node);
+
+        root->set_parent(new_root);
+        //s2_node->set_parent(new_root);
+        //s2_node->set_leaf_node(true);
+
+        root = new_root;
+
+        //Insert(new_value, root);
+        //Insert(new_value);
+
+        SplitNonLeafNode(root, 0, new_value);
+    }
+
+    // Obtain the best vantage point for objects set
+    const unsigned& ComponentInitANNG_new::SelectVP(const std::vector<unsigned>& objects) {
+        assert(!objects.empty());
+
+        return *objects.begin();
+    }
+
+    // Construct the tree from given objects set
+    Index::VPNodePtr ComponentInitANNG_new::MakeVPTree(const std::vector<unsigned>& objects, const Index::VPNodePtr& parent){
+
+        if(objects.empty())
+            return Index::VPNodePtr(new Index::VPNodeType);
+
+        Index::VPNodePtr new_node(new Index::VPNodeType);
+
+        new_node->set_parent(parent);
+
+        // Set the VP
+        new_node->set_value(SelectVP(objects));
+
+        if(objects.size() <= index->vp_tree.m_non_leaf_branching_factor * index->vp_tree.m_leaf_branching_factor)
+        {
+            for(size_t c_pos = 0; c_pos < index->vp_tree.m_leaf_branching_factor; ++c_pos)
+            {
+                new_node->AddChild(0, Index::VPNodePtr(new Index::VPNodeType));
+                new_node->m_child_list[c_pos]->set_leaf_node(true);
+                new_node->m_child_list[c_pos]->set_parent(new_node);
+            }
+
+            new_node->m_child_list[0]->m_objects_list.insert(new_node->m_child_list[0]->m_objects_list.begin(), objects.begin()+1, objects.end());
+
+            RedistributeAmongLeafNodes(new_node, *objects.begin());
+
+            return new_node;
+        }
+
+        // Init children
+        new_node->AddChild(0, Index::VPNodePtr(new Index::VPNodeType));
+        new_node->AddChild(0, Index::VPNodePtr(new Index::VPNodeType));
+
+        float median = Median(new_node->get_value(), objects.begin(), objects.end());
+        new_node->m_mu_list[0] = median;
+
+        size_t objects_count = objects.size();
+        if(median == 0)
+            objects_count = 0;
+
+        bool c_left = false;
+
+        // 60% of size
+        size_t reserved_memory = static_cast<size_t>(static_cast<double>(objects_count) * 0.6);
+        std::vector<unsigned> s_left, s_right;
+        s_left.reserve(reserved_memory);
+        s_right.reserve(reserved_memory);
+
+        typename std::vector<unsigned>::const_iterator it_obj = objects.begin();
+        while(it_obj != objects.end())
+        {
+            float dist = index->getDist()->compare(index->getBaseData() + index->getBaseDim() * new_node->get_value(),
+                                                     index->getBaseData() + index->getBaseDim() * (*it_obj),
+                                                     index->getBaseDim());
+            if(dist < new_node->m_mu_list[0] || (dist == 0  && !c_left))
+            {
+                s_left.push_back(*it_obj);
+                c_left = true;
+            }else
+            {
+                s_right.push_back(*it_obj);
+                c_left = false;
+            }
+            ++it_obj;
+        }
+
+        size_t left_count = s_left.size();
+        size_t right_count = s_right.size();
+
+        // 8( for 2 only now
+        new_node->set_branches_count(2);
+
+        Index::VPNodePtr new_node_l(new Index::VPNodeType);
+        Index::VPNodePtr new_node_r(new Index::VPNodeType);
+
+        Index::VPNodePtr new_node_lc(new Index::VPNodeType);
+        Index::VPNodePtr new_node_rc(new Index::VPNodeType);
+
+#pragma omp task shared(new_node)
+        new_node->m_child_list[0] = MakeVPTree(s_left, new_node);
+#pragma omp task shared(new_node)
+        new_node->m_child_list[1] = MakeVPTree(s_right, new_node);
+
+#pragma omp taskwait
+
+        return new_node;
+    }
+
+    // 3.b. If Parent-Parent node is not full, spleat non-leaf node
+    void ComponentInitANNG_new::SplitNonLeafNode(const Index::VPNodePtr& parent_node, const size_t child_id, const unsigned& new_value)
+    {
+        //std::cout << "	split node" << std::endl;
+        assert(child_id < parent_node->m_child_list.size());
+
+        const size_t k = child_id;
+        const size_t F = parent_node->get_branches_count();
+
+        Index::VPNodePtr c_split_node = parent_node->m_child_list[child_id];
+        Index::VPNodePtr c_node;
+
+        std::vector<unsigned> S; // Set of leaf objects + new one;
+
+        // Create Set of whole objects from leaf nodes at sub tree
+        CollectObjects(c_split_node, S);
+        S.push_back(new_value);
+
+        // Order the objects in S with respect to their distances from P's vantage point
+        unsigned m_main_val = parent_node->get_value();
+        Index *tmp_index = index;
+        //Index::ValueSorterType val_sorter(parent_node->get_value(), m_get_distance);
+        std::sort(S.begin(), S.end(), [m_main_val, tmp_index](unsigned val1, unsigned val2) {
+            float dist1 = tmp_index->getDist()->compare(tmp_index->getBaseData() + tmp_index->getBaseDim() * m_main_val,
+                                                        tmp_index->getBaseData() + tmp_index->getBaseDim() * val1,
+                                                        tmp_index->getBaseDim());
+            float dist2 = tmp_index->getDist()->compare(tmp_index->getBaseData() + tmp_index->getBaseDim() * m_main_val,
+                                                        tmp_index->getBaseData() + tmp_index->getBaseDim() * val2,
+                                                        tmp_index->getBaseDim());
+            return dist1 < dist2;
+        });
+
+        // Create free room for instance
+        Index::VPNodePtr s2_node(new Index::VPNodeType);
+        s2_node->set_parent(parent_node);
+        parent_node->AddChild(0, s2_node);
+
+        std::vector<unsigned> SS1(S.begin(), S.begin() + S.size() / 2);
+        std::vector<unsigned> SS2(S.begin() + S.size() / 2, S.end());
+
+
+        // Shift data at parent node
+
+        if(F > 1)
+            for(size_t c_pos = F-2; c_pos >= k; --c_pos)
+            {
+                parent_node->m_mu_list[c_pos+1] = parent_node->m_mu_list[c_pos];
+                if(!c_pos) // !!! hack :(
+                    break;
+            }
+
+        parent_node->m_mu_list[k] = MedianSumm(SS1, SS2, parent_node->get_value());
+        for(size_t c_pos = F-1; c_pos >= k+1; --c_pos)
+            parent_node->m_child_list[c_pos + 1] = parent_node->m_child_list[c_pos];
+
+
+        // Construct new vp-tree
+        Index::VPNodePtr ss1_node;
+        Index::VPNodePtr ss2_node;
+
+#pragma omp task shared(ss1_node)
+        ss1_node = MakeVPTree(SS1, ss1_node);
+#pragma omp task shared(ss2_node)
+        ss2_node = MakeVPTree(SS2, ss2_node);
+
+#pragma omp taskwait
+
+        ss1_node->set_parent(parent_node);
+        ss2_node->set_parent(parent_node);
+
+        parent_node->m_child_list[k] = ss1_node;
+        parent_node->m_child_list[k+1] = ss2_node;
+    }
+
+    void ComponentInitANNG_new::Insert(const unsigned& new_value, Index::VPNodePtr& root) {
+        assert(root.get());
+        // 4.  L is the empty root Node
+        if(!root->get_branches_count() && !root->get_leaf_node()){
+            // At first insertion make root as a leaf node
+            //InsertSplitRoot(new_value)
+            root->AddObject(new_value);
+        }else {
+            // Traverse the tree, choosing the subtree Si, until the L(eaf) node
+            // is found
+
+            size_t c_current_node_parent_id = 0;
+            Index::VPNodePtr c_parent_node;
+            // Go through the tree, searching leaf node
+            Index::VPNodePtr c_current_node = c_parent_node = root;
+            while (!c_current_node->get_leaf_node() && c_current_node.get()) {
+                c_parent_node = c_current_node;
+                // test all distances at node
+                for (size_t c_pos = 0; c_pos < c_current_node->m_mu_list.size(); ++c_pos) {
+                    // test new_value with node vantage point
+                    float dist = index->getDist()->compare(index->getBaseData() + index->getBaseDim() * new_value,
+                                                           index->getBaseData() + index->getBaseDim() * c_current_node->get_value(),
+                                                           index->getBaseDim());
+                    if (dist < c_current_node->m_mu_list[c_pos]) {
+                        c_current_node = c_current_node->m_child_list[c_pos];
+                        c_current_node_parent_id = c_pos;
+                        break;
+                    }
+                }
+
+                if (c_parent_node == c_current_node)
+                    c_current_node = *c_current_node->m_child_list.rbegin();
+            }
+
+            // Assume c_current_node - Leaf node
+            // Have found leaf node, analize ancestros
+
+            // 0. If there is a room at L(eaf) node - insert data
+            if (c_current_node->get_objects_count() < index->vp_tree.m_leaf_branching_factor) {
+                c_current_node->AddObject(new_value);
+                return;
+            }
+
+            // Second node - we split the root
+            if (c_current_node == root &&
+                c_current_node->get_objects_count() >= index->vp_tree.m_leaf_branching_factor) {
+                InsertSplitLeafRoot(c_current_node, new_value);
+                return;
+            }
+
+            // 1. If any sibling leaf node of L(eaf) is not full,
+            // redistribute all objects under P(arent), among the leaf nodes
+            // Analize sibling nodes
+            for (size_t c_pos = 0; c_pos < c_parent_node->get_branches_count(); ++c_pos) {
+                if (c_parent_node->m_child_list[c_pos]->get_objects_count() < index->vp_tree.m_leaf_branching_factor) {
+                    RedistributeAmongLeafNodes(c_parent_node, new_value);
+                    return;
+                }
+            }
+
+
+            // 2. If Parent has a room for one more child - split the leaf node
+            if (c_parent_node->get_branches_count() < index->vp_tree.m_non_leaf_branching_factor) {
+                SplitLeafNode(c_parent_node, c_current_node_parent_id, new_value);
+                return;
+            }
+
+            // 3.a. Redistribute, among the sibling subtrees
+            Index::VPNodePtr c_ancestor = c_parent_node->m_parent;
+            if (c_ancestor.get()) {
+                // found an id of full leaf node parent
+                size_t c_found_free_subtree_id = index->vp_tree.m_leaf_branching_factor;
+                size_t c_full_subtree_id = index->vp_tree.m_leaf_branching_factor;
+                for (size_t c_anc_pos = 0; c_anc_pos < c_ancestor->get_branches_count(); ++c_anc_pos)
+                    if (c_ancestor->m_child_list[c_anc_pos] == c_current_node->m_parent)
+                        c_full_subtree_id = c_anc_pos;
+
+                //assert(c_full_subtree_id != m_leaf_branching_factor);
+
+                if (c_full_subtree_id != index->vp_tree.m_leaf_branching_factor)
+                    for (size_t c_anc_pos = 0; c_anc_pos < c_ancestor->get_branches_count(); ++c_anc_pos) {
+                        Index::VPNodePtr c_parent = c_ancestor->m_child_list[c_anc_pos];
+
+                        if (c_parent == c_current_node->m_parent)
+                            continue;
+
+                        for (size_t c_par_pos = 0; c_par_pos < c_parent->get_branches_count(); ++c_par_pos) {
+                            if (c_parent->m_child_list[c_par_pos]->get_leaf_node() &&
+                                c_parent->m_child_list[c_par_pos]->m_objects_list.size() < index->vp_tree.m_leaf_branching_factor) {
+                                c_found_free_subtree_id = c_anc_pos;
+                                break;
+                            }
+                        }
+                        if (c_found_free_subtree_id < index->vp_tree.m_leaf_branching_factor) {
+                            // Found free subtree - redistribute data
+                            if (c_found_free_subtree_id > c_full_subtree_id)
+                                RedistributeAmongNonLeafNodes(c_ancestor, c_full_subtree_id, c_found_free_subtree_id,
+                                                              new_value);
+                            else
+                                RedistributeAmongNonLeafNodes(c_ancestor, c_found_free_subtree_id, c_full_subtree_id,
+                                                              new_value);
+
+                            Insert(new_value, c_ancestor);
+
+                            return;
+                        }
+                    }
+            }
+
+            // 3.b. If Parent-Parent node is not full, spleat non-leaf node
+            if (c_current_node->m_parent.get() && c_current_node->m_parent->m_parent.get()) {
+                Index::VPNodePtr c_ancestor = c_current_node->m_parent->m_parent; // A
+                Index::VPNodePtr c_current_parent = c_current_node->m_parent; // B
+
+                size_t c_found_free_subtree_id = index->vp_tree.m_non_leaf_branching_factor;
+                for (size_t c_pos = 0; c_pos < c_ancestor->get_branches_count(); ++c_pos)
+                    if (c_ancestor->m_child_list[c_pos] == c_current_parent)
+                        c_found_free_subtree_id = c_pos;
+
+                if (c_found_free_subtree_id != index->vp_tree.m_non_leaf_branching_factor &&
+                    c_ancestor->get_branches_count() < index->vp_tree.m_non_leaf_branching_factor) {
+                    SplitNonLeafNode(c_ancestor, c_found_free_subtree_id, new_value);
+                    return;
+                }
+            }
+
+            // 4. Cannot find any ancestor, that is not full -> split the root
+            // into two new nodes s1 and s2
+            InsertSplitRoot(root, new_value);
+        }
+    }
+
+    void ComponentInitANNG_new::Insert(const unsigned int &new_value) {
+        //std::cout << "Insert data to vptree.root" << std::endl;
+
+        Insert(new_value, index->vp_tree.m_root);
     }
 
 
