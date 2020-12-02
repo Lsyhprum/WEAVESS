@@ -649,6 +649,8 @@ namespace weavess {
             bool bLocalOpt = true;
             for (unsigned i = 0; i < index->R_refine; i++) {
                 int nn_index = node[i].id;
+                // TODO why
+                if (nn_index >= index->getBaseLen()) break;
                 if (nn_index < 0) break;
                 if (nodeCheckStatus.CheckAndSet(nn_index)) continue;
                 float distance2leaf = index->getDist()->compare(index->getBaseData() + index->getBaseDim() * query,

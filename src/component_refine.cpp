@@ -1204,7 +1204,7 @@ namespace weavess {
 
         // PRUNE
         std::cout << "__PRUNE : RNG__" << std::endl;
-        auto *b = new ComponentPruneHeuristic(index);
+        auto *b = new ComponentPruneNaive(index);
 
 #pragma omp parallel
         {
@@ -1327,6 +1327,110 @@ namespace weavess {
             }
 
             std::vector<Index::SimpleNeighbor>().swap(pool);
+        }
+    }
+
+
+    void ComponentRefineONNG_right::RefineInner() {
+        SetConfigs();
+
+        if (index->numOfOutgoingEdges > 0 || index->numOfIncomingEdges > 0) {
+            std::vector<std::vector<Index::SimpleNeighbor>> graph;
+            //std::cerr << "Optimizer::execute: Extract the graph data." << std::endl;
+            // extract only edges from the index to reduce the memory usage.
+            extractGraph(graph);
+            reconstructGraph(graph);
+//            graphIndex.saveGraph(outIndexPath);
+//            prop.graphType = NGT::NeighborhoodGraph::GraphTypeONNG;
+//            graphIndex.saveProperty(outIndexPath);
+        }
+
+        //if (shortcutReduction) {
+            //NGT::Timer timer;
+            //timer.start();
+            //NGT::GraphReconstructor::adjustPathsEffectively(graphIndex);
+            //timer.stop();
+            //std::cerr << "Optimizer::execute: Path adjustment time=" << timer.time << " (sec) " << std::endl;
+            //graphIndex.saveGraph(outIndexPath);
+        //}
+
+        //optimizeSearchParameters(outIndexPath);
+    }
+
+    void ComponentRefineONNG_right::SetConfigs() {
+        index->numOfIncomingEdges = index->getParam().get<unsigned>("numOfIncomingEdges");
+        index->numOfOutgoingEdges = index->getParam().get<unsigned>("numOfOutgoingEdges");
+    }
+
+    void ComponentRefineONNG_right::extractGraph(std::vector<std::vector<Index::SimpleNeighbor>> &outGraph) {
+        outGraph.resize(index->getBaseLen());
+
+        for(int i = 0; i < index->getBaseLen(); i ++) {
+            for(int j = 0; j < index->getFinalGraph()[i].size(); j ++) {
+                outGraph[i].push_back(index->getFinalGraph()[i][j]);
+            }
+        }
+    }
+
+    void ComponentRefineONNG_right::reconstructGraph(std::vector<std::vector<Index::SimpleNeighbor>> &graph) {
+        if (index->numOfIncomingEdges > 10000) {
+            std::cerr << "something wrong. Edge size=" << index->numOfIncomingEdges << std::endl;
+            exit(1);
+        }
+
+        for (size_t id = 0; id < index->getBaseLen(); id++) {
+            std::vector<Index::SimpleNeighbor> &node = index->getFinalGraph()[id];
+            if (index->numOfOutgoingEdges == 0) {
+                std::vector<Index::SimpleNeighbor> empty;
+                node.swap(empty);
+            } else {
+                std::vector<Index::SimpleNeighbor> n = graph[id - 1];
+                if (n.size() < index->numOfOutgoingEdges) {
+                    std::cerr << "GraphReconstructor: Warning. The edges are too few. " << n.size() << ":" << index->numOfOutgoingEdges << " for " << id << std::endl;
+                    continue;
+                }
+                n.resize(index->numOfOutgoingEdges);
+                node.swap(n);
+            }
+        }
+
+        int insufficientNodeCount = 0;
+        for (size_t id = 0; id < graph.size(); ++id) {
+            std::vector<Index::SimpleNeighbor> &node = graph[id];
+            size_t rsize = index->numOfIncomingEdges;
+            if (rsize > node.size()) {
+                insufficientNodeCount++;
+                rsize = node.size();
+            }
+            for (size_t i = 0; i < rsize; ++i) {
+                float distance = node[i].distance;
+                size_t nodeID = node[i].id;
+                std::vector<Index::SimpleNeighbor> &n = index->getFinalGraph()[nodeID];
+                n.push_back(Index::SimpleNeighbor(id, distance));
+            }
+        }
+
+        if (insufficientNodeCount != 0) {
+            std::cerr << "# of the nodes edges of which are in short = " << insufficientNodeCount << std::endl;
+        }
+
+        for (size_t id = 0; id < index->getBaseLen(); id++) {
+            std::vector<Index::SimpleNeighbor> &n = index->getFinalGraph()[id];
+//                if (id % 100000 == 0) {
+//                    std::cerr << "Processed " << id << " nodes" << std::endl;
+//                }
+            std::sort(n.begin(), n.end());
+            unsigned prev = (std::numeric_limits<int>::max)();;
+            for (auto it = n.begin(); it != n.end();) {
+                if (prev == (*it).id) {
+                    it = n.erase(it);
+                    continue;
+                }
+                prev = (*it).id;
+                it++;
+            }
+            std::vector<Index::SimpleNeighbor> tmp = n;
+            n.swap(tmp);
         }
     }
 }
