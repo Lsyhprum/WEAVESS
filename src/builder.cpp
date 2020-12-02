@@ -45,6 +45,7 @@ namespace weavess {
     * @return 当前建造者指针
     */
     IndexBuilder *IndexBuilder::init(TYPE type) {
+        s = std::chrono::high_resolution_clock::now();  //构建开始时间点
         ComponentInit *a = nullptr;
 
         if (type == INIT_NN_DESCENT) {
@@ -139,6 +140,10 @@ namespace weavess {
 
         a->RefineInner();
 
+        // 下面3行置于输出索引信息操作前面，以避免输出索引信息对索引构建时间的影响
+        std::cout << "__REFINE : FINISH__" << std::endl;
+        std::cout << "===================" << std::endl;
+        e = std::chrono::high_resolution_clock::now();  
         if (debug) {
             // degree
             std::unordered_map<unsigned, unsigned> degree;
@@ -147,11 +152,6 @@ namespace weavess {
             // 连通分量
             conn_info();
         }
-
-        std::cout << "__REFINE : FINISH__" << std::endl;
-        std::cout << "===================" << std::endl;
-
-        e = std::chrono::high_resolution_clock::now();
 
         return this;
     }
@@ -391,6 +391,5 @@ namespace weavess {
             cnt++;
         }
     }
-
 
 }
