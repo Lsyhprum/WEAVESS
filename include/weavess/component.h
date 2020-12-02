@@ -629,6 +629,23 @@ namespace weavess {
         void SetConfigs();
     };
 
+    class ComponentRefineONNG_right : public ComponentRefine {
+    public:
+        explicit ComponentRefineONNG_right(Index *index) : ComponentRefine(index) {}
+
+        void RefineInner() override;
+
+    private:
+        void Link(Index::SimpleNeighbor *cut_graph_);
+
+        void SetConfigs();
+
+        void extractGraph(std::vector<std::vector<Index::SimpleNeighbor>> &outGraph);
+
+        void reconstructGraph(std::vector<std::vector<Index::SimpleNeighbor>> &outGraph);
+
+    };
+
 
     // entry
     class ComponentRefineEntry : public Component {

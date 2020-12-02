@@ -883,6 +883,9 @@ namespace weavess {
         unsigned size;
         float explorationCoefficient = 1.1;
 
+        int numOfOutgoingEdges ;
+        int numOfIncomingEdges ;
+
         typedef VPNode VPNodeType;
         typedef boost::shared_ptr<VPNodeType> VPNodePtr;
 

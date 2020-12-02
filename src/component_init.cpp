@@ -3147,13 +3147,13 @@ namespace weavess {
 
         BuildGraph();
 
-//        for(int i = 0; i < 10; i ++) {
-//            std::cout << "len : " << index->getFinalGraph()[i].size() << std::endl;
-//            for(int j = 0; j < index->getFinalGraph()[i].size(); j ++){
-//                std::cout << index->getFinalGraph()[i][j].id << "|" << index->getFinalGraph()[i][j].distance << " ";
-//            }
-//            std::cout << std::endl;
-//        }
+        for(int i = 0; i < 10; i ++) {
+            std::cout << "len : " << index->getFinalGraph()[i].size() << std::endl;
+            for(int j = 0; j < index->getFinalGraph()[i].size(); j ++){
+                std::cout << index->getFinalGraph()[i][j].id << "|" << index->getFinalGraph()[i][j].distance << " ";
+            }
+            std::cout << std::endl;
+        }
     }
 
     void ComponentInitSPTAG_KDT_new::SetConfigs() {

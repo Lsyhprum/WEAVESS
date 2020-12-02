@@ -226,6 +226,7 @@ void ONNG(std::string base_path, std::string query_path, std::string ground_path
     auto *builder = new weavess::IndexBuilder();
     builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
             -> init(weavess::INIT_ANNG)
+            -> refine(weavess::REFINE_ONNG2, false)
             -> refine(weavess::REFINE_ONNG, false);
             //-> search(weavess::SEARCH_ENTRY_NONE, weavess::ROUTER_NGT);
 
@@ -358,7 +359,7 @@ int main() {
     //HCNNG(base_path, query_path, ground_path);
     //SPTAG_KDT_new(base_path, query_path, ground_path);
     //SPTAG_BKT_new(base_path, query_path, ground_path);
-    PANNG(base_path, query_path, ground_path);
+    //PANNG(base_path, query_path, ground_path);
     //ONNG(base_path, query_path, ground_path);
 
     //EFANNA(base_path, query_path, ground_path);
