@@ -3,6 +3,7 @@
 //
 
 #include "weavess/component.h"
+#include <functional>
 
 
 namespace weavess {
@@ -215,7 +216,7 @@ namespace weavess {
         for (unsigned i = 0; i < index->getBaseLen(); i++) {
             std::vector<Index::SimpleNeighbor> tmp;
 
-            std::sort(index->graph_[i].pool.begin(), index->graph_[i].pool.end());
+            // std::sort(index->graph_[i].pool.begin(), index->graph_[i].pool.end());
 
             for (int j = 0; j < index->L; j++) {
                 tmp.push_back(Index::SimpleNeighbor(index->graph_[i].pool[j].id, index->graph_[i].pool[j].distance));
@@ -248,17 +249,22 @@ namespace weavess {
 #pragma omp parallel for
 #endif
         for (unsigned i = 0; i < index->getBaseLen(); i++) {
+            std::vector<Index::Neighbor> tmp;
             for (unsigned j = 0; j < index->getBaseLen(); j++) {
                 if (i == j) continue;
 
                 float dist = index->getDist()->compare(index->getBaseData() + index->getBaseDim() * i,
                                                        index->getBaseData() + index->getBaseDim() * j,
                                                        index->getBaseDim());
-                index->graph_[i].pool.emplace_back(Index::Neighbor(j, dist, true));
+                tmp.emplace_back(Index::Neighbor(j, dist, true));
             }
-
-            std::make_heap(index->graph_[i].pool.begin(), index->graph_[i].pool.end());
-            index->graph_[i].pool.reserve(index->getBaseLen() - 1);
+            std::make_heap(tmp.begin(), tmp.end(), std::greater<Index::Neighbor>());
+            index->graph_[i].pool.reserve(index->L);
+            for (unsigned j = 0; j < index->L; j++) {
+                index->graph_[i].pool.emplace_back(tmp[0]);
+                std::pop_heap(tmp.begin(), tmp.end(), std::greater<Index::Neighbor>());
+                tmp.pop_back();
+            }
         }
     }
 
