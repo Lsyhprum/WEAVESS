@@ -8,6 +8,7 @@
 #include "index.h"
 
 namespace weavess {
+
     class Component {
     public:
         explicit Component(Index *index) : index(index) {}
@@ -35,22 +36,16 @@ namespace weavess {
         virtual void InitInner() = 0;
     };
 
-    class ComponentInitNNDescent : public ComponentInit {
+    class ComponentInitRandom : public ComponentInit {
     public:
-        explicit ComponentInitNNDescent(Index *index) : ComponentInit(index) {}
+        explicit ComponentInitRandom(Index *index) : ComponentInit(index) {}
 
         void InitInner() override;
 
     private:
         void SetConfigs();
 
-        void init();
-
-        void NNDescent();
-
-        void join();
-
-        void update();
+        void GenRandom(std::mt19937 &rng, unsigned *addr, unsigned size);
     };
 
     class ComponentInitRand : public ComponentInit {
@@ -158,83 +153,6 @@ namespace weavess {
     class ComponentInitANNG : public ComponentInit {
     public:
         explicit ComponentInitANNG(Index *index) : ComponentInit(index) {}
-
-        void InitInner() override;
-
-    private:
-        void SetConfigs();
-
-        void Build();
-
-        void InsertNode(unsigned id);
-
-        bool addEdge(unsigned target, unsigned addID, float dist);
-
-        void truncateEdgesOptimally(unsigned id, size_t truncationSize);
-
-        void Search(unsigned startId, unsigned query, std::vector<Index::SimpleNeighbor> &pool);
-    };
-
-    class ComponentInitANNG_new : public ComponentInit {
-    public:
-        explicit ComponentInitANNG_new(Index *index) : ComponentInit(index) {}
-
-        void InitInner() override;
-
-    private:
-        void SetConfigs();
-
-        void Build();
-
-        unsigned searchMultipleQueryForCreation(unsigned &id, Index::OutputJobQueue &output);
-
-        void insertMultipleSearchResults(Index::OutputJobQueue &output, unsigned cnt);
-
-        void InsertNode(unsigned id);
-
-        bool addEdge(unsigned target, unsigned addID, float dist);
-
-        void truncateEdgesOptimally(unsigned id, size_t truncationSize);
-
-        void Search(unsigned startId, unsigned query, std::vector<Index::SimpleNeighbor> &pool);
-
-        // VP-tree
-        void Insert(const unsigned& new_value);
-
-        void Insert(const unsigned& new_value, Index::VPNodePtr& root);
-
-        void MakeVPTree(const std::vector<unsigned>& objects);
-
-        void SplitLeafNode(const Index::VPNodePtr& parent_node, const size_t child_id, const unsigned& new_value);
-
-        void InsertSplitLeafRoot(Index::VPNodePtr& root, const unsigned& new_value);
-
-        void CollectObjects(const Index::VPNodePtr& node, std::vector<unsigned>& S);
-
-        void RedistributeAmongLeafNodes(const Index::VPNodePtr& parent_node, const unsigned& new_value);
-
-        const float MedianSumm(const std::vector<unsigned>& SS1, const std::vector<unsigned>& SS2, const unsigned& v) const;
-
-        float Median(const unsigned& value, const std::vector<unsigned>::const_iterator it_begin,
-                                            const std::vector<unsigned>::const_iterator it_end);
-
-        void RedistributeAmongNonLeafNodes(const Index::VPNodePtr& parent_node, const size_t k_id,
-                                                                  const size_t k1_id, const unsigned& new_value);
-
-        void Remove(const unsigned& query_value, const Index::VPNodePtr& node);
-
-        void InsertSplitRoot(Index::VPNodePtr& root, const unsigned& new_value);
-
-        void SplitNonLeafNode(const Index::VPNodePtr& parent_node, const size_t child_id, const unsigned& new_value);
-
-        Index::VPNodePtr MakeVPTree(const std::vector<unsigned>& objects, const Index::VPNodePtr& parent);
-
-        const unsigned& SelectVP(const std::vector<unsigned>& objects);
-    };
-
-    class ComponentInitPANNG : public ComponentInit {
-    public:
-        explicit ComponentInitPANNG(Index *index) : ComponentInit(index) {}
 
         void InitInner() override;
 
@@ -493,6 +411,14 @@ namespace weavess {
 
     private:
         void SetConfigs();
+
+        void init();
+
+        void NNDescent();
+
+        void join();
+
+        void update();
     };
 
     class ComponentRefineNSG : public ComponentRefine {
@@ -575,9 +501,9 @@ namespace weavess {
         void eval_recall(std::vector<unsigned> &ctrl_points, std::vector<std::vector<unsigned> > &acc_eval_set);
     };
 
-    class ComponentRefineONNG : public ComponentRefine {
+    class ComponentRefinePANNG : public ComponentRefine {
     public:
-        explicit ComponentRefineONNG(Index *index) : ComponentRefine(index) {}
+        explicit ComponentRefinePANNG(Index *index) : ComponentRefine(index) {}
 
         void RefineInner() override;
 

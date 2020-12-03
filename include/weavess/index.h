@@ -6,6 +6,8 @@
 #define WEAVESS_INDEX_H
 
 #define PARALLEL
+#define THREADS_NUM 10
+
 #define FLT_EPSILON 1.19209290E-07F
 
 // IEH
@@ -36,7 +38,7 @@
 #include <fstream>
 #include <cassert>
 #include <iostream>
-#include <windows.h>
+// #include <windows.h>
 #include <algorithm>
 #include <unordered_set>
 #include <boost/dynamic_bitset.hpp>
@@ -47,6 +49,8 @@
 #include "distance.h"
 #include "parameters.h"
 #include "CommonDataStructure.h"
+#include <mm_malloc.h>
+#include <stdlib.h>
 
 namespace weavess {
 
@@ -89,6 +93,13 @@ namespace weavess {
             std::vector<unsigned> rnn_new;
 
             nhood() {}
+
+            nhood(unsigned l, unsigned s) {
+                M = s;
+                nn_new.resize(s * 2);
+                nn_new.reserve(s * 2);
+                pool.reserve(l);
+            }
 
             nhood(unsigned l, unsigned s, std::mt19937 &rng, unsigned N) {
                 M = s;
@@ -265,7 +276,7 @@ namespace weavess {
 
         std::vector<Node *> tree_roots_;                    // 存储树根
         std::vector<std::pair<Node *, size_t> > mlNodeList;  //  ml 层 节点 和对应树根编号
-        std::vector<std::vector<unsigned>> LeafLists;       // 存储每个随机截断树的对应节点
+        std::vector<std::vector<unsigned> > LeafLists;       // 存储每个随机截断树的对应节点
         omp_lock_t rootlock;
         bool error_flag = false;
         int max_deepth = 0x0fffffff;
@@ -413,7 +424,7 @@ namespace weavess {
             size_t max_m_;
             size_t max_m0_;
 
-            std::vector<std::vector<HnswNode*>> friends_at_layer_;
+            std::vector<std::vector<HnswNode*> > friends_at_layer_;
             std::mutex access_guard_;
         };
 
@@ -481,7 +492,7 @@ namespace weavess {
                 return p1.second > p2.second;
             }
         };
-        typedef typename boost::heap::d_ary_heap<IdDistancePair, boost::heap::arity<4>, boost::heap::compare<IdDistancePairMinHeapComparer>> IdDistancePairMinHeap;
+        typedef typename boost::heap::d_ary_heap<IdDistancePair, boost::heap::arity<4>, boost::heap::compare<IdDistancePairMinHeapComparer> > IdDistancePairMinHeap;
 
         HnswNode* enterpoint_ = nullptr;
         std::vector<HnswNode*> nodes_;
@@ -1659,6 +1670,30 @@ namespace weavess {
             param_ = param;
         }
 
+        unsigned int getInitEdgesNum() const {
+            return init_edges_num;
+        }
+
+        void setInitEdgesNum(unsigned int initEdgesNum) {
+            init_edges_num = initEdgesNum;
+        }
+
+        unsigned int getCandidatesEdgesNum() const {
+            return candidates_edges_num;
+        }
+
+        void setCandidatesEdgesNum(unsigned int candidatesEdgesNum) {
+            candidates_edges_num = candidatesEdgesNum;
+        }
+
+        unsigned int getResultEdgesNum() const {
+            return result_edges_num;
+        }
+
+        void setResultEdgesNum(unsigned int resultEdgesNum) {
+            result_edges_num = resultEdgesNum;
+        }
+
         Distance *getDist() const {
             return dist_;
         }
@@ -1668,10 +1703,15 @@ namespace weavess {
         }
 
         // sorted
-        typedef std::vector<std::vector<SimpleNeighbor>> FinalGraph;
+        typedef std::vector<std::vector<SimpleNeighbor> > FinalGraph;
+        typedef std::vector<std::vector<unsigned> > LoadGraph;
 
         FinalGraph &getFinalGraph() {
             return final_graph_;
+        }
+
+        LoadGraph &getLoadGraph() {
+            return load_graph_;
         }
 
         TYPE getCandidateType() const {
@@ -1710,8 +1750,18 @@ namespace weavess {
             return dist_count;
         }
 
+        void resetDistCount() {
+            dist_count = 0;
+        }
+
         void addDistCount() {
             dist_count += 1;
+        }
+        void initDistCount() {
+            dist_count = 0;
+        }
+        void setNumThreads(const unsigned numthreads) {
+            omp_set_num_threads(numthreads);
         }
 
         int i = 0;
@@ -1723,11 +1773,16 @@ namespace weavess {
         unsigned base_dim_, query_dim_, ground_dim_;
 
         Parameters param_;
+        unsigned init_edges_num;
+        unsigned candidates_edges_num;
+        unsigned result_edges_num;
 
         Distance *dist_;
 
         // 迭代式
         FinalGraph final_graph_;
+        LoadGraph load_graph_;
+
 
         TYPE entry_type;
         TYPE candidate_type;

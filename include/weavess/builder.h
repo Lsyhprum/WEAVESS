@@ -12,6 +12,7 @@ namespace weavess {
     public:
         explicit IndexBuilder() {
             final_index_ = new Index();
+            omp_set_num_threads(8);
         }
 
         virtual ~IndexBuilder() {
@@ -20,17 +21,19 @@ namespace weavess {
 
         IndexBuilder *load(char *data_file, char *query_file, char *ground_file, Parameters &parameters);
 
-        IndexBuilder *init(TYPE type);
+        IndexBuilder *init(TYPE type, bool debug = false);
 
-        IndexBuilder *save_graph(char *graph_file);
+        IndexBuilder *save_graph(TYPE type, char *graph_file);
 
-        IndexBuilder *load_graph(char *graph_file);
+        IndexBuilder *load_graph(TYPE type, char *graph_file);
 
         IndexBuilder *refine(TYPE type, bool debug);
 
         IndexBuilder *search(TYPE entry_type, TYPE route_type);
 
-        void degree_info(std::unordered_map<unsigned, unsigned> &degree);
+        void print_graph();
+
+        void degree_info(std::unordered_map<unsigned, unsigned> &in_degree, std::unordered_map<unsigned, unsigned> &out_degree);
 
         void conn_info();
 
