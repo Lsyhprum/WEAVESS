@@ -1,4 +1,7 @@
 cmake_minimum_required(VERSION 2.8)
+# set cmake C and CXX compiler, only required for local Mac environment
+#set(CMAKE_C_COMPILER "/usr/local/bin/gcc-7")
+#set(CMAKE_CXX_COMPILER "/usr/local/bin/g++-7")
 project(WEAVESS)
 
 set(CMAKE_CXX_STANDARD 11)
@@ -15,7 +18,10 @@ else()
 endif()
 
 #Boost
+# windows
 set(BOOST_ROOT G:/MinGW-w64/boost_1_73_0)
+# macOS
+#set(BOOST_ROOT /usr/local/Cellar/boost/1.74.0/)
 find_package(BOOST)
 if(Boost_FOUND)
     #message(Boost_INCLUDE_DIRS "${Boost_INCLUDE_DIRS}")
