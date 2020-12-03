@@ -261,12 +261,12 @@ namespace weavess {
 
                 a->SearchEntryInner(i, pool);
 
-                for(unsigned j = 0; j < pool.size(); j ++) {
-                    std::cout << pool[j].id << "|" << pool[j].distance << " ";
-                }
-                std::cout << std::endl;
+                // for(unsigned j = 0; j < pool.size(); j ++) {
+                //     std::cout << pool[j].id << "|" << pool[j].distance << " ";
+                // }
+                // std::cout << std::endl;
 
-                std::cout << pool.size() << std::endl;
+                // std::cout << pool.size() << std::endl;
 
                 b->RouteInner(i, pool, res[i]);
 
@@ -313,6 +313,53 @@ namespace weavess {
         std::cout << "__SEARCH FINISH__" << std::endl;
 
         return this;
+    }
+
+    /**
+     * 保存图索引
+     * @param index_type 图索引类型
+     * @param graph_file 图索引保存地址
+     * @return 当前建造者指针
+     */
+    IndexBuilder *IndexBuilder::save_graph(TYPE type, char *graph_file) {
+    std::ofstream out(graph_file, std::ios::binary | std::ios::out);
+    if (type == INDEX_NSG || type == INDEX_VAMANA) {
+        out.write((char *)&final_index_->ep_, sizeof(unsigned));
+    }
+    for (unsigned i = 0; i < final_index_->getBaseLen(); i++) {
+        unsigned GK = (unsigned) final_index_->getFinalGraph()[i].size();
+        std::vector<unsigned> tmp;
+        for (unsigned j = 0; j < GK; j++) {
+            tmp.push_back(final_index_->getFinalGraph()[i][j].id);
+        }
+        out.write((char *) &GK, sizeof(unsigned));
+        out.write((char *) tmp.data(), GK * sizeof(unsigned));
+    }
+    out.close();
+    return this;
+    }
+
+    /**
+     * 载入图索引
+     * @param index_type 图索引类型
+     * @param graph_file 图索引地址
+     * @return 当前建造者指针
+     */
+    IndexBuilder *IndexBuilder::load_graph(TYPE type, char *graph_file) {
+    std::ifstream in(graph_file, std::ios::binary);
+    if (type == INDEX_NSG || type == INDEX_VAMANA) {
+        in.read((char *)&final_index_->ep_, sizeof(unsigned));
+    }
+
+    while (!in.eof()) {
+        unsigned GK;
+        in.read((char *)&GK, sizeof(unsigned));
+        if (in.eof()) break;
+        std::vector<unsigned> tmp(GK);
+        in.read((char *)tmp.data(), GK * sizeof(unsigned));
+        final_index_->getLoadGraph().push_back(tmp);
+    }
+    return this;
     }
 
     /**
