@@ -33,8 +33,8 @@ namespace weavess {
                 unsigned n = pool[k].id;
 
                 // 查找邻居的邻居
-                for (unsigned m = 0; m < index->getFinalGraph()[n].size(); ++m) {
-                    unsigned id = index->getFinalGraph()[n][m].id;
+                for (unsigned m = 0; m < index->getLoadGraph()[n].size(); ++m) {
+                    unsigned id = index->getLoadGraph()[n][m];
 
                     if (flags[id])continue;
                     flags[id] = 1;
@@ -387,7 +387,7 @@ namespace weavess {
         std::unordered_map<unsigned, unsigned> relation; // 记录终止结点和起始结点关系
 
         unsigned enter = pool[0].id;
-        unsigned start = index->getFinalGraph()[enter][0].id;
+        unsigned start = index->getLoadGraph()[enter][0];
         relation[start] = enter;
         mp[enter] = 0;
         float dist = index->getDist()->compare(index->getBaseData() + index->getBaseDim() * start,
@@ -407,7 +407,7 @@ namespace weavess {
             if(!flags[top_node]) {
                 flags[top_node] = true;
 
-                unsigned nnid = index->getFinalGraph()[top_node][0].id;
+                unsigned nnid = index->getLoadGraph()[top_node][0];
                 relation[nnid] = top_node;
                 mp[top_node] = 0;
                 m += 1;
@@ -429,11 +429,11 @@ namespace weavess {
             //std::cout << 3.11 << " " << (*iter).second << std::endl;
             //std::cout << index->getFinalGraph()[start_node].size() << std::endl;
             // 已访问所有近邻
-            if((*iter).second < index->getFinalGraph()[start_node].size() - 1) {
+            if((*iter).second < index->getLoadGraph()[start_node].size() - 1) {
                 //std::cout << 3.1 << std::endl;
                 pos = (*iter).second + 1;
                 mp[start_node] = pos;
-                unsigned nnid = index->getFinalGraph()[start_node][pos].id;
+                unsigned nnid = index->getLoadGraph()[start_node][pos];
                 //std::cout << 3.2 << " " << nnid << std::endl;
                 relation[nnid] = start_node;
                 float dist = index->getDist()->compare(index->getQueryData() + index->getQueryDim() * query,

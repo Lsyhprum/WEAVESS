@@ -104,7 +104,7 @@ namespace weavess {
 
     void ComponentRefineFANNG::SetConfigs() {
         index->R_refine = index->getParam().get<unsigned>("R_refine");
-        index->M = index->getParam().get<unsigned>("M");
+        // index->M = index->getParam().get<unsigned>("M");
     }
 
 
