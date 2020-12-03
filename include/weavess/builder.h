@@ -12,6 +12,7 @@ namespace weavess {
     public:
         explicit IndexBuilder() {
             final_index_ = new Index();
+            omp_set_num_threads(8);
         }
 
         virtual ~IndexBuilder() {
@@ -22,9 +23,9 @@ namespace weavess {
 
         IndexBuilder *init(TYPE type);
 
-        IndexBuilder *save_graph(char *graph_file);
+        IndexBuilder *save_graph(TYPE type, char *graph_file);
 
-        IndexBuilder *load_graph(char *graph_file);
+        IndexBuilder *load_graph(TYPE type, char *graph_file);
 
         IndexBuilder *refine(TYPE type, bool debug);
 
