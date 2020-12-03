@@ -6,6 +6,8 @@
 #define WEAVESS_INDEX_H
 
 #define PARALLEL
+#define THREADS_NUM 10
+
 #define FLT_EPSILON 1.19209290E-07F
 
 // IEH
@@ -91,6 +93,13 @@ namespace weavess {
             std::vector<unsigned> rnn_new;
 
             nhood() {}
+
+            nhood(unsigned l, unsigned s) {
+                M = s;
+                nn_new.resize(s * 2);
+                nn_new.reserve(s * 2);
+                pool.reserve(l);
+            }
 
             nhood(unsigned l, unsigned s, std::mt19937 &rng, unsigned N) {
                 M = s;
@@ -1126,7 +1135,7 @@ namespace weavess {
 
             inline int hash_func(int idx)
             {
-                // return ((int)(idx * 99991) + _rotl(idx, 2) + 101) & m_poolSize;
+                return ((int)(idx * 99991) + _rotl(idx, 2) + 101) & m_poolSize;
             }
 
         public:
@@ -1661,6 +1670,30 @@ namespace weavess {
             param_ = param;
         }
 
+        unsigned int getInitEdgesNum() const {
+            return init_edges_num;
+        }
+
+        void setInitEdgesNum(unsigned int initEdgesNum) {
+            init_edges_num = initEdgesNum;
+        }
+
+        unsigned int getCandidatesEdgesNum() const {
+            return candidates_edges_num;
+        }
+
+        void setCandidatesEdgesNum(unsigned int candidatesEdgesNum) {
+            candidates_edges_num = candidatesEdgesNum;
+        }
+
+        unsigned int getResultEdgesNum() const {
+            return result_edges_num;
+        }
+
+        void setResultEdgesNum(unsigned int resultEdgesNum) {
+            result_edges_num = resultEdgesNum;
+        }
+
         Distance *getDist() const {
             return dist_;
         }
@@ -1717,6 +1750,10 @@ namespace weavess {
             return dist_count;
         }
 
+        void resetDistCount() {
+            dist_count = 0;
+        }
+
         void addDistCount() {
             dist_count += 1;
         }
@@ -1736,6 +1773,9 @@ namespace weavess {
         unsigned base_dim_, query_dim_, ground_dim_;
 
         Parameters param_;
+        unsigned init_edges_num;
+        unsigned candidates_edges_num;
+        unsigned result_edges_num;
 
         Distance *dist_;
 

@@ -4,9 +4,11 @@
 
 ## Algorithms
        
-|  Algo  |       TYPE       |          Init         |       Entry       |   Candidate   |     Prune    |     Conn     |    Search Entry    |    Search Route    |
-|:------:|:----------------:| :--------------------:| :---------------: | :-----------: | :-----------:| :-----------:| :-----------------:|:------------------:|
-| KGraph |    Refinement    |       NN-Descent      |       Query       | PROPAGATION 1 |    Naive     |              |      Random        |       Greedy       |
+|  Algo  |       TYPE       |          Init         |       Refine      |    Search Entry    |    Search Route    |
+|:------:|:----------------:| :--------------------:| :---------------: | :-----------------:| :-----------------:|
+| KGraph |    Refinement    |         Random        |     NN-Descent    |      Random        |       Greedy       |
+
+
 | FANNG  |    Refinement    |         KNNG          |       Query       | PROPAGATION 1 |     RNG      |              |      Random        |      Backtrack     |
 | NSG    |    Refinement    |       NN-Descent      |      Centroid     |     Greedy    |     RNG      | Reverse+DFS  |     Centroid       |       Greedy       |
 | SSG    |    Refinement    |       NN-Descent      |       Query       | PROPAGATION 2 |     SSG      | Reverse+DFS  |    Sub Centroid    |       Greedy       |
@@ -122,11 +124,11 @@
 
 |  Name        |    Interval    |  Description                         |  sift1M |  gist |  glove-100 |  crawl |  audio |  msong |  uqv |  enron |   c_1   |  c_10 |  c_100  |  d_8   |  d_32  |  d_128 | n_10000 |n_100000|n_1000000 |  s_1  |    s_5     |  s_10  |
 |:------------:|:--------------:|:------------------------------------:|:-------:|:-----:|:----------:|:------:|:------:|:------:|:----:|:------:|:-------:|:-----:|:-------:|:------:|:------:|:------:|:-------:|:------:|:--------:|:-----:|:----------:|:------:|
-| KDT_number   |    [1,2,4]     | degree bound                         |   100   |  100  |    100     |   100  |  100   |   100  | 100  |  100   |   100   |  200  |   200   |  100   |   \    |  100   |   100   |    \   |    100   |       |     \      |    1   |
-| TPT_number   |   [16,32,64]   | number of top nearest candidate      |   100   |  100  |    130     |   130  |  130   |   110  | 100  |  120   |   100   |  210  |   220   |  110   |   \    |  100   |   130   |    \   |    100   |       |     \      |   32   |
-| TPT_leaf_size| [500:2500:500] | number of iteration in NN-Descent    |         |       |            |        |        |        |      |        |         |       |         |        |        |        |         |        |          |       |            |  1500  |
-| scale        |    [2,8,32]    | number of seeds for NN-Descent       |    25   |   20  |     20     |    20  |   25   |    20  |  20  |   15   |    20   |   25  |   25    |   20   |   \    |   25   |    20   |    \   |     20   |       |     \      |   32   |
-| CEF          | [500:2000:500] | number of reverse edge in NN-Descent |   300   |  100  |    100     |   100  |  100   |   100  | 300  |  200   |   300   |  300  |   200   |  200   |   \    |  200   |   300   |    \   |    300   |       |     \      |  1500  |
+| KDT_number   |    [1,2,4]     | degree bound                         |   100   |  100  |    100     |   100  |  100   |   100  | 100  |  100   |    \    |   2   |    1    |  100   |   \    |  100   |   100   |    \   |    100   |       |     \      |    1   |
+| TPT_number   |   [16,32,64]   | number of top nearest candidate      |   100   |  100  |    130     |   130  |  130   |   110  | 100  |  120   |    \    |   16  |    16   |  110   |   \    |  100   |   130   |    \   |    100   |       |     \      |   32   |
+| TPT_leaf_size| [500:2500:500] | number of iteration in NN-Descent    |         |       |            |        |        |        |      |        |    \    |  1000 |   1500  |        |        |        |         |        |          |       |            |  1500  |
+| scale        |    [2,8,32]    | number of seeds for NN-Descent       |    25   |   20  |     20     |    20  |   25   |    20  |  20  |   15   |    \    |   8   |    8    |   20   |   \    |   25   |    20   |    \   |     20   |       |     \      |   32   |
+| CEF          | [500:2000:500] | number of reverse edge in NN-Descent |   300   |  100  |    100     |   100  |  100   |   100  | 300  |  200   |    \    |  500  |   1500  |  200   |   \    |  200   |   300   |    \   |    300   |       |     \      |  1500  |
 
 
 ### SPTAG_BKT
@@ -140,38 +142,6 @@
  
 
 ## TODO
-
-#### Code
-
-- [x] KGraph
-
-- [x] NSG
-
-- [x] NSSG
-
-- [x] DPG
-
-- [x] EFANNA
-
-- [x] IEH
-
-- [x] VAMANA
-
-- [x] HCNNG
-
-- [x] FANNG
-
-
-
-
-- [x] NSW
-
-- [x] HNSW
-
-- [ ] NGT
-
-- [x] SPTAG
-
 
 #### Optimal Parameter
 
@@ -205,6 +175,8 @@
 
 - [] SPTAG-BKT
 
+sptag_kdt c1 100000
+
 
 
 
@@ -220,6 +192,27 @@
 * search entry -> pool -> seeds
 * panng 路径调整 根据id 排序
 * NGT 性能统计
+* HNSWNode 结点距离
+
+
+* 随机初始化，查询点id 相同
+* make_heap
+
+* 删除 final_graph resize
+
+* push 前 reserve
+
+
+如果有大量的数据需要进行push_back，
+
+应当使用reserve()函数提前设定其容量大小，否则会出现许多次容量扩充操作，导致效率低下
+
+vector::resize() 使用array index，效率最高，但是需要提前知道size大小
+
+vector::reserve()使用 push_back()，效率一般，较原生有一定提升。
+
+vector 先插入后排序效率？
+
 
 
 

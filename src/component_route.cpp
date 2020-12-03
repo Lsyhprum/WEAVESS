@@ -17,11 +17,6 @@ namespace weavess {
         const auto L = index->getParam().get<unsigned>("L_search");
         const auto K = index->getParam().get<unsigned>("K_search");
 
-//        for(int i = 0; i < pool.size(); i ++) {
-//            std::cout << pool[i].id << "|" << pool[i].distance << " ";
-//        }
-//        std::cout << std::endl;
-
         std::vector<char> flags(index->getBaseLen(), 0);
 
         int k = 0;
@@ -1229,14 +1224,14 @@ namespace weavess {
         }
         //std::cout << "res : " << results.size() << std::endl;
         while(!results.empty()) {
-            std::cout << results.top().id << "|" << results.top().distance << " ";
+            //std::cout << results.top().id << "|" << results.top().distance << " ";
             if(results.size() <= K) {
                 res.push_back(results.top().id);
             }
 
             results.pop();
         }
-        std::cout << std::endl;
+        //std::cout << std::endl;
 
         sort(res.begin(), res.end());
 
