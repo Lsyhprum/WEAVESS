@@ -36,7 +36,7 @@
 #include <fstream>
 #include <cassert>
 #include <iostream>
-#include <windows.h>
+// #include <windows.h>
 #include <algorithm>
 #include <unordered_set>
 #include <boost/dynamic_bitset.hpp>
@@ -47,6 +47,8 @@
 #include "distance.h"
 #include "parameters.h"
 #include "CommonDataStructure.h"
+#include <mm_malloc.h>
+#include <stdlib.h>
 
 namespace weavess {
 
@@ -265,7 +267,7 @@ namespace weavess {
 
         std::vector<Node *> tree_roots_;                    // 存储树根
         std::vector<std::pair<Node *, size_t> > mlNodeList;  //  ml 层 节点 和对应树根编号
-        std::vector<std::vector<unsigned>> LeafLists;       // 存储每个随机截断树的对应节点
+        std::vector<std::vector<unsigned> > LeafLists;       // 存储每个随机截断树的对应节点
         omp_lock_t rootlock;
         bool error_flag = false;
         int max_deepth = 0x0fffffff;
@@ -413,7 +415,7 @@ namespace weavess {
             size_t max_m_;
             size_t max_m0_;
 
-            std::vector<std::vector<HnswNode*>> friends_at_layer_;
+            std::vector<std::vector<HnswNode*> > friends_at_layer_;
             std::mutex access_guard_;
         };
 
@@ -481,7 +483,7 @@ namespace weavess {
                 return p1.second > p2.second;
             }
         };
-        typedef typename boost::heap::d_ary_heap<IdDistancePair, boost::heap::arity<4>, boost::heap::compare<IdDistancePairMinHeapComparer>> IdDistancePairMinHeap;
+        typedef typename boost::heap::d_ary_heap<IdDistancePair, boost::heap::arity<4>, boost::heap::compare<IdDistancePairMinHeapComparer> > IdDistancePairMinHeap;
 
         HnswNode* enterpoint_ = nullptr;
         std::vector<HnswNode*> nodes_;
@@ -1124,7 +1126,7 @@ namespace weavess {
 
             inline int hash_func(int idx)
             {
-                return ((int)(idx * 99991) + _rotl(idx, 2) + 101) & m_poolSize;
+                // return ((int)(idx * 99991) + _rotl(idx, 2) + 101) & m_poolSize;
             }
 
         public:
@@ -1668,10 +1670,15 @@ namespace weavess {
         }
 
         // sorted
-        typedef std::vector<std::vector<SimpleNeighbor>> FinalGraph;
+        typedef std::vector<std::vector<SimpleNeighbor> > FinalGraph;
+        typedef std::vector<std::vector<unsigned> > LoadGraph;
 
         FinalGraph &getFinalGraph() {
             return final_graph_;
+        }
+
+        LoadGraph &getLoadGraph() {
+            return load_graph_;
         }
 
         TYPE getCandidateType() const {
@@ -1713,6 +1720,12 @@ namespace weavess {
         void addDistCount() {
             dist_count += 1;
         }
+        void initDistCount() {
+            dist_count = 0;
+        }
+        void setNumThreads(const unsigned numthreads) {
+            omp_set_num_threads(numthreads);
+        }
 
         int i = 0;
 
@@ -1728,6 +1741,8 @@ namespace weavess {
 
         // 迭代式
         FinalGraph final_graph_;
+        LoadGraph load_graph_;
+
 
         TYPE entry_type;
         TYPE candidate_type;
