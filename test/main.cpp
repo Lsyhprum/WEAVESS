@@ -306,50 +306,58 @@ int main(int argc, char** argv) {
     std::string dataset(argv[2]);
     std::string graph_file(alg + "_" + dataset + ".graph");
     unsigned L, R;
+    // dataset
     if (dataset == "siftsmall") {
         base_path.append(R"(siftsmall/siftsmall_base.fvecs)");
         query_path.append(R"(siftsmall/siftsmall_query.fvecs)");
         ground_path.append(R"(siftsmall/siftsmall_groundtruth.ivecs)");
         L = 100, R = 25;
     }else if (dataset == "sift1M") {
-        base_path.append(R"(sift1M\sift_base.fvecs)");
-        query_path.append(R"(sift1M\sift_query.fvecs)");
-        ground_path.append(R"(sift1M\sift_groundtruth.ivecs)");
+        base_path.append(R"(sift1M/sift_base.fvecs)");
+        query_path.append(R"(sift1M/sift_query.fvecs)");
+        ground_path.append(R"(sift1M/sift_groundtruth.ivecs)");
         L = 110, R = 70;
+    }else if (dataset == "gist") {
+        base_path.append(R"(gist/gist_base.fvecs)");
+        query_path.append(R"(gist/gist_query.fvecs)");
+        ground_path.append(R"(gist/gist_groundtruth.ivecs)");
+        L = 210, R = 50;
+    }else if (dataset == "glove-100") {
+        base_path.append(R"(glove-100/glove-100_base.fvecs)");
+        query_path.append(R"(glove-100/glove-100_query.fvecs)");
+        ground_path.append(R"(glove-100/glove-100_groundtruth.ivecs)");
+        L = 210, R = 70;
+    }else if (dataset == "audio") {
+        base_path = dataset_root.append(R"(audio/audio_base.fvecs)");
+        query_path = dataset_root.append(R"(audio/audio_query.fvecs)");
+        ground_path = dataset_root.append(R"(audio/audio_groundtruth.ivecs)");
+        L = 130, R = 50;
+    }else if (dataset == "crawl") {
+        base_path.append(R"(crawl/crawl_base.fvecs)");
+        query_path.append(R"(crawl/crawl_query.fvecs)");
+        ground_path.append(R"(crawl/crawl_groundtruth.ivecs)");
+        L = 110, R = 30;
+    }else if (dataset == "msong") {
+        base_path.append(R"(msong/msong_base.fvecs)");
+        query_path.append(R"(msong/msong_query.fvecs)");
+        ground_path.append(R"(msong/msong_groundtruth.ivecs)");
+        L = 150, R = 10;
+    }else if (dataset == "uqv") {
+        base_path.append(R"(uqv/uqv_base.fvecs)");
+        query_path.append(R"(uqv/uqv_query.fvecs)");
+        ground_path.append(R"(uqv/uqv_groundtruth.ivecs)");
+        L = 250, R = 90;
+    }else if (dataset == "enron") {
+        base_path.append(R"(enron/enron_base.fvecs)");
+        query_path.append(R"(enron/enron_query.fvecs)");
+        ground_path.append(R"(enron/enron_groundtruth.ivecs)");
+        L = 130, R = 110;
+    }else if (dataset == "mnist") {
+        base_path.append(R"(mnist/mnist_base.fvecs)");
+        query_path.append(R"(mnist/mnist_query.fvecs)");
+        ground_path.append(R"(mnist/mnist_groundtruth.ivecs)");
+        L = 100, R = 25;  
     }
-    // else if (dataset == "gist") {
-    //     std::string base_path = dataset_root.append(R"(gist\gist_base.fvecs)");
-    //     std::string query_path = dataset_root.append(R"(gist\gist_query.fvecs)");
-    //     std::string ground_path = dataset_root.append(R"(gist\gist_groundtruth.ivecs)");
-    //     unsigned L = 210, R = 50;
-    // }
-    // else if (dataset == "glove-100") {
-    //     std::string base_path = dataset_root.append(R"(glove-100\glove-100_base.fvecs)");
-    //     std::string query_path = dataset_root.append(R"(glove-100\glove-100_query.fvecs)");
-    //     std::string ground_path = dataset_root.append(R"(glove-100\glove-100_groundtruth.ivecs)");
-    //     unsigned L = 210, R = 70;
-    // }
-    // else if (dataset == "audio") {
-    //     std::string base_path = dataset_root.append(R"(audio\audio_base.fvecs)");
-    //     std::string query_path = dataset_root.append(R"(audio\audio_query.fvecs)");
-    //     std::string ground_path = dataset_root.append(R"(audio\audio_groundtruth.ivecs)");
-    //     unsigned L = 130, R = 50;
-    // }
-    // else if (dataset == "crawl") {
-    //     std::string base_path = dataset_root.append(R"(crawl\crawl_base.fvecs)");
-    //     std::string query_path = dataset_root.append(R"(crawl\crawl_query.fvecs)");
-    //     std::string ground_path = dataset_root.append(R"(crawl\crawl_groundtruth.ivecs)");
-    //     unsigned L = 110, R = 30;
-    // }
-    // else if (dataset == "msong") {
-
-    // }
-    // else if (dataset == "uqv") {
-
-    // }
-    // else if (dataset == "enron") {
-
-    // }
     else {
         std::cout << "input dataset error!\n";
         exit(-1);
@@ -366,21 +374,30 @@ int main(int argc, char** argv) {
         SSG(base_path, query_path, ground_path);
     }else if (alg == "efanna") {
         EFANNA(base_path, query_path, ground_path);
+    }else if (alg == "dpg") {
+        DPG(base_path, query_path, ground_path);
+    }else if (alg == "ieh") {
+        IEH(base_path, query_path, ground_path);
+    }else if (alg == "vamana") {
+        VAMANA(base_path, query_path, ground_path);
+    }else if (alg == "nsw") {
+        NSW(base_path, query_path, ground_path);
+    }else if (alg == "hnsw") {
+        HNSW(base_path, query_path, ground_path);
+    }else if (alg == "panng") {
+        PANNG(base_path, query_path, ground_path);
+    }else if (alg == "onng") {
+        ONNG(base_path, query_path, ground_path);
+    }else if (alg == "hcnng") {
+        HCNNG(base_path, query_path, ground_path);
+    }else if (alg == "sptag_kdt") {
+        SPTAG_KDT(base_path, query_path, ground_path);
+    }else if (alg == "sptag_bkt") {
+        SPTAG_BKT(base_path, query_path, ground_path);
+    }else {
+        std::cout << "alg input error!\n";
+        exit(-1);
     }
-    //KGraph(base_path, query_path, ground_path);
-    //NSG(base_path, query_path, ground_path);
-    //SSG(base_path, query_path, ground_path);
-    //DPG(base_path, query_path, ground_path);
-    //VAMANA(base_path, query_path, ground_path);
-    //EFANNA(base_path, query_path, ground_path);
-    //IEH(base_path, query_path, ground_path);
-    //NSW(base_path, query_path, ground_path);
-    //HNSW(base_path, query_path, ground_path);
-    //PANNG(base_path, query_path, ground_path);
-    //ONNG(base_path, query_path, ground_path);
-    //HCNNG(base_path, query_path, ground_path);
-    //SPTAG_KDT(base_path, query_path, ground_path);
-    //SPTAG_BKT(base_path, query_path, ground_path);
 
     return 0;
 }

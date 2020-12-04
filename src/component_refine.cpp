@@ -20,6 +20,7 @@ namespace weavess {
         NNDescent();
 
         // graph_ -> final_graph
+#pragma omp parallel for
         for (unsigned i = 0; i < index->getBaseLen(); i++) {
             std::vector<Index::SimpleNeighbor> tmp;
             tmp.reserve(index->getCandidatesEdgesNum());
