@@ -109,6 +109,7 @@ namespace weavess {
         float d = index->getDist()->compare(index->getQueryData() + qnode * index->getQueryDim(),
                                             index->getBaseData() + enterpoint->GetId() * index->getBaseDim(),
                                             index->getBaseDim());
+        index->addDistCount();
         result.emplace(enterpoint, d);
         candidates.emplace(enterpoint, d);
 
@@ -132,6 +133,7 @@ namespace weavess {
                     d = index->getDist()->compare(index->getQueryData() + qnode * index->getQueryDim(),
                                                   index->getBaseData() + neighbor->GetId() * index->getBaseDim(),
                                                   index->getBaseDim());
+                    index->addDistCount();
                     if (result.size() < L || result.top().GetDistance() > d) {
                         result.emplace(neighbor, d);
                         candidates.emplace(neighbor, d);
@@ -167,6 +169,7 @@ namespace weavess {
         float d = index->getDist()->compare(index->getQueryData() + query * index->getQueryDim(),
                                             index->getBaseData() + cur_node->GetId() * index->getBaseDim(),
                                             index->getBaseDim());
+        index->addDistCount();
         float cur_dist = d;
 
         ensure_k_path_.clear();
@@ -190,7 +193,7 @@ namespace weavess {
                         d = index->getDist()->compare(index->getQueryData() + query * index->getQueryDim(),
                                                       index->getBaseData() + (*iter)->GetId() * index->getBaseDim(),
                                                       index->getBaseDim());
-
+                        index->addDistCount();
                         if (d < cur_dist) {
                             cur_dist = d;
                             cur_node = *iter;
@@ -273,6 +276,7 @@ namespace weavess {
                     float d = index->getDist()->compare(index->getQueryData() + index->getQueryDim() * query,
                                                         index->getBaseData() + index->getBaseDim() * node_id,
                                                         index->getBaseDim());
+                    index->addDistCount();
                     //std::cout << "wtf6" << std::endl;
                     if (d < minimum_distance || total_size < ef_search) {
                         candidates.emplace(cur_node->GetFriends(0)[j], d);
@@ -333,6 +337,7 @@ namespace weavess {
             int neighbor = pool[j].id;
             Index::Candidate2<float> c(neighbor,
                                        index->getDist()->compare(&index->test[query][0], &index->train[neighbor][0], index->test[query].size()));
+            index->addDistCount();
             cands.insert(c);
             if (cands.size() > L)cands.erase(cands.begin());
         }
@@ -356,6 +361,7 @@ namespace weavess {
             for (size_t j = 0; j < ids.size(); j++) {
                 Index::Candidate2<float> c(ids[j], index->getDist()->compare(&index->test[query][0], &index->train[ids[j]][0],
                                                                              index->test[query].size()));
+                index->addDistCount();
                 cands.insert(c);
                 if (cands.size() > L)cands.erase(cands.begin());
             }
@@ -394,6 +400,7 @@ namespace weavess {
                                                index->getQueryData() + index->getQueryDim() * query,
                                                index->getBaseDim());
 
+        index->addDistCount();
         int m = 1;
         queue.push(Index::FANNGCloserFirst(start, dist));
         full.push(Index::FANNGCloserFirst(start, dist));
@@ -414,6 +421,7 @@ namespace weavess {
                 float dist = index->getDist()->compare(index->getQueryData() + index->getQueryDim() * query,
                                                        index->getBaseData() + index->getBaseDim() * nnid,
                                                        index->getBaseDim());
+                index->addDistCount();
                 queue.push(Index::FANNGCloserFirst(nnid, dist));
                 full.push(Index::FANNGCloserFirst(nnid, dist));
             }
@@ -439,6 +447,7 @@ namespace weavess {
                 float dist = index->getDist()->compare(index->getQueryData() + index->getQueryDim() * query,
                                                       index->getBaseData() + index->getBaseDim() * nnid,
                                                       index->getBaseDim());
+                index->addDistCount();
                 //std::cout << 3.3 << std::endl;
                 queue.push(Index::FANNGCloserFirst(nnid, dist));
                 full.push(Index::FANNGCloserFirst(nnid, dist));
@@ -501,7 +510,7 @@ namespace weavess {
                     float dist = index->getDist()->compare(index->getQueryData() + query * index->getQueryDim(),
                                                            index->getBaseData() + id * index->getBaseDim(),
                                                            (unsigned)index->getBaseDim());
-                    //index->dist_cout++;
+                    index->addDistCount();
                     if (dist >= pool[L - 1].distance) continue;
                     Index::Neighbor nn(id, dist, true);
                     int r = Index::InsertIntoPool(pool.data(), L, nn);
@@ -621,6 +630,7 @@ namespace weavess {
                 float distance2leaf = index->getDist()->compare(index->getQueryData() + index->getQueryDim() * query,
                                                                 index->getBaseData() + index->getBaseDim() * nn_index,
                                                                 index->getBaseDim());
+                index->addDistCount();
                 //if(query == 700)
                 //std::cout << 4.73 << " " << std::endl;
                 if (distance2leaf <= upperBound) bLocalOpt = false;
@@ -673,6 +683,7 @@ namespace weavess {
             m_NGQueue.insert(Index::HeapCell(tmp, index->getDist()->compare(index->getQueryData() + index->getQueryDim() * query,
                                                                             index->getBaseData() + index->getBaseDim() * tmp,
                                                                             index->getBaseDim())));
+            index->addDistCount();
             return;
         }
         auto& tnode = index->m_pKDTreeRoots[node];
@@ -711,6 +722,7 @@ namespace weavess {
             m_NGQueue.insert(Index::HeapCell(tmp, index->getDist()->compare(index->getQueryData() + index->getQueryDim() * query,
                                                                             index->getBaseData() + index->getBaseDim() * tmp,
                                                                             index->getBaseDim())));
+            index->addDistCount();
             return;
         }
 
@@ -802,6 +814,7 @@ namespace weavess {
                 float distance2leaf = index->getDist()->compare(index->getQueryData() + index->getQueryDim() * query,
                                                                 index->getBaseData() + index->getBaseDim() * nn_index,
                                                                 index->getBaseDim());
+                index->addDistCount();
                 if (distance2leaf <= upperBound) bLocalOpt = false;
                 m_iNumberOfCheckedLeaves++;
                 m_NGQueue.insert(Index::HeapCell(nn_index, distance2leaf));
@@ -852,6 +865,7 @@ namespace weavess {
                     float dist = index->getDist()->compare(index->getQueryData() + index->getQueryDim() * query,
                                                            index->getBaseData() + index->getBaseDim() * tmp,
                                                            index->getBaseDim());
+                    index->addDistCount();
                     m_SPTQueue.insert(Index::HeapCell(begin, dist));
                 }
             }
@@ -893,6 +907,7 @@ namespace weavess {
                 float dist = index->getDist()->compare(index->getQueryData() + index->getQueryDim() * query,
                                                        index->getBaseData() + index->getBaseDim() * node.centerid,
                                                        index->getBaseDim());
+                index->addDistCount();
                 m_SPTQueue.insert(Index::HeapCell(index->m_pTreeStart[i], dist));
             }
             else {
@@ -901,6 +916,7 @@ namespace weavess {
                     float dist = index->getDist()->compare(index->getQueryData() + index->getQueryDim() * query,
                                                            index->getBaseData() + index->getBaseDim() * tmp,
                                                            index->getBaseDim());
+                    index->addDistCount();
                     m_SPTQueue.insert(Index::HeapCell(begin, dist));
                 }
             }
@@ -942,6 +958,7 @@ namespace weavess {
                 float distance2leaf = index->getDist()->compare(index->getQueryData() + index->getQueryDim() * query,
                                                                 index->getBaseData() + index->getBaseDim() * nn_index,
                                                                 index->getBaseDim());
+                index->addDistCount();
                 m_iNumberOfCheckedLeaves++;
                 m_NGQueue.insert(Index::HeapCell(nn_index, distance2leaf));
             }
@@ -998,6 +1015,7 @@ namespace weavess {
                                                   index->getDist()->compare(index->getQueryData() + index->getQueryDim() * query,
                                                                             index->getBaseData() + index->getBaseDim() * node.centerid,
                                                                             index->getBaseDim())));
+                index->addDistCount();
             }
             else {
                 for (unsigned begin = node.childStart; begin < node.childEnd; begin++) {
@@ -1006,6 +1024,7 @@ namespace weavess {
                                                       index->getDist()->compare(index->getQueryData() + index->getQueryDim() * query,
                                                                                 index->getBaseData() + index->getBaseDim() * cen,
                                                                                 index->getBaseDim())));
+                    index->addDistCount();
                 }
             }
         }
@@ -1032,6 +1051,7 @@ namespace weavess {
                                                       index->getDist()->compare(index->getQueryData() + index->getQueryDim() * query,
                                                                                 index->getBaseData() + index->getBaseDim() * cen,
                                                                                 index->getBaseDim())));
+                    index->addDistCount();
                 }
             }
         }
@@ -1093,6 +1113,7 @@ namespace weavess {
                 float distance2leaf = index->getDist()->compare(index->getQueryData() + index->getQueryDim() * query,
                                                                 index->getBaseData() + index->getBaseDim() * nn_index,
                                                                 index->getBaseDim());
+                index->addDistCount();
                 m_iNumberOfCheckedLeaves++;
                 m_NGQueue.insert(Index::HeapCell(nn_index, distance2leaf));
             }
@@ -1120,6 +1141,7 @@ namespace weavess {
                                                               index->getDist()->compare(index->getQueryData() + index->getQueryDim() * query,
                                                                                         index->getBaseData() + index->getBaseDim() * cen,
                                                                                         index->getBaseDim())));
+                            index->addDistCount();
                         }
                     }
                 }
@@ -1209,6 +1231,7 @@ namespace weavess {
                 float distance = index->getDist()->compare(index->getQueryData() + index->getQueryDim() * query,
                                                            index->getBaseData() + index->getBaseDim() * neighbor.id,
                                                            index->getBaseDim());
+                index->addDistCount();
                 //sc.distanceComputationCount++;
                 if (distance <= explorationRadius){
                     unchecked.push(Index::Neighbor(neighbor.id, distance, true));

@@ -66,6 +66,7 @@ namespace weavess {
                     index->getDist()->compare(index->getBaseData() + index->getBaseDim() * id,
                                               index->getQueryData() + index->getQueryDim() * query,
                                               (unsigned) index->getBaseDim());
+            index->addDistCount();
             pool[i] = Index::Neighbor(id, dist, true);
             // flags[id] = true;
         }
@@ -101,6 +102,7 @@ namespace weavess {
             x++;
             float dist = index->getDist()->compare(x, index->getQueryData() + query * index->getQueryDim(),
                                                    (unsigned) index->getBaseDim());
+            index->addDistCount();
             pool[i] = Index::Neighbor(id, dist, true);
             flags[id] = true;
             L++;
@@ -333,6 +335,7 @@ namespace weavess {
                 float c_distance = index->getDist()->compare(index->getQueryData() + index->getQueryDim() * query_value,
                                                              index->getBaseData() + index->getBaseDim() * node->m_objects_list[c_pos],
                                                              index->getBaseDim());
+                index->addDistCount();
                 if( c_distance <= q)
                 {
                     pool.insert(std::pair<float, unsigned>(c_distance, node->m_objects_list[c_pos]));
@@ -363,12 +366,14 @@ namespace weavess {
                 dist = index->getDist()->compare(index->getBaseData() + index->getBaseDim() * node->get_value(),
                                                  index->getQueryData() + index->getQueryDim() * query_value,
                                                  index->getBaseDim());
+                index->addDistCount();
             }else
             {
                 //m_stat.distance_count++;
                 dist = index->getDist()->compare(index->getBaseData() + index->getBaseDim() * node->get_value(),
                                                  index->getQueryData() + index->getQueryDim() * query_value,
                                                  index->getBaseDim());
+                index->addDistCount();
                 //dist = m_get_distance(node->get_value(), query_value);
                 for(size_t c_pos = 0; c_pos < node->m_mu_list.size() -1 ; ++c_pos)
                 {
