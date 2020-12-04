@@ -110,12 +110,23 @@ namespace weavess {
     }
 
     void ComponentRefineNNDescent::NNDescent() {
-        for (unsigned it = 0; it < index->ITER; it++) {
-            std::cout << "NN-Descent iter: " << it << std::endl;
-
-            join();
-
-            update();
+        if (index->debug == true) {
+            std::mt19937 rng(rand());
+            std::vector<unsigned> control_points(CONTROL_NUM);
+            std::vector<std::vector<unsigned> > acc_eval_set(CONTROL_NUM);
+            GenRandom(rng, &control_points[0], control_points.size(), index->getBaseLen());
+            generate_control_set(control_points, acc_eval_set, index->getBaseLen());
+            for (unsigned it = 0; it < index->ITER; it++) {
+                join();
+                update();
+                std::cout << "NN-Descent iter: " << it << std::endl;
+                eval_recall(control_points, acc_eval_set);
+            }
+        } else {
+            for (unsigned it = 0; it < index->ITER; it++) {
+                join();
+                update();
+            }
         }
     }
 
@@ -233,6 +244,41 @@ namespace weavess {
         }
     }
 
+    void ComponentRefineNNDescent::generate_control_set(std::vector<unsigned> &c,
+                                        std::vector<std::vector<unsigned> > &v,
+                                        unsigned N){
+    #pragma omp parallel for
+    for(unsigned i=0; i<c.size(); i++){
+        std::vector<NNDescent::Neighbor> tmp;
+        for(unsigned j=0; j<N; j++){
+        float dist = index->getDist()->compare(index->getBaseData() + c[i] * index->getBaseDim(), index->getBaseData() + j * index->getBaseDim(), index->getBaseDim());
+        tmp.push_back(NNDescent::Neighbor(j, dist, true));
+        }
+        std::partial_sort(tmp.begin(), tmp.begin() + CONTROL_NUM, tmp.end());
+        for(unsigned j=0; j<CONTROL_NUM; j++){
+        v[i].push_back(tmp[j].id);
+        }
+    }
+    }
+
+    void ComponentRefineNNDescent::eval_recall(std::vector<unsigned>& ctrl_points, std::vector<std::vector<unsigned> > &acc_eval_set){
+    float mean_acc=0;
+    for(unsigned i=0; i<ctrl_points.size(); i++){
+        float acc = 0;
+        auto &g = index->graph_[ctrl_points[i]].pool;
+        auto &v = acc_eval_set[i];
+        for(unsigned j=0; j<g.size(); j++){
+        for(unsigned k=0; k<v.size(); k++){
+            if(g[j].id == v[k]){
+            acc++;
+            break;
+            }
+        }
+        }
+        mean_acc += acc / v.size();
+    }
+    std::cout<<"Graph Quality : "<<mean_acc / ctrl_points.size() <<std::endl;
+    }
 
     /**
      * FANNG Refine :
@@ -875,7 +921,7 @@ namespace weavess {
         NNDescent();
 
         index->getFinalGraph().reserve(index->getBaseLen());
-
+#pragma omp parallel for
         for (unsigned i = 0; i < index->getBaseLen(); i++) {
             std::vector<Index::SimpleNeighbor> tmp;
 
@@ -935,16 +981,24 @@ namespace weavess {
             index->graph_[i].pool.reserve(index->L);
         }
     }
-
     void ComponentRefineEFANNA::NNDescent() {
-
-        std::mt19937 rng(rand());
-
-        for (unsigned it = 0; it < index->ITER; it++) {
-            join();
-            update();
-            //checkDup();
-            std::cout << "iter: " << it << std::endl;
+        if (index->debug == true) {
+            std::mt19937 rng(rand());
+            std::vector<unsigned> control_points(CONTROL_NUM);
+            std::vector<std::vector<unsigned> > acc_eval_set(CONTROL_NUM);
+            GenRandom(rng, &control_points[0], control_points.size(), index->getBaseLen());
+            generate_control_set(control_points, acc_eval_set, index->getBaseLen());
+            for (unsigned it = 0; it < index->ITER; it++) {
+                join();
+                update();
+                std::cout << "NN-Descent iter: " << it << std::endl;
+                eval_recall(control_points, acc_eval_set);
+            }
+        } else {
+            for (unsigned it = 0; it < index->ITER; it++) {
+                join();
+                update();
+            }
         }
     }
 
@@ -1054,6 +1108,41 @@ namespace weavess {
         }
     }
 
+    void ComponentRefineEFANNA::generate_control_set(std::vector<unsigned> &c,
+                                        std::vector<std::vector<unsigned> > &v,
+                                        unsigned N){
+    #pragma omp parallel for
+    for(unsigned i=0; i<c.size(); i++){
+        std::vector<NNDescent::Neighbor> tmp;
+        for(unsigned j=0; j<N; j++){
+        float dist = index->getDist()->compare(index->getBaseData() + c[i] * index->getBaseDim(), index->getBaseData() + j * index->getBaseDim(), index->getBaseDim());
+        tmp.push_back(NNDescent::Neighbor(j, dist, true));
+        }
+        std::partial_sort(tmp.begin(), tmp.begin() + CONTROL_NUM, tmp.end());
+        for(unsigned j=0; j<CONTROL_NUM; j++){
+        v[i].push_back(tmp[j].id);
+        }
+    }
+    }
+
+    void ComponentRefineEFANNA::eval_recall(std::vector<unsigned>& ctrl_points, std::vector<std::vector<unsigned> > &acc_eval_set){
+    float mean_acc=0;
+    for(unsigned i=0; i<ctrl_points.size(); i++){
+        float acc = 0;
+        auto &g = index->graph_[ctrl_points[i]].pool;
+        auto &v = acc_eval_set[i];
+        for(unsigned j=0; j<g.size(); j++){
+        for(unsigned k=0; k<v.size(); k++){
+            if(g[j].id == v[k]){
+            acc++;
+            break;
+            }
+        }
+        }
+        mean_acc += acc / v.size();
+    }
+    std::cout<<"Graph Quality : "<<mean_acc / ctrl_points.size() <<std::endl;
+    }
 
     /**
      * PANNG refine :

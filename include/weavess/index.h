@@ -10,6 +10,9 @@
 
 #define FLT_EPSILON 1.19209290E-07F
 
+// NN-Descent
+#define CONTROL_NUM 100
+
 // IEH
 #define MAX_ROWSIZE 1024
 #define HASH_RADIUS 1
@@ -1135,7 +1138,7 @@ namespace weavess {
 
             inline int hash_func(int idx)
             {
-                return ((int)(idx * 99991) + _rotl(idx, 2) + 101) & m_poolSize;
+                // return ((int)(idx * 99991) + _rotl(idx, 2) + 101) & m_poolSize;
             }
 
         public:
@@ -1765,6 +1768,7 @@ namespace weavess {
         }
 
         int i = 0;
+        bool debug = true;
 
     private:
         float *base_data_, *query_data_;

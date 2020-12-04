@@ -21,20 +21,27 @@ void KGraph(std::string base_path, std::string query_path, std::string ground_pa
     std::cout << "Time cost: " << builder->GetBuildTime().count() << std::endl;
 }
 
-void FANNG(std::string base_path, std::string query_path, std::string ground_path) {
-    std::string graph_file = R"(fanng.graph)";
+void FANNG(std::string base_path, std::string query_path, std::string ground_path, std::string graph_file, unsigned L, unsigned R_refine) {
 
     weavess::Parameters parameters;
-    parameters.set<unsigned>("L", 100);
-    parameters.set<unsigned>("R_refine", 25);
+    parameters.set<unsigned>("L", L);
+    parameters.set<unsigned>("R_refine", R_refine);
 
     auto *builder = new weavess::IndexBuilder();
-    builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
-            -> init(weavess::TYPE::INIT_FANNG)
-            -> refine(weavess::TYPE::REFINE_FANNG, false)
-            -> search(weavess::TYPE::SEARCH_ENTRY_RAND, weavess::TYPE::ROUTER_BACKTRACK);
 
-    std::cout << "Time cost: " << builder->GetBuildTime().count() << std::endl;
+    // build
+    builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
+            -> init(weavess::TYPE::INIT_FANNG);
+    std::cout << "Init cost: " << builder->GetBuildTime().count() << std::endl;
+    builder -> refine(weavess::TYPE::REFINE_FANNG, false)
+            -> save_graph(weavess::TYPE::INDEX_FANNG, &graph_file[0]);
+    std::cout << "Build cost: " << builder->GetBuildTime().count() << std::endl;
+
+    // seach
+    // builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
+    //         -> load_graph(weavess::TYPE::INDEX_FANNG, &graph_file[0])
+    //         -> search(weavess::TYPE::SEARCH_ENTRY_RAND, weavess::TYPE::ROUTER_BACKTRACK);
+
 }
 
 void NSG(std::string base_path, std::string query_path, std::string ground_path) {
@@ -53,10 +60,10 @@ void NSG(std::string base_path, std::string query_path, std::string ground_path)
 
     auto *builder = new weavess::IndexBuilder();
     builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
-            -> init(weavess::INIT_NN_DESCENT)
+            -> init(weavess::INIT_RANDOM)
             -> refine(weavess::REFINE_NN_DESCENT, true)
-            -> refine(weavess::REFINE_NSG, true)
-            -> search(weavess::TYPE::SEARCH_ENTRY_CENTROID, weavess::TYPE::ROUTER_GREEDY);
+            -> refine(weavess::REFINE_NSG, true);
+            // -> search(weavess::TYPE::SEARCH_ENTRY_CENTROID, weavess::TYPE::ROUTER_GREEDY);
 
     std::cout << "Time cost: " << builder->GetBuildTime().count() << std::endl;
 }
@@ -140,8 +147,8 @@ void EFANNA(std::string base_path, std::string query_path, std::string ground_pa
     auto *builder = new weavess::IndexBuilder();
     builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
             -> init(weavess::INIT_KDT)
-            -> refine(weavess::REFINE_EFANNA, true)
-            -> search(weavess::SEARCH_ENTRY_KDT, weavess::ROUTER_GREEDY);
+            -> refine(weavess::REFINE_EFANNA, true);
+            // -> search(weavess::SEARCH_ENTRY_KDT, weavess::ROUTER_GREEDY);
 
     std::cout << "Time cost: " << builder->GetBuildTime().count() << std::endl;
 }
@@ -290,13 +297,77 @@ void SPTAG_BKT(std::string base_path, std::string query_path, std::string ground
 }
 
 
-int main() {
-    std::string base_path = R"(G:\ANNS\dataset\siftsmall\siftsmall_base.fvecs)";
-    std::string query_path = R"(G:\ANNS\dataset\siftsmall\siftsmall_query.fvecs)";
-    std::string ground_path = R"(G:\ANNS\dataset\siftsmall\siftsmall_groundtruth.ivecs)";
+int main(int argc, char** argv) {
+    std::string dataset_root = R"(/Users/wmz/Documents/Postgraduate/Code/dataset/)";
+    std::string base_path(dataset_root);
+    std::string query_path(dataset_root);
+    std::string ground_path(dataset_root);
+    std::string alg(argv[1]);
+    std::string dataset(argv[2]);
+    std::string graph_file(alg + "_" + dataset + ".graph");
+    unsigned L, R;
+    if (dataset == "siftsmall") {
+        base_path.append(R"(siftsmall/siftsmall_base.fvecs)");
+        query_path.append(R"(siftsmall/siftsmall_query.fvecs)");
+        ground_path.append(R"(siftsmall/siftsmall_groundtruth.ivecs)");
+        L = 100, R = 25;
+    }else if (dataset == "sift1M") {
+        base_path.append(R"(sift1M\sift_base.fvecs)");
+        query_path.append(R"(sift1M\sift_query.fvecs)");
+        ground_path.append(R"(sift1M\sift_groundtruth.ivecs)");
+        L = 110, R = 70;
+    }
+    // else if (dataset == "gist") {
+    //     std::string base_path = dataset_root.append(R"(gist\gist_base.fvecs)");
+    //     std::string query_path = dataset_root.append(R"(gist\gist_query.fvecs)");
+    //     std::string ground_path = dataset_root.append(R"(gist\gist_groundtruth.ivecs)");
+    //     unsigned L = 210, R = 50;
+    // }
+    // else if (dataset == "glove-100") {
+    //     std::string base_path = dataset_root.append(R"(glove-100\glove-100_base.fvecs)");
+    //     std::string query_path = dataset_root.append(R"(glove-100\glove-100_query.fvecs)");
+    //     std::string ground_path = dataset_root.append(R"(glove-100\glove-100_groundtruth.ivecs)");
+    //     unsigned L = 210, R = 70;
+    // }
+    // else if (dataset == "audio") {
+    //     std::string base_path = dataset_root.append(R"(audio\audio_base.fvecs)");
+    //     std::string query_path = dataset_root.append(R"(audio\audio_query.fvecs)");
+    //     std::string ground_path = dataset_root.append(R"(audio\audio_groundtruth.ivecs)");
+    //     unsigned L = 130, R = 50;
+    // }
+    // else if (dataset == "crawl") {
+    //     std::string base_path = dataset_root.append(R"(crawl\crawl_base.fvecs)");
+    //     std::string query_path = dataset_root.append(R"(crawl\crawl_query.fvecs)");
+    //     std::string ground_path = dataset_root.append(R"(crawl\crawl_groundtruth.ivecs)");
+    //     unsigned L = 110, R = 30;
+    // }
+    // else if (dataset == "msong") {
 
-    KGraph(base_path, query_path, ground_path);
-    //FANNG(base_path, query_path, ground_path);
+    // }
+    // else if (dataset == "uqv") {
+
+    // }
+    // else if (dataset == "enron") {
+
+    // }
+    else {
+        std::cout << "input dataset error!\n";
+        exit(-1);
+    }
+
+    // alg
+    if (alg == "kgraph") {
+        KGraph(base_path, query_path, ground_path);
+    }else if (alg == "fanng") {
+        FANNG(base_path, query_path, ground_path, graph_file, L, R);
+    }else if (alg == "nsg") {
+        NSG(base_path, query_path, ground_path);
+    }else if (alg == "ssg") {
+        SSG(base_path, query_path, ground_path);
+    }else if (alg == "efanna") {
+        EFANNA(base_path, query_path, ground_path);
+    }
+    //KGraph(base_path, query_path, ground_path);
     //NSG(base_path, query_path, ground_path);
     //SSG(base_path, query_path, ground_path);
     //DPG(base_path, query_path, ground_path);

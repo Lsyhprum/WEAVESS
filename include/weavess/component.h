@@ -419,6 +419,10 @@ namespace weavess {
         void join();
 
         void update();
+        
+        void generate_control_set(std::vector<unsigned> &c, std::vector<std::vector<unsigned> > &v, unsigned N);
+
+        void eval_recall(std::vector<unsigned> &ctrl_points, std::vector<std::vector<unsigned> > &acc_eval_set);
     };
 
     class ComponentRefineNSG : public ComponentRefine {
