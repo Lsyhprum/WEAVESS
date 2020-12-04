@@ -21,7 +21,7 @@ namespace weavess {
 
         IndexBuilder *load(char *data_file, char *query_file, char *ground_file, Parameters &parameters);
 
-        IndexBuilder *init(TYPE type);
+        IndexBuilder *init(TYPE type, bool debug = false);
 
         IndexBuilder *save_graph(TYPE type, char *graph_file);
 
@@ -31,7 +31,9 @@ namespace weavess {
 
         IndexBuilder *search(TYPE entry_type, TYPE route_type);
 
-        void degree_info(std::unordered_map<unsigned, unsigned> &degree);
+        void print_graph();
+
+        void degree_info(std::unordered_map<unsigned, unsigned> &in_degree, std::unordered_map<unsigned, unsigned> &out_degree);
 
         void conn_info();
 

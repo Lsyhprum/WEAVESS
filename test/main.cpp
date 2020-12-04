@@ -7,14 +7,14 @@ void KGraph(std::string base_path, std::string query_path, std::string ground_pa
 
     weavess::Parameters parameters;
     parameters.set<unsigned>("K", 25);
-    parameters.set<unsigned>("L", 100);
+    parameters.set<unsigned>("L", 50);
     parameters.set<unsigned>("ITER", 8);
     parameters.set<unsigned>("S", 10);
     parameters.set<unsigned>("R", 100);
 
     auto *builder = new weavess::IndexBuilder();
     builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
-            -> init(weavess::TYPE::INIT_NN_DESCENT)
+            -> init(weavess::TYPE::INIT_RANDOM, true)
             -> refine(weavess::TYPE::REFINE_NN_DESCENT, true)
             -> search(weavess::TYPE::SEARCH_ENTRY_RAND, weavess::TYPE::ROUTER_GREEDY);
 
@@ -195,21 +195,21 @@ void HNSW(std::string base_path, std::string query_path, std::string ground_path
     std::cout << "Time cost: " << builder->GetBuildTime().count() << std::endl;
 }
 
-//void ANNG(std::string base_path, std::string query_path, std::string ground_path) {
-//    weavess::Parameters parameters;
-//    parameters.set<unsigned>("edgeSizeForCreation", 10); // 初始化边数阈值
-//    parameters.set<unsigned>("truncationThreshold", 10);
-//    parameters.set<unsigned>("edgeSizeForSearch", 10);
-//    parameters.set<unsigned>("size", 10);
-//
-//    auto *builder = new weavess::IndexBuilder();
-//    builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
-//            -> init(weavess::INIT_ANNG)
-//            -> refine(weavess::REFINE_ONNG, false);
-//    //-> search(weavess::SEARCH_ENTRY_NONE, weavess::ROUTER_NGT);
-//
-//    std::cout << "Time cost: " << builder->GetBuildTime().count() << std::endl;
-//}
+void PANNG(std::string base_path, std::string query_path, std::string ground_path) {
+    weavess::Parameters parameters;
+    parameters.set<unsigned>("NN", 10);          // K
+    parameters.set<unsigned>("ef_construction", 50);        //L
+    parameters.set<unsigned>("n_threads_", 1);
+    //parameters.set<unsigned>("batchSizeForCreation", 200);
+
+    auto *builder = new weavess::IndexBuilder();
+    builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
+            -> init(weavess::INIT_ANNG)
+            -> refine(weavess::REFINE_PANNG, false)
+            -> search(weavess::SEARCH_ENTRY_VPT, weavess::ROUTER_NGT);
+
+    std::cout << "Time cost: " << builder->GetBuildTime().count() << std::endl;
+}
 
 void ONNG(std::string base_path, std::string query_path, std::string ground_path) {
     weavess::Parameters parameters;
@@ -227,24 +227,8 @@ void ONNG(std::string base_path, std::string query_path, std::string ground_path
     builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
             -> init(weavess::INIT_ANNG)
             -> refine(weavess::REFINE_ONNG2, false)
-            -> refine(weavess::REFINE_ONNG, false);
+            -> refine(weavess::REFINE_PANNG, false);
             //-> search(weavess::SEARCH_ENTRY_NONE, weavess::ROUTER_NGT);
-
-    std::cout << "Time cost: " << builder->GetBuildTime().count() << std::endl;
-}
-
-void PANNG(std::string base_path, std::string query_path, std::string ground_path) {
-    weavess::Parameters parameters;
-    parameters.set<unsigned>("NN", 10);          // K
-    parameters.set<unsigned>("ef_construction", 50);        //L
-    parameters.set<unsigned>("n_threads_", 1);
-    //parameters.set<unsigned>("batchSizeForCreation", 200);
-
-    auto *builder = new weavess::IndexBuilder();
-    builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
-            -> init(weavess::INIT_ANNG)
-            -> refine(weavess::REFINE_ONNG, false)
-            -> search(weavess::SEARCH_ENTRY_VPT, weavess::ROUTER_NGT);
 
     std::cout << "Time cost: " << builder->GetBuildTime().count() << std::endl;
 }
@@ -268,23 +252,6 @@ void HCNNG(std::string base_path, std::string query_path, std::string ground_pat
 
 void SPTAG_KDT(std::string base_path, std::string query_path, std::string ground_path) {
     weavess::Parameters parameters;
-    parameters.set<unsigned>("numOfThreads", 1);
-    parameters.set<unsigned>("KDTNumber", 1);
-    parameters.set<unsigned>("NeighborhoodSize", 64);
-    parameters.set<unsigned>("GraphNeighborhoodScale", 2);
-    parameters.set<unsigned>("TPTLeafSize", 2000);
-    parameters.set<unsigned>("CEF", 1000);
-
-    auto *builder = new weavess::IndexBuilder();
-    builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
-            -> init(weavess::INIT_SPTAG_KDT)
-            -> refine(weavess::REFINE_SPTAG_KDT, false);
-            //-> search(weavess::SEARCH_ENTRY_NONE, weavess::ROUTER_SPTAG_KDT);
-    std::cout << "Time cost: " << builder->GetBuildTime().count() << std::endl;
-}
-
-void SPTAG_KDT_new(std::string base_path, std::string query_path, std::string ground_path) {
-    weavess::Parameters parameters;
     parameters.set<unsigned>("KDTNumber", 1);
     parameters.set<unsigned>("TPTNumber", 32);
     parameters.set<unsigned>("TPTLeafSize", 2000);
@@ -301,7 +268,7 @@ void SPTAG_KDT_new(std::string base_path, std::string query_path, std::string gr
     std::cout << "Time cost: " << builder->GetBuildTime().count() << std::endl;
 }
 
-void SPTAG_BKT_new(std::string base_path, std::string query_path, std::string ground_path) {
+void SPTAG_BKT(std::string base_path, std::string query_path, std::string ground_path) {
     weavess::Parameters parameters;
 
     parameters.set<unsigned>("BKTNumber", 1);
@@ -322,49 +289,27 @@ void SPTAG_BKT_new(std::string base_path, std::string query_path, std::string gr
     std::cout << "Time cost: " << builder->GetBuildTime().count() << std::endl;
 }
 
-void SPTAG_BKT(std::string base_path, std::string query_path, std::string ground_path) {
-    weavess::Parameters parameters;
-    parameters.set<unsigned>("numOfThreads", 1);
-    parameters.set<unsigned>("BKTNumber", 1);
-    parameters.set<unsigned>("NeighborhoodSize", 32);
-    parameters.set<unsigned>("GraphNeighborhoodScale", 2);
-    parameters.set<unsigned>("TPTLeafSize", 2000);
-    parameters.set<unsigned>("CEF", 1000);
-
-    auto *builder = new weavess::IndexBuilder();
-    builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
-            -> init(weavess::INIT_SPTAG_BKT)
-            -> refine(weavess::REFINE_SPTAG_BKT, false)
-            -> search(weavess::SEARCH_ENTRY_NONE, weavess::ROUTER_SPTAG_BKT);
-    std::cout << "Time cost: " << builder->GetBuildTime().count() << std::endl;
-}
-
 
 int main() {
     std::string base_path = R"(G:\ANNS\dataset\siftsmall\siftsmall_base.fvecs)";
     std::string query_path = R"(G:\ANNS\dataset\siftsmall\siftsmall_query.fvecs)";
     std::string ground_path = R"(G:\ANNS\dataset\siftsmall\siftsmall_groundtruth.ivecs)";
 
-//    std::string base_path = R"(G:\ANNS\dataset\sift1M\sift_base.fvecs)";
-//    std::string query_path = R"(G:\ANNS\dataset\sift1M\sift_query.fvecs)";
-//    std::string ground_path = R"(G:\ANNS\dataset\sift1M\sift_groundtruth.ivecs)";
-
-    //KGraph(base_path, query_path, ground_path);
+    KGraph(base_path, query_path, ground_path);
     //FANNG(base_path, query_path, ground_path);
     //NSG(base_path, query_path, ground_path);
     //SSG(base_path, query_path, ground_path);
     //DPG(base_path, query_path, ground_path);
     //VAMANA(base_path, query_path, ground_path);
-    //IEH(base_path, query_path, ground_path);
-    //HCNNG(base_path, query_path, ground_path);
-    //SPTAG_KDT_new(base_path, query_path, ground_path);
-    //SPTAG_BKT_new(base_path, query_path, ground_path);
-    //PANNG(base_path, query_path, ground_path);
-    //ONNG(base_path, query_path, ground_path);
-
     //EFANNA(base_path, query_path, ground_path);
+    //IEH(base_path, query_path, ground_path);
     //NSW(base_path, query_path, ground_path);
     //HNSW(base_path, query_path, ground_path);
+    //PANNG(base_path, query_path, ground_path);
+    //ONNG(base_path, query_path, ground_path);
+    //HCNNG(base_path, query_path, ground_path);
+    //SPTAG_KDT(base_path, query_path, ground_path);
+    //SPTAG_BKT(base_path, query_path, ground_path);
 
     return 0;
 }

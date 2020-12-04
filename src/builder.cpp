@@ -20,9 +20,8 @@ namespace weavess {
      */
     IndexBuilder *IndexBuilder::load(char *data_file, char *query_file, char *ground_file, Parameters &parameters) {
         auto *a = new ComponentLoad(final_index_);
-        a->LoadInner(data_file, query_file, ground_file, parameters);
 
-        e = std::chrono::high_resolution_clock::now();
+        a->LoadInner(data_file, query_file, ground_file, parameters);
 
         std::cout << "base data len : " << final_index_->getBaseLen() << std::endl;
         std::cout << "base data dim : " << final_index_->getBaseDim() << std::endl;
@@ -44,14 +43,11 @@ namespace weavess {
     * @param debug 是否输出图索引相关信息（开启将对性能产生一定影响）
     * @return 当前建造者指针
     */
-    IndexBuilder *IndexBuilder::init(TYPE type) {
+    IndexBuilder *IndexBuilder::init(TYPE type, bool debug) {
         s = std::chrono::high_resolution_clock::now();  //构建开始时间点
         ComponentInit *a = nullptr;
 
-        if (type == INIT_NN_DESCENT) {
-            std::cout << "__INIT : NN-Descent__" << std::endl;
-            a = new ComponentInitNNDescent(final_index_);
-        } else if (type == INIT_RAND) {
+        if (type == INIT_RAND) {
             std::cout << "__INIT : RAND__" << std::endl;
             a = new ComponentInitRand(final_index_);
         } else if (type == INIT_KDT) {
@@ -67,8 +63,8 @@ namespace weavess {
             std::cout << "__INIT : HNSW__" << std::endl;
             a = new ComponentInitHNSW(final_index_);
         } else if (type == INIT_ANNG) {
-            std::cout << "__INIT : PANNG__" << std::endl;
-            a = new ComponentInitPANNG(final_index_);
+            std::cout << "__INIT : ANNG__" << std::endl;
+            a = new ComponentInitANNG(final_index_);
         } else if (type == INIT_SPTAG_KDT) {
             std::cout << "__INIT : SPTAG_KDT__" << std::endl;
             a = new ComponentInitSPTAG_KDT_new(final_index_);
@@ -84,12 +80,25 @@ namespace weavess {
         } else if (type == INIT_HCNNG) {
             std::cout << "__INIT : HCNNG__" << std::endl;
             a = new ComponentInitHCNNG(final_index_);
-        } else {
+        } else if (type == INIT_RANDOM) {
+            std::cout << "__INIT : RANDOM__" << std::endl;
+            a = new ComponentInitRandom(final_index_);
+        }
+
+        else {
             std::cout << "__INIT : WRONG TYPE__" << std::endl;
             exit(-1);
         }
 
         a->InitInner();
+
+        if(debug) {
+            //print_graph();
+            std::unordered_map<unsigned, unsigned> in_degree;
+            std::unordered_map<unsigned, unsigned> out_degree;
+            degree_info(in_degree, out_degree);
+            conn_info();
+        }
 
         e = std::chrono::high_resolution_clock::now();
 
@@ -134,7 +143,12 @@ namespace weavess {
         } else if (type == REFINE_FANNG) {
             std::cout << "__REFINE : FANNG__" << std::endl;
             a = new ComponentRefineFANNG(final_index_);
-        } else {
+        } else if (type == REFINE_PANNG) {
+            std::cout << "__REFINE : PANNG__" << std::endl;
+            a = new ComponentRefinePANNG(final_index_);
+        }
+
+        else {
             std::cerr << "__REFINE : WRONG TYPE__" << std::endl;
         }
 
@@ -146,8 +160,9 @@ namespace weavess {
         e = std::chrono::high_resolution_clock::now();  
         if (debug) {
             // degree
-            std::unordered_map<unsigned, unsigned> degree;
-            degree_info(degree);
+            std::unordered_map<unsigned, unsigned> in_degree;
+            std::unordered_map<unsigned, unsigned> out_degree;
+            degree_info(in_degree, out_degree);
 
             // 连通分量
             conn_info();
@@ -261,12 +276,12 @@ namespace weavess {
 
                 a->SearchEntryInner(i, pool);
 
-                // for(unsigned j = 0; j < pool.size(); j ++) {
-                //     std::cout << pool[j].id << "|" << pool[j].distance << " ";
-                // }
-                // std::cout << std::endl;
-
-                // std::cout << pool.size() << std::endl;
+//                for(unsigned j = 0; j < pool.size(); j ++) {
+//                    std::cout << pool[j].id << "|" << pool[j].distance << " ";
+//                }
+//                std::cout << std::endl;
+//
+//                std::cout << pool.size() << std::endl;
 
                 b->RouteInner(i, pool, res[i]);
 
@@ -282,6 +297,7 @@ namespace weavess {
 
             //float speedup = (float)(index_->n_ * query_num) / (float)distcount;
             std::cout << "DistCount: " << final_index_->getDistCount() << std::endl;
+            final_index_->resetDistCount();
             //结果评估
             int cnt = 0;
             for (unsigned i = 0; i < final_index_->getGroundLen(); i++) {
@@ -316,68 +332,51 @@ namespace weavess {
     }
 
     /**
-     * 保存图索引
-     * @param index_type 图索引类型
-     * @param graph_file 图索引保存地址
-     * @return 当前建造者指针
+     * 打印索引
      */
-    IndexBuilder *IndexBuilder::save_graph(TYPE type, char *graph_file) {
-    std::ofstream out(graph_file, std::ios::binary | std::ios::out);
-    if (type == INDEX_NSG || type == INDEX_VAMANA) {
-        out.write((char *)&final_index_->ep_, sizeof(unsigned));
-    }
-    for (unsigned i = 0; i < final_index_->getBaseLen(); i++) {
-        unsigned GK = (unsigned) final_index_->getFinalGraph()[i].size();
-        std::vector<unsigned> tmp;
-        for (unsigned j = 0; j < GK; j++) {
-            tmp.push_back(final_index_->getFinalGraph()[i][j].id);
+    void IndexBuilder::print_graph() {
+        std::cout << "=====================" << std::endl;
+        for (int i = 0; i < final_index_->getBaseLen(); i ++) {
+            std::cout << i << " : " << final_index_->getFinalGraph()[i].size() << std::endl;
+            for (int j = 0; j < final_index_->getFinalGraph()[i].size(); j ++) {
+                std::cout << final_index_->getFinalGraph()[i][j].id << "|" << final_index_->getFinalGraph()[i][j].distance << " ";
+            }
+            std::cout << std::endl;
         }
-        out.write((char *) &GK, sizeof(unsigned));
-        out.write((char *) tmp.data(), GK * sizeof(unsigned));
-    }
-    out.close();
-    return this;
-    }
-
-    /**
-     * 载入图索引
-     * @param index_type 图索引类型
-     * @param graph_file 图索引地址
-     * @return 当前建造者指针
-     */
-    IndexBuilder *IndexBuilder::load_graph(TYPE type, char *graph_file) {
-    std::ifstream in(graph_file, std::ios::binary);
-    if (type == INDEX_NSG || type == INDEX_VAMANA) {
-        in.read((char *)&final_index_->ep_, sizeof(unsigned));
-    }
-
-    while (!in.eof()) {
-        unsigned GK;
-        in.read((char *)&GK, sizeof(unsigned));
-        if (in.eof()) break;
-        std::vector<unsigned> tmp(GK);
-        in.read((char *)tmp.data(), GK * sizeof(unsigned));
-        final_index_->getLoadGraph().push_back(tmp);
-    }
-    return this;
     }
 
     /**
      * 输出图索引出度、入度信息
      * @param degree 出度分布
      */
-    void IndexBuilder::degree_info(std::unordered_map<unsigned, unsigned> &degree) {
-        unsigned max = 0, min = 1e6;
-        double avg = 0.0;
+    void IndexBuilder::degree_info(std::unordered_map<unsigned, unsigned> &in_degree, std::unordered_map<unsigned, unsigned> &out_degree) {
+        unsigned max_out_degree = 0, min_out_degree = 1e6;
+        double avg_out_degree = 0.0;
+
+        unsigned max_in_degree = 0, min_in_degree = 1e6;
+        double avg_in_degree = 0.0;
+
         for (size_t i = 0; i < final_index_->getBaseLen(); i++) {
             auto size = final_index_->getFinalGraph()[i].size();
-            degree[size]++;
-            max = max < size ? size : max;
-            min = min > size ? size : min;
-            avg += size;
+            out_degree[size]++;
+            max_out_degree = max_out_degree < size ? size : max_out_degree;
+            min_out_degree = min_out_degree > size ? size : min_out_degree;
+            avg_out_degree += size;
+
+            for (unsigned j = 0; j < final_index_->getFinalGraph()[i].size(); j ++) {
+                in_degree[final_index_->getFinalGraph()[i][j].id] ++;
+                max_in_degree = max_in_degree < in_degree[final_index_->getFinalGraph()[i][j].id] ? in_degree[final_index_->getFinalGraph()[i][j].id] : max_in_degree;
+                min_in_degree = min_in_degree > in_degree[final_index_->getFinalGraph()[i][j].id] ? in_degree[final_index_->getFinalGraph()[i][j].id] : min_in_degree;
+            }
         }
-        avg /= final_index_->getBaseLen();
-        printf("Degree Statistics: Max = %d, Min = %d, Avg = %lf\n", max, min, avg);
+        for (auto it : in_degree) {
+            avg_in_degree += it.second;
+        }
+
+        avg_out_degree /= final_index_->getBaseLen();
+        avg_in_degree /= final_index_->getBaseLen();
+        printf("Degree Statistics: Max out degree = %d, Min out degree= %d, Avg out degree = %lf\n", max_out_degree, min_out_degree, avg_out_degree);
+        printf("Degree Statistics: Max in degree = %d, Min in degree= %d, Avg in degree = %lf\n", max_in_degree, min_in_degree, avg_in_degree);
     }
 
     /**
@@ -438,5 +437,53 @@ namespace weavess {
             cnt++;
         }
     }
+
+    /**
+    * 保存图索引
+    * @param index_type 图索引类型
+    * @param graph_file 图索引保存地址
+    * @return 当前建造者指针
+    */
+    IndexBuilder *IndexBuilder::save_graph(TYPE type, char *graph_file) {
+        std::ofstream out(graph_file, std::ios::binary | std::ios::out);
+        if (type == INDEX_NSG || type == INDEX_VAMANA) {
+            out.write((char *)&final_index_->ep_, sizeof(unsigned));
+        }
+        for (unsigned i = 0; i < final_index_->getBaseLen(); i++) {
+            unsigned GK = (unsigned) final_index_->getFinalGraph()[i].size();
+            std::vector<unsigned> tmp;
+            for (unsigned j = 0; j < GK; j++) {
+                tmp.push_back(final_index_->getFinalGraph()[i][j].id);
+            }
+            out.write((char *) &GK, sizeof(unsigned));
+            out.write((char *) tmp.data(), GK * sizeof(unsigned));
+        }
+        out.close();
+        return this;
+    }
+
+    /**
+     * 载入图索引
+     * @param index_type 图索引类型
+     * @param graph_file 图索引地址
+     * @return 当前建造者指针
+     */
+    IndexBuilder *IndexBuilder::load_graph(TYPE type, char *graph_file) {
+        std::ifstream in(graph_file, std::ios::binary);
+        if (type == INDEX_NSG || type == INDEX_VAMANA) {
+            in.read((char *)&final_index_->ep_, sizeof(unsigned));
+        }
+
+        while (!in.eof()) {
+            unsigned GK;
+            in.read((char *)&GK, sizeof(unsigned));
+            if (in.eof()) break;
+            std::vector<unsigned> tmp(GK);
+            in.read((char *)tmp.data(), GK * sizeof(unsigned));
+            final_index_->getLoadGraph().push_back(tmp);
+        }
+        return this;
+    }
+
 
 }
