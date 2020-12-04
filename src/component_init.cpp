@@ -45,7 +45,7 @@ namespace weavess {
         std::mt19937 rng(rand());
 
 #ifdef PARALLEL
-#pragma omp parallel for num_threads(THREADS_NUM)
+#pragma omp parallel for
 #endif
         for (unsigned i = 0; i < index->getBaseLen(); i++) {
             index->getFinalGraph()[i].reserve(range);

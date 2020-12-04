@@ -97,7 +97,7 @@ namespace weavess {
         }
 
 #ifdef PARALLEL
-#pragma omp parallel for num_threads(THREADS_NUM)
+#pragma omp parallel for
 #endif
         for (unsigned i = 0; i < index->getBaseLen(); i++) {
             for (unsigned j = 0; j < index->getFinalGraph()[i].size(); j++) {
@@ -139,7 +139,7 @@ namespace weavess {
 
     void ComponentRefineNNDescent::update() {
 #ifdef PARALLEL
-#pragma omp parallel for num_threads(THREADS_NUM)
+#pragma omp parallel for
 #endif
         for (unsigned i = 0; i < index->getBaseLen(); i++) {
             std::vector<unsigned>().swap(index->graph_[i].nn_new);
@@ -152,7 +152,7 @@ namespace weavess {
             //graph_[i].rnn_old.clear();
         }
 #ifdef PARALLEL
-#pragma omp parallel for num_threads(THREADS_NUM)
+#pragma omp parallel for
 #endif
         for (unsigned n = 0; n < index->getBaseLen(); ++n) {
             auto &nn = index->graph_[n];
@@ -171,7 +171,7 @@ namespace weavess {
             nn.M = l;
         }
 #ifdef PARALLEL
-#pragma omp parallel for num_threads(THREADS_NUM)
+#pragma omp parallel for
 #endif
         for (unsigned n = 0; n < index->getBaseLen(); ++n) {
             auto &nnhd = index->graph_[n];
@@ -207,7 +207,7 @@ namespace weavess {
             std::make_heap(nnhd.pool.begin(), nnhd.pool.end());
         }
 #ifdef PARALLEL
-#pragma omp parallel for num_threads(THREADS_NUM)
+#pragma omp parallel for
 #endif
         for (unsigned i = 0; i < index->getBaseLen(); ++i) {
             auto &nn_new = index->graph_[i].nn_new;
