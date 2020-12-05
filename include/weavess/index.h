@@ -1760,9 +1760,6 @@ namespace weavess {
         void addDistCount() {
             dist_count += 1;
         }
-        void initDistCount() {
-            dist_count = 0;
-        }
         void setNumThreads(const unsigned numthreads) {
             omp_set_num_threads(numthreads);
         }

@@ -177,12 +177,10 @@ namespace weavess {
      * @param route_type 路由策略
      * @return 当前建造者指针
      */
-    IndexBuilder *IndexBuilder::search(TYPE entry_type, TYPE route_type) {
+    IndexBuilder *IndexBuilder::search(TYPE entry_type, TYPE route_type, bool IsControlRecall) {
         std::cout << "__SEARCH__" << std::endl;
 
         unsigned K = 10;
-        unsigned L_st = 5;
-        unsigned L_st2 = 8;
 
         final_index_->getParam().set<unsigned>("K_search", K);
 
@@ -254,75 +252,154 @@ namespace weavess {
             exit(-1);
         }
 
-        for (unsigned i = 0; i < 10; i ++) {
-            unsigned L = L_st + L_st2;
-            L_st = L_st2;
-            L_st2 = L;
-            std::cout << "SEARCH_L : " << L << std::endl;
-            if (L < K) {
-                std::cout << "search_L cannot be smaller than search_K! " << std::endl;
-                exit(-1);
-            }
-
-            final_index_->getParam().set<unsigned>("L_search", L);
-
-            auto s1 = std::chrono::high_resolution_clock::now();
-
-            res.clear();
-            res.resize(final_index_->getBaseLen());
-
-            for (unsigned i = 0; i < final_index_->getQueryLen(); i++) {
-                pool.clear();
-
-                a->SearchEntryInner(i, pool);
-
-//                for(unsigned j = 0; j < pool.size(); j ++) {
-//                    std::cout << pool[j].id << "|" << pool[j].distance << " ";
-//                }
-//                std::cout << std::endl;
-//
-//                std::cout << pool.size() << std::endl;
-
-                b->RouteInner(i, pool, res[i]);
-
-//                for(unsigned j = 0; j < res[i].size(); j ++) {
-//                    std::cout << res[i][j] << " ";
-//                }
-//                std::cout << std::endl;
-            }
-
-            auto e1 = std::chrono::high_resolution_clock::now();
-            std::chrono::duration<double> diff = e1 - s1;
-            std::cout << "search time: " << diff.count() << "\n";
-
-            //float speedup = (float)(index_->n_ * query_num) / (float)distcount;
-            std::cout << "DistCount: " << final_index_->getDistCount() << std::endl;
-            final_index_->resetDistCount();
-            //结果评估
-            int cnt = 0;
-            for (unsigned i = 0; i < final_index_->getGroundLen(); i++) {
-                for (unsigned j = 0; j < K; j++) {
-                    unsigned k = 0;
-                    for (; k < K; k++) {
-                        if (res[i][j] == final_index_->getGroundData()[i * final_index_->getGroundDim() + k])
-                            break;
-                    }
-                    if (k == K)
-                        cnt++;
+        if (IsControlRecall) {
+            unsigned sg = 1000; //计算L步长的参数
+            bool flag = false;
+            int L_sl = 1;   // 可能取负值
+            unsigned L = K;
+            float acc_set = 0.99;
+            while (true) {
+                // unsigned L_pre = L;
+                std::cout << "SEARCH_L : " << L << std::endl;
+                if (L < K) {
+                    std::cout << "search_L cannot be smaller than search_K! " << std::endl;
+                    exit(-1);
                 }
 
-//                for(unsigned j = 0; j < K; j ++) {
-//                    std::cout << res[i][j] << " ";
-//                }
-//                std::cout << std::endl;
-//                for(unsigned j = 0; j < K; j ++) {
-//                    std::cout << final_index_->getGroundData()[i * final_index_->getGroundDim() + j] << " ";
-//                }
-//                std::cout << std::endl;
-            }
+                final_index_->getParam().set<unsigned>("L_search", L);
 
-            float acc = 1 - (float) cnt / (final_index_->getGroundLen() * K);
-            std::cout << K << " NN accuracy: " << acc << std::endl;
+                auto s1 = std::chrono::high_resolution_clock::now();
+
+                res.clear();
+                res.resize(final_index_->getBaseLen());
+
+                for (unsigned i = 0; i < final_index_->getQueryLen(); i++) {
+                    pool.clear();
+
+                    a->SearchEntryInner(i, pool);
+
+                    b->RouteInner(i, pool, res[i]);
+
+                }
+
+                auto e1 = std::chrono::high_resolution_clock::now();
+                std::chrono::duration<double> diff = e1 - s1;
+                std::cout << "search time: " << diff.count() << "\n";
+
+                //float speedup = (float)(index_->n_ * query_num) / (float)distcount;
+                std::cout << "DistCount: " << final_index_->getDistCount() << std::endl;
+                final_index_->resetDistCount();
+                //结果评估
+                int cnt = 0;
+                for (unsigned i = 0; i < final_index_->getGroundLen(); i++) {
+                    for (unsigned j = 0; j < K; j++) {
+                        unsigned k = 0;
+                        for (; k < K; k++) {
+                            if (res[i][j] == final_index_->getGroundData()[i * final_index_->getGroundDim() + k])
+                                break;
+                        }
+                        if (k == K)
+                            cnt++;
+                    }
+                }
+
+                float acc = 1 - (float) cnt / (final_index_->getGroundLen() * K);
+                std::cout << K << " NN accuracy: " << acc << std::endl;
+                if (acc_set - acc <= 0) {
+                    if (L == K) {
+                        break;
+                    }else {
+                        if (flag == false) {
+                            L_sl < 0 ? L_sl-- : L_sl++;
+                            flag = true;
+                        }
+
+                        L_sl /= 2;
+
+                        if (L_sl == 0) {
+                            break;
+                        }
+                        L_sl < 0 ? L_sl : L_sl = -L_sl;
+                    }
+                }else {
+                    L_sl = (int)(sg * (acc_set - acc + 0.0001));
+                    flag = false;
+                }
+                L += L_sl;
+            }
+        }else {
+            unsigned L_st = 5;
+            unsigned L_st2 = 8;
+            for (unsigned i = 0; i < 10; i ++) {
+                unsigned L = L_st + L_st2;
+                L_st = L_st2;
+                L_st2 = L;
+                std::cout << "SEARCH_L : " << L << std::endl;
+                if (L < K) {
+                    std::cout << "search_L cannot be smaller than search_K! " << std::endl;
+                    exit(-1);
+                }
+
+                final_index_->getParam().set<unsigned>("L_search", L);
+
+                auto s1 = std::chrono::high_resolution_clock::now();
+
+                res.clear();
+                res.resize(final_index_->getBaseLen());
+
+                for (unsigned i = 0; i < final_index_->getQueryLen(); i++) {
+                    pool.clear();
+
+                    a->SearchEntryInner(i, pool);
+
+    //                for(unsigned j = 0; j < pool.size(); j ++) {
+    //                    std::cout << pool[j].id << "|" << pool[j].distance << " ";
+    //                }
+    //                std::cout << std::endl;
+    //
+    //                std::cout << pool.size() << std::endl;
+
+                    b->RouteInner(i, pool, res[i]);
+
+    //                for(unsigned j = 0; j < res[i].size(); j ++) {
+    //                    std::cout << res[i][j] << " ";
+    //                }
+    //                std::cout << std::endl;
+                }
+
+                auto e1 = std::chrono::high_resolution_clock::now();
+                std::chrono::duration<double> diff = e1 - s1;
+                std::cout << "search time: " << diff.count() << "\n";
+
+                //float speedup = (float)(index_->n_ * query_num) / (float)distcount;
+                std::cout << "DistCount: " << final_index_->getDistCount() << std::endl;
+                final_index_->resetDistCount();
+                //结果评估
+                int cnt = 0;
+                for (unsigned i = 0; i < final_index_->getGroundLen(); i++) {
+                    for (unsigned j = 0; j < K; j++) {
+                        unsigned k = 0;
+                        for (; k < K; k++) {
+                            if (res[i][j] == final_index_->getGroundData()[i * final_index_->getGroundDim() + k])
+                                break;
+                        }
+                        if (k == K)
+                            cnt++;
+                    }
+
+    //                for(unsigned j = 0; j < K; j ++) {
+    //                    std::cout << res[i][j] << " ";
+    //                }
+    //                std::cout << std::endl;
+    //                for(unsigned j = 0; j < K; j ++) {
+    //                    std::cout << final_index_->getGroundData()[i * final_index_->getGroundDim() + j] << " ";
+    //                }
+    //                std::cout << std::endl;
+                }
+
+                float acc = 1 - (float) cnt / (final_index_->getGroundLen() * K);
+                std::cout << K << " NN accuracy: " << acc << std::endl;
+            }
         }
 
         e = std::chrono::high_resolution_clock::now();
