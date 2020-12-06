@@ -502,8 +502,8 @@ namespace weavess {
         SetConfigs();
 
         // ENTRY
-        auto *a = new ComponentRefineEntryCentroid(index);
-        a->EntryInner();
+        // auto *a = new ComponentRefineEntryCentroid(index);
+        // a->EntryInner();
 
         auto *cut_graph_ = new Index::SimpleNeighbor[index->getBaseLen() * (size_t) index->R_refine];
         Link(cut_graph_);
