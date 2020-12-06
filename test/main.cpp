@@ -2,23 +2,32 @@
 #include <iostream>
 
 
-void KGraph(std::string base_path, std::string query_path, std::string ground_path) {
-    std::string graph_file = R"(kgraph.graph)";
+void KGraph(std::string base_path, std::string query_path, std::string ground_path, std::string graph_file, unsigned K, unsigned L, unsigned Iter, unsigned S, unsigned R, const unsigned num_threads) {
+    // std::string graph_file = R"(kgraph.graph)";
 
     weavess::Parameters parameters;
-    parameters.set<unsigned>("K", 25);
-    parameters.set<unsigned>("L", 50);
-    parameters.set<unsigned>("ITER", 8);
-    parameters.set<unsigned>("S", 10);
-    parameters.set<unsigned>("R", 100);
+    parameters.set<unsigned>("K", K);
+    parameters.set<unsigned>("L", L);
+    parameters.set<unsigned>("ITER", Iter);
+    parameters.set<unsigned>("S", S);
+    parameters.set<unsigned>("R", R);
 
-    auto *builder = new weavess::IndexBuilder(8);
+    auto *builder = new weavess::IndexBuilder(num_threads);
+
+    // build
     builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
-            -> init(weavess::TYPE::INIT_RANDOM, true)
-            -> refine(weavess::TYPE::REFINE_NN_DESCENT, true)
-            -> search(weavess::TYPE::SEARCH_ENTRY_RAND, weavess::TYPE::ROUTER_GREEDY, false);
+            -> init(weavess::TYPE::INIT_RANDOM, false);
+    std::cout << "Init cost: " << builder->GetBuildTime().count() << std::endl;
+    // 注意正式实验要关闭NN-Descent迭代图质量信息输出 index.h文件中
+    builder -> refine(weavess::TYPE::REFINE_NN_DESCENT, false)
+            -> save_graph(weavess::TYPE::INDEX_KGRAPH, &graph_file[0]);
+    std::cout << "Build cost: " << builder->GetBuildTime().count() << std::endl;
+    
+    // search
+    builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
+            -> load_graph(weavess::TYPE::INDEX_FANNG, &graph_file[0])
+            -> search(weavess::TYPE::SEARCH_ENTRY_RAND, weavess::TYPE::ROUTER_GREEDY, true);
 
-    std::cout << "Time cost: " << builder->GetBuildTime().count() << std::endl;
 }
 
 void FANNG(std::string base_path, std::string query_path, std::string ground_path, std::string graph_file, unsigned L, unsigned R_refine, const unsigned num_threads) {
@@ -306,58 +315,79 @@ int main(int argc, char** argv) {
     std::string alg(argv[1]);
     std::string dataset(argv[2]);
     std::string graph_file(alg + "_" + dataset + ".graph");
-    unsigned L, R;
+    // unsigned L, R; // fanng
+    unsigned K, L, Iter, S, R;  // kgraph
     // dataset
     if (dataset == "siftsmall") {
         base_path.append(R"(siftsmall/siftsmall_base.fvecs)");
         query_path.append(R"(siftsmall/siftsmall_query.fvecs)");
         ground_path.append(R"(siftsmall/siftsmall_groundtruth.ivecs)");
-        L = 100, R = 25;    // fanng
+        // L = 100, R = 25;    // fanng
+        K = 25, L = 50, Iter = 8, S = 10, R = 100;  // kgraph
+
     }else if (dataset == "sift1M") {
         base_path.append(R"(sift1M/sift_base.fvecs)");
         query_path.append(R"(sift1M/sift_query.fvecs)");
         ground_path.append(R"(sift1M/sift_groundtruth.ivecs)");
-        L = 110, R = 70;    // fanng
+        // L = 110, R = 70;    // fanng
+        K = 90, L = 130, Iter = 8, S = 20, R = 50;  // kgraph
+
     }else if (dataset == "gist") {
         base_path.append(R"(gist/gist_base.fvecs)");
         query_path.append(R"(gist/gist_query.fvecs)");
         ground_path.append(R"(gist/gist_groundtruth.ivecs)");
-        L = 210, R = 50;    // fanng
+        // L = 210, R = 50;    // fanng
+        K = 100, L = 120, Iter = 8, S = 25, R = 100;  // kgraph
+
     }else if (dataset == "glove-100") {
         base_path.append(R"(glove-100/glove-100_base.fvecs)");
         query_path.append(R"(glove-100/glove-100_query.fvecs)");
         ground_path.append(R"(glove-100/glove-100_groundtruth.ivecs)");
-        L = 210, R = 70;    // fanng
+        // L = 210, R = 70;    // fanng
+        K = 100, L = 150, Iter = 8, S = 35, R = 150;  // kgraph
+
     }else if (dataset == "audio") {
         base_path.append(R"(audio/audio_base.fvecs)");
         query_path.append(R"(audio/audio_query.fvecs)");
         ground_path.append(R"(audio/audio_groundtruth.ivecs)");
-        L = 130, R = 50;    // fanng
+        // L = 130, R = 50;    // fanng
+        K = 40, L = 60, Iter = 8, S = 20, R = 100;  // kgraph
+
     }else if (dataset == "crawl") {
         base_path.append(R"(crawl/crawl_base.fvecs)");
         query_path.append(R"(crawl/crawl_query.fvecs)");
         ground_path.append(R"(crawl/crawl_groundtruth.ivecs)");
-        L = 110, R = 30;    // fanng
+        // L = 110, R = 30;    // fanng
+        K = 80, L = 100, Iter = 8, S = 10, R = 150;  // kgraph
+
     }else if (dataset == "msong") {
         base_path.append(R"(msong/msong_base.fvecs)");
         query_path.append(R"(msong/msong_query.fvecs)");
         ground_path.append(R"(msong/msong_groundtruth.ivecs)");
-        L = 150, R = 10;    // fanng
+        // L = 150, R = 10;    // fanng
+        K = 100, L = 140, Iter = 8, S = 15, R = 150;  // kgraph
+
     }else if (dataset == "uqv") {
         base_path.append(R"(uqv/uqv_base.fvecs)");
         query_path.append(R"(uqv/uqv_query.fvecs)");
         ground_path.append(R"(uqv/uqv_groundtruth.ivecs)");
-        L = 250, R = 90;    // fanng
+        // L = 250, R = 90;    // fanng
+        K = 40, L = 80, Iter = 8, S = 25, R = 100;  // kgraph
+
     }else if (dataset == "enron") {
         base_path.append(R"(enron/enron_base.fvecs)");
         query_path.append(R"(enron/enron_query.fvecs)");
         ground_path.append(R"(enron/enron_groundtruth.ivecs)");
-        L = 130, R = 110;    // fanng
+        // L = 130, R = 110;    // fanng
+        K = 50, L = 80, Iter = 8, S = 15, R = 100;  // kgraph
+
     }else if (dataset == "mnist") {
         base_path.append(R"(mnist/mnist_base.fvecs)");
         query_path.append(R"(mnist/mnist_query.fvecs)");
         ground_path.append(R"(mnist/mnist_groundtruth.ivecs)");
         L = 100, R = 25;    // fanng
+        K = 25, L = 50, Iter = 8, S = 10, R = 100;  // kgraph
+
     }
     else {
         std::cout << "input dataset error!\n";
@@ -366,7 +396,7 @@ int main(int argc, char** argv) {
 
     // alg
     if (alg == "kgraph") {
-        KGraph(base_path, query_path, ground_path);
+        KGraph(base_path, query_path, ground_path, graph_file, K, L, Iter, S, R, num_threads);
     }else if (alg == "fanng") {
         FANNG(base_path, query_path, ground_path, graph_file, L, R, num_threads);
     }else if (alg == "nsg") {

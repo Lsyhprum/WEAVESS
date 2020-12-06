@@ -1765,7 +1765,7 @@ namespace weavess {
         }
 
         int i = 0;
-        bool debug = true;
+        bool debug = true;  // 控制NN-Descent迭代图质量信息输出
 
     private:
         float *base_data_, *query_data_;

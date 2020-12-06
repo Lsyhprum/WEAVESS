@@ -248,7 +248,7 @@ namespace weavess {
     void ComponentRefineNNDescent::generate_control_set(std::vector<unsigned> &c,
                                         std::vector<std::vector<unsigned> > &v,
                                         unsigned N){
-    #pragma omp parallel for
+#pragma omp parallel for
     for(unsigned i=0; i<c.size(); i++){
         std::vector<NNDescent::Neighbor> tmp;
         for(unsigned j=0; j<N; j++){
