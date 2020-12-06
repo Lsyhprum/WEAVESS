@@ -306,7 +306,7 @@ namespace weavess {
                 float acc = 1 - (float) cnt / (final_index_->getGroundLen() * K);
                 std::cout << K << " NN accuracy: " << acc << std::endl;
                 if (acc_set - acc <= 0) {
-                    if (L == K) {
+                    if (L == K || L_sl == 1) {
                         break;
                     }else {
                         if (flag == false) {
@@ -525,6 +525,10 @@ namespace weavess {
         std::ofstream out(graph_file, std::ios::binary | std::ios::out);
         if (type == INDEX_NSG || type == INDEX_VAMANA) {
             out.write((char *)&final_index_->ep_, sizeof(unsigned));
+        }else if (type == INDEX_SSG) {
+            unsigned n_ep=final_index_->eps_.size();
+            out.write((char *)&n_ep, sizeof(unsigned));
+            out.write((char *)final_index_->eps_.data(), n_ep*sizeof(unsigned));
         }
         for (unsigned i = 0; i < final_index_->getBaseLen(); i++) {
             unsigned GK = (unsigned) final_index_->getFinalGraph()[i].size();
@@ -549,8 +553,12 @@ namespace weavess {
         std::ifstream in(graph_file, std::ios::binary);
         if (type == INDEX_NSG || type == INDEX_VAMANA) {
             in.read((char *)&final_index_->ep_, sizeof(unsigned));
+        }else if (type == INDEX_SSG) {
+            unsigned n_ep=0;
+            in.read((char *)&n_ep, sizeof(unsigned));
+            final_index_->eps_.resize(n_ep);
+            in.read((char *)final_index_->eps_.data(), n_ep*sizeof(unsigned));
         }
-
         while (!in.eof()) {
             unsigned GK;
             in.read((char *)&GK, sizeof(unsigned));
