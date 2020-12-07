@@ -699,7 +699,7 @@ namespace weavess {
         }
 
         // CONN
-        std::cout << "__CONN : DFS__" << std::endl;
+        // std::cout << "__CONN : DFS__" << std::endl;
         auto *c = new ComponentConnReverse(index);
         c->ConnInner();
     }
