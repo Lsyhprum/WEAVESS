@@ -10,9 +10,9 @@
 namespace weavess {
     class IndexBuilder {
     public:
-        explicit IndexBuilder() {
+        explicit IndexBuilder(const unsigned num_threads) {
             final_index_ = new Index();
-            omp_set_num_threads(8);
+            omp_set_num_threads(num_threads);
         }
 
         virtual ~IndexBuilder() {
@@ -29,7 +29,7 @@ namespace weavess {
 
         IndexBuilder *refine(TYPE type, bool debug);
 
-        IndexBuilder *search(TYPE entry_type, TYPE route_type);
+        IndexBuilder *search(TYPE entry_type, TYPE route_type, bool IsControlRecall);
 
         void print_graph();
 

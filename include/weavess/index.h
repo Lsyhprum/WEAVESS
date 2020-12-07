@@ -6,9 +6,11 @@
 #define WEAVESS_INDEX_H
 
 #define PARALLEL
-#define THREADS_NUM 10
 
 #define FLT_EPSILON 1.19209290E-07F
+
+// NN-Descent
+#define CONTROL_NUM 100
 
 // IEH
 #define MAX_ROWSIZE 1024
@@ -24,7 +26,6 @@
 
 // NGT
 #define NGT_SEED_SIZE 5
-#define NGT_EXPLORATION_COEFFICIENT 1.1
 
 #include <omp.h>
 #include <mutex>
@@ -38,7 +39,6 @@
 #include <fstream>
 #include <cassert>
 #include <iostream>
-// #include <windows.h>
 #include <algorithm>
 #include <unordered_set>
 #include <boost/dynamic_bitset.hpp>
@@ -1135,7 +1135,7 @@ namespace weavess {
 
             inline int hash_func(int idx)
             {
-                return ((int)(idx * 99991) + _rotl(idx, 2) + 101) & m_poolSize;
+                // return ((int)(idx * 99991) + _rotl(idx, 2) + 101) & m_poolSize;
             }
 
         public:
@@ -1757,14 +1757,12 @@ namespace weavess {
         void addDistCount() {
             dist_count += 1;
         }
-        void initDistCount() {
-            dist_count = 0;
-        }
         void setNumThreads(const unsigned numthreads) {
             omp_set_num_threads(numthreads);
         }
 
         int i = 0;
+        bool debug = false;  // 控制NN-Descent迭代图质量信息输出
 
     private:
         float *base_data_, *query_data_;

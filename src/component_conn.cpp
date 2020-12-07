@@ -264,6 +264,6 @@ namespace weavess {
                 }
             }
         }
-        fprintf(stderr, "inverse edges: %d\n", count);
+        // fprintf(stderr, "inverse edges: %d\n", count);
     }
 }
