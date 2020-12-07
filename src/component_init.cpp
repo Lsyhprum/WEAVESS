@@ -9,7 +9,7 @@
 namespace weavess {
 
     /**
-     * 获取随机近邻
+     * 随机 KNNG
      *
      * TODO : 近邻 id 可能等于查询点 id，近邻个数 **小于等于** 初始近邻阈值 init_edges_num
      * @param rng
@@ -72,6 +72,55 @@ namespace weavess {
     }
 
     void ComponentInitRandom::SetConfigs() {
+        index->setInitEdgesNum(index->getParam().get<unsigned>("S"));
+    }
+
+
+    /**
+     * 精确 KNNG
+     *
+     * KNNG 近邻个数 **等于** init_edges_num
+     *
+     */
+    void ComponentInitKNNG::InitInner() {
+        SetConfigs();
+
+        unsigned range = index->getInitEdgesNum();
+
+        index->getFinalGraph().resize(index->getBaseLen());
+
+#ifdef PARALLEL
+#pragma omp parallel for num_threads(THREADS_NUM)
+#endif
+        for (unsigned i = 0; i < index->getBaseLen(); i ++) {
+            index->getFinalGraph()[i].resize(range);
+
+            std::vector<Index::SimpleNeighbor> tmp;
+            tmp.resize(index->getBaseLen() - 1);
+
+            // 暴力计算 k 近邻
+            int pos = 0;
+            for (unsigned j = 0; j < index->getBaseLen(); j ++) {
+                if (i == j) continue;
+
+                float dist = index->getDist()->compare(index->getBaseData() + index->getBaseDim() * i,
+                                                       index->getBaseData() + index->getBaseDim() * j,
+                                                       index->getBaseDim());
+                tmp[pos ++] = Index::SimpleNeighbor(j, dist);
+            }
+
+            std::sort(tmp.begin(), tmp.end());
+
+            for(int k = 0; k < index->getInitEdgesNum(); k ++) {
+                index->getFinalGraph()[i][k] = tmp[k];
+            }
+
+            // 回收内存
+            std::vector<Index::SimpleNeighbor>().swap(tmp);
+        }
+    }
+
+    void ComponentInitKNNG::SetConfigs() {
         index->setInitEdgesNum(index->getParam().get<unsigned>("S"));
     }
 
@@ -1952,8 +2001,8 @@ namespace weavess {
     }
 
 
-    // SPTAG KDT new
-    void ComponentInitSPTAG_KDT_new::InitInner() {
+    // SPTAG KDT
+    void ComponentInitSPTAG_KDT::InitInner() {
         SetConfigs();
 
         BuildTrees();
@@ -1969,7 +2018,7 @@ namespace weavess {
         }
     }
 
-    void ComponentInitSPTAG_KDT_new::SetConfigs() {
+    void ComponentInitSPTAG_KDT::SetConfigs() {
         index->numOfThreads = index->getParam().get<unsigned>("numOfThreads");
 
         index->m_iTreeNumber = index->getParam().get<unsigned>("KDTNumber");
@@ -1985,7 +2034,7 @@ namespace weavess {
         index->m_iCEF = index->getParam().get<unsigned>("CEF");
     }
 
-    void ComponentInitSPTAG_KDT_new::BuildTrees() {
+    void ComponentInitSPTAG_KDT::BuildTrees() {
         std::vector<int> localindices;
 
         localindices.resize(index->getBaseLen());
@@ -2013,11 +2062,11 @@ namespace weavess {
         }
     }
 
-    int ComponentInitSPTAG_KDT_new::rand(int high, int low) {
+    int ComponentInitSPTAG_KDT::rand(int high, int low) {
         return low + (int) (float(high - low) * (std::rand() / (RAND_MAX + 1.0)));
     }
 
-    int ComponentInitSPTAG_KDT_new::SelectDivisionDimension(const std::vector<float> &varianceValues) {
+    int ComponentInitSPTAG_KDT::SelectDivisionDimension(const std::vector<float> &varianceValues) {
         // Record the top maximum variances
         std::vector<int> topind(index->m_numTopDimensionKDTSplit);
         int num = 0;
@@ -2038,11 +2087,11 @@ namespace weavess {
             }
         }
         // randomly choose a dimension from TOP_DIM
-        return topind[ComponentInitSPTAG_KDT_new::rand(num)];
+        return topind[ComponentInitSPTAG_KDT::rand(num)];
     }
 
-    void ComponentInitSPTAG_KDT_new::ChooseDivision(Index::KDTNode &node, const std::vector<int> &indices,
-                                                    const int first, const int last) {
+    void ComponentInitSPTAG_KDT::ChooseDivision(Index::KDTNode &node, const std::vector<int> &indices,
+                                                const int first, const int last) {
         std::vector<float> meanValues(index->getBaseDim(), 0);
         std::vector<float> varianceValues(index->getBaseDim(), 0);
         int end = std::min(first + index->m_iSamples, last);
@@ -2071,8 +2120,8 @@ namespace weavess {
         node.split_value = meanValues[node.split_dim];
     }
 
-    int ComponentInitSPTAG_KDT_new::Subdivide(const Index::KDTNode &node, std::vector<int> &indices,
-                                              const int first, const int last) {
+    int ComponentInitSPTAG_KDT::Subdivide(const Index::KDTNode &node, std::vector<int> &indices,
+                                          const int first, const int last) {
         int i = first;
         int j = last;
         // decide which child one point belongs
@@ -2094,8 +2143,8 @@ namespace weavess {
         return i;
     }
 
-    void ComponentInitSPTAG_KDT_new::DivideTree(std::vector<int> &indices, int first,
-                                                int last, int tree_index, int &iTreeSize) {
+    void ComponentInitSPTAG_KDT::DivideTree(std::vector<int> &indices, int first,
+                                            int last, int tree_index, int &iTreeSize) {
         ChooseDivision(index->m_pKDTreeRoots[tree_index], indices, first, last);
         int i = Subdivide(index->m_pKDTreeRoots[tree_index], indices, first, last);
         if (i - 1 <= first) {
@@ -2114,13 +2163,13 @@ namespace weavess {
         }
     }
 
-    bool ComponentInitSPTAG_KDT_new::Compare(const Index::SimpleNeighbor &lhs, const Index::SimpleNeighbor &rhs) {
+    bool ComponentInitSPTAG_KDT::Compare(const Index::SimpleNeighbor &lhs, const Index::SimpleNeighbor &rhs) {
         return ((lhs.distance < rhs.distance) || ((lhs.distance == rhs.distance) && (lhs.id < rhs.id)));
     }
 
-    void ComponentInitSPTAG_KDT_new::PartitionByTptree(std::vector<int> &indices, const int first,
-                                                       const int last,
-                                                       std::vector<std::pair<int, int>> &leaves) {
+    void ComponentInitSPTAG_KDT::PartitionByTptree(std::vector<int> &indices, const int first,
+                                                   const int last,
+                                                   std::vector<std::pair<int, int>> &leaves) {
         if (last - first <= index->m_iTPTLeafSize) {
             leaves.emplace_back(first, last);
         } else {
@@ -2152,7 +2201,7 @@ namespace weavess {
                     Variance[k].distance += dist * dist;
                 }
             }
-            std::sort(Variance.begin(), Variance.end(), ComponentInitSPTAG_KDT_new::Compare);
+            std::sort(Variance.begin(), Variance.end(), ComponentInitSPTAG_KDT::Compare);
             std::vector<int> indexs(index->m_numTopDimensionTPTSplit);
             std::vector<float> weight(index->m_numTopDimensionTPTSplit), bestweight(index->m_numTopDimensionTPTSplit);
             float bestvariance = Variance[index->getBaseDim() - 1].distance;
@@ -2230,7 +2279,7 @@ namespace weavess {
         }
     }
 
-    void ComponentInitSPTAG_KDT_new::AddNeighbor(int idx, float dist, int origin) {
+    void ComponentInitSPTAG_KDT::AddNeighbor(int idx, float dist, int origin) {
         int size = index->m_iNeighborhoodSize - 1;
 
         if (dist < index->getFinalGraph()[origin][size].distance ||
@@ -2253,7 +2302,7 @@ namespace weavess {
         }
     }
 
-    void ComponentInitSPTAG_KDT_new::BuildGraph() {
+    void ComponentInitSPTAG_KDT::BuildGraph() {
         // 初始化索引尺寸
         index->m_iNeighborhoodSize = index->m_iNeighborhoodSize * index->m_iNeighborhoodScale;
 
@@ -2324,377 +2373,11 @@ namespace weavess {
     }
 
 
-    // SPTAG KDT
-    void ComponentInitSPTAG_KDT::InitInner() {
-        SetConfigs();
-
-        BuildTrees();
-
-        BuildGraph();
-    }
-
-    void ComponentInitSPTAG_KDT::SetConfigs() {
-        index->numOfThreads = index->getParam().get<unsigned>("numOfThreads");
-
-        index->m_iTreeNumber = index->getParam().get<unsigned>("KDTNumber");
-
-        index->m_iTPTNumber = index->getParam().get<unsigned>("TPTNumber");
-
-        index->m_iTPTLeafSize = index->getParam().get<unsigned>("TPTLeafSize");
-
-        index->m_iNeighborhoodSize = index->getParam().get<unsigned>("NeighborhoodSize");
-
-        index->m_iNeighborhoodScale = index->getParam().get<unsigned>("GraphNeighborhoodScale");
-
-        index->m_iCEF = index->getParam().get<unsigned>("CEF");
-    }
-
-    void ComponentInitSPTAG_KDT::BuildTrees() {
-        std::vector<unsigned> localindices;
-        localindices.resize(index->getBaseLen());
-        for (unsigned i = 0; i < localindices.size(); i++) localindices[i] = i;
-
-        // 记录 KDT 结构
-        index->m_pKDTreeRoots.resize(index->m_iTreeNumber * localindices.size());
-        // 记录树根
-        index->m_pTreeStart.resize(index->m_iTreeNumber, 0);
-
-#pragma omp parallel for num_threads(index->numOfThreads)
-        for (int i = 0; i < index->m_iTreeNumber; i++) {
-            // 非多线程 -> 删除 ！！！
-            //Sleep(i * 100);
-            std::srand(clock());
-
-            std::vector<unsigned> pindices(localindices.begin(), localindices.end());
-            std::random_shuffle(pindices.begin(), pindices.end());
-
-            index->m_pTreeStart[i] = i * pindices.size();
-            std::cout << "Start to build KDTree " << i + 1 << std::endl;
-            unsigned iTreeSize = index->m_pTreeStart[i];
-            DivideTree(pindices, 0, pindices.size() - 1, index->m_pTreeStart[i], iTreeSize);
-            std::cout << i + 1 << " KDTree built, " << iTreeSize - index->m_pTreeStart[i] << " " << pindices.size()
-                      << std::endl;
-        }
-    }
-
-    void ComponentInitSPTAG_KDT::BuildGraph() {
-        index->m_iNeighborhoodSize = index->m_iNeighborhoodSize * index->m_iNeighborhoodScale;       // L
-
-        index->getFinalGraph().resize(index->getBaseLen());
-
-        float MaxDist = (std::numeric_limits<float>::max)();
-        unsigned MaxId = (std::numeric_limits<unsigned>::max)();
-
-        for (unsigned i = 0; i < index->getBaseLen(); i++) {
-            index->getFinalGraph()[i].resize(index->m_iNeighborhoodSize);
-            for (unsigned j = 0; j < index->m_iNeighborhoodSize; j++) {
-                Index::SimpleNeighbor neighbor(MaxId, MaxDist);
-                index->getFinalGraph()[i][j] = neighbor;
-            }
-        }
-
-        BuildInitKNNGraph();
-    }
-
-    void ComponentInitSPTAG_KDT::BuildInitKNNGraph() {
-        std::vector<std::vector<unsigned>> TptreeDataIndices(index->m_iTPTNumber,
-                                                             std::vector<unsigned>(index->getBaseLen()));
-        std::vector<std::vector<std::pair<unsigned, unsigned>>> TptreeLeafNodes(index->m_iTPTNumber,
-                                                                                std::vector<std::pair<unsigned, unsigned>>());
-
-#pragma omp parallel for schedule(dynamic)
-        for (int i = 0; i < index->m_iTPTNumber; i++) {
-            // 非多线程注意注释
-            //Sleep(i * 100);
-            std::srand(clock());
-            for (unsigned j = 0; j < index->getBaseLen(); j++) TptreeDataIndices[i][j] = j;
-            std::random_shuffle(TptreeDataIndices[i].begin(), TptreeDataIndices[i].end());
-            PartitionByTptree(TptreeDataIndices[i], 0, index->getBaseLen() - 1, TptreeLeafNodes[i]);
-            std::cout << "Finish Getting Leaves for Tree : " << i << std::endl;
-        }
-        std::cout << "Parallel TpTree Partition done" << std::endl;
-
-        for (int i = 0; i < index->m_iTPTNumber; i++) {
-#pragma omp parallel for schedule(dynamic)
-            for (unsigned j = 0; j < (unsigned) TptreeLeafNodes[i].size(); j++) {
-                unsigned start_index = TptreeLeafNodes[i][j].first;
-                unsigned end_index = TptreeLeafNodes[i][j].second;
-                if ((j * 5) % TptreeLeafNodes[i].size() == 0)
-                    std::cout << "Processing Tree : " << i
-                              << static_cast<int>(j * 1.0 / TptreeLeafNodes[i].size() * 100) << std::endl;
-
-                for (unsigned x = start_index; x < end_index; x++) {
-                    for (unsigned y = x + 1; y <= end_index; y++) {
-                        unsigned p1 = TptreeDataIndices[i][x];
-                        unsigned p2 = TptreeDataIndices[i][y];
-                        float dist = index->getDist()->compare(index->getBaseData() + index->getBaseDim() * p1,
-                                                               index->getBaseData() + index->getBaseDim() * p2,
-                                                               index->getBaseDim());
-
-                        AddNeighbor(p2, dist, p1, index->m_iNeighborhoodSize);
-                        AddNeighbor(p1, dist, p2, index->m_iNeighborhoodSize);
-                    }
-                }
-            }
-            TptreeDataIndices[i].clear();
-            TptreeLeafNodes[i].clear();
-        }
-        TptreeDataIndices.clear();
-        TptreeLeafNodes.clear();
-    }
-
-    void
-    ComponentInitSPTAG_KDT::PartitionByTptree(std::vector<unsigned> &indices, const unsigned first, const unsigned last,
-                                              std::vector<std::pair<unsigned, unsigned>> &leaves) {
-        unsigned m_numTopDimensionTPTSplit = 5;
-
-        if (last - first <= index->m_iTPTLeafSize) {
-            leaves.emplace_back(first, last);
-        } else {
-            std::vector<float> Mean(index->getBaseDim(), 0);
-
-            int iIteration = 100;
-            unsigned end = std::min(first + index->m_iSamples, last);
-            unsigned count = end - first + 1;
-            // calculate the mean of each dimension
-            for (unsigned j = first; j <= end; j++) {
-                const float *v = index->getBaseData() + indices[j] * index->getBaseDim();
-                for (unsigned k = 0; k < index->getBaseDim(); k++) {
-                    Mean[k] += v[k];
-                }
-            }
-            // 计算每个维度平均值
-            for (unsigned k = 0; k < index->getBaseDim(); k++) {
-                Mean[k] /= count;
-            }
-            std::vector<Index::SimpleNeighbor> Variance;
-            Variance.reserve(index->getBaseDim());
-            for (unsigned j = 0; j < index->getBaseDim(); j++) {
-                Variance.emplace_back(j, 0.0f);
-            }
-            // calculate the variance of each dimension
-            for (unsigned j = first; j <= end; j++) {
-                const float *v = index->getBaseData() + index->getBaseDim() * indices[j];
-                for (unsigned k = 0; k < index->getBaseDim(); k++) {
-                    float dist = v[k] - Mean[k];
-                    Variance[k].distance += dist * dist;
-                }
-            }
-            std::sort(Variance.begin(), Variance.end(), ComponentInitSPTAG_KDT::Compare);
-            std::vector<unsigned> indexs(m_numTopDimensionTPTSplit);
-            std::vector<float> weight(m_numTopDimensionTPTSplit), bestweight(m_numTopDimensionTPTSplit);
-            float bestvariance = Variance[index->getBaseDim() - 1].distance;
-            // 选出离散程度更大的 m_numTopDimensionTPTSplit 个维度
-            for (int i = 0; i < m_numTopDimensionTPTSplit; i++) {
-                indexs[i] = Variance[index->getBaseDim() - 1 - i].id;
-                bestweight[i] = 0;
-            }
-            bestweight[0] = 1;
-            float bestmean = Mean[indexs[0]];
-
-            std::vector<float> Val(count);
-            for (int i = 0; i < iIteration; i++) {
-                float sumweight = 0;
-                for (int j = 0; j < m_numTopDimensionTPTSplit; j++) {
-                    weight[j] = float(std::rand() % 10000) / 5000.0f - 1.0f;
-                    sumweight += weight[j] * weight[j];
-                }
-                sumweight = sqrt(sumweight);
-                for (int j = 0; j < m_numTopDimensionTPTSplit; j++) {
-                    weight[j] /= sumweight;
-                }
-                float mean = 0;
-                for (unsigned j = 0; j < count; j++) {
-                    Val[j] = 0;
-                    const float *v = index->getBaseData() + index->getBaseDim() * indices[first + j];
-                    for (int k = 0; k < m_numTopDimensionTPTSplit; k++) {
-                        Val[j] += weight[k] * v[indexs[k]];
-                    }
-                    mean += Val[j];
-                }
-                mean /= count;
-                float var = 0;
-                for (unsigned j = 0; j < count; j++) {
-                    float dist = Val[j] - mean;
-                    var += dist * dist;
-                }
-                if (var > bestvariance) {
-                    bestvariance = var;
-                    bestmean = mean;
-                    for (int j = 0; j < m_numTopDimensionTPTSplit; j++) {
-                        bestweight[j] = weight[j];
-                    }
-                }
-            }
-            unsigned i = first;
-            unsigned j = last;
-            // decide which child one point belongs
-            while (i <= j) {
-                float val = 0;
-                const float *v = index->getBaseData() + index->getBaseDim() * indices[i];
-                for (int k = 0; k < m_numTopDimensionTPTSplit; k++) {
-                    val += bestweight[k] * v[indexs[k]];
-                }
-                if (val < bestmean) {
-                    i++;
-                } else {
-                    std::swap(indices[i], indices[j]);
-                    j--;
-                }
-            }
-            // if all the points in the node are equal,equally split the node into 2
-            if ((i == first) || (i == last + 1)) {
-                i = (first + last + 1) / 2;
-            }
-
-            Mean.clear();
-            Variance.clear();
-            Val.clear();
-            indexs.clear();
-            weight.clear();
-            bestweight.clear();
-
-            PartitionByTptree(indices, first, i - 1, leaves);
-            PartitionByTptree(indices, i, last, leaves);
-        }
-    }
-
-    void ComponentInitSPTAG_KDT::AddNeighbor(unsigned idx, float dist, unsigned origin, unsigned size) {
-        size--;
-        if (dist < index->getFinalGraph()[origin][size].distance ||
-            (dist == index->getFinalGraph()[origin][size].distance && idx < index->getFinalGraph()[origin][size].id)) {
-            unsigned nb;
-
-            for (nb = 0; nb <= size && index->getFinalGraph()[origin][nb].id != idx; nb++);
-
-            if (nb > size) {
-                nb = size;
-                while (nb > 0 && (dist < index->getFinalGraph()[origin][nb - 1].distance ||
-                                  (dist == index->getFinalGraph()[origin][nb - 1].distance &&
-                                   idx < index->getFinalGraph()[origin][nb - 1].id))) {
-                    index->getFinalGraph()[origin][nb] = index->getFinalGraph()[origin][nb - 1];
-                    nb--;
-                }
-                index->getFinalGraph()[origin][nb].distance = dist;
-                index->getFinalGraph()[origin][nb].id = idx;
-            }
-        }
-    }
-
-    inline bool ComponentInitSPTAG_KDT::Compare(const Index::SimpleNeighbor &lhs, const Index::SimpleNeighbor &rhs) {
-        return ((lhs.distance < rhs.distance) || ((lhs.distance == rhs.distance) && (lhs.id < rhs.id)));
-    }
-
-    void ComponentInitSPTAG_KDT::DivideTree(std::vector<unsigned> &indices, unsigned first, unsigned last,
-                                            unsigned tree_index, unsigned &iTreeSize) {
-        // 选择分离维度
-        ChooseDivision(index->m_pKDTreeRoots[tree_index], indices, first, last);
-        unsigned i = Subdivide(index->m_pKDTreeRoots[tree_index], indices, first, last);
-        if (i - 1 <= first) {
-            index->m_pKDTreeRoots[tree_index].left = -indices[first] - 1;
-        } else {
-            iTreeSize++;
-            index->m_pKDTreeRoots[tree_index].left = iTreeSize;
-            DivideTree(indices, first, i - 1, iTreeSize, iTreeSize);
-        }
-        if (last == i) {
-            index->m_pKDTreeRoots[tree_index].right = -indices[last] - 1;
-        } else {
-            iTreeSize++;
-            index->m_pKDTreeRoots[tree_index].right = iTreeSize;
-            DivideTree(indices, i, last, iTreeSize, iTreeSize);
-        }
-    }
-
-    void ComponentInitSPTAG_KDT::ChooseDivision(Index::KDTNode &node, const std::vector<unsigned> &indices,
-                                                const unsigned first, const unsigned last) {
-
-        std::vector<float> meanValues(index->getBaseDim(), 0);
-        std::vector<float> varianceValues(index->getBaseDim(), 0);
-        unsigned end = std::min(first + index->m_iSamples, last);
-        unsigned count = end - first + 1;
-        // calculate the mean of each dimension
-        for (unsigned j = first; j <= end; j++) {
-            float *v = index->getBaseData() + index->getBaseDim() * indices[j];
-            for (unsigned k = 0; k < index->getBaseDim(); k++) {
-                meanValues[k] += v[k];
-            }
-        }
-        for (unsigned k = 0; k < index->getBaseDim(); k++) {
-            meanValues[k] /= count;
-        }
-        // calculate the variance of each dimension
-        for (unsigned j = first; j <= end; j++) {
-            const float *v = index->getBaseData() + index->getBaseDim() * indices[j];
-            for (unsigned k = 0; k < index->getBaseDim(); k++) {
-                float dist = v[k] - meanValues[k];
-                varianceValues[k] += dist * dist;
-            }
-        }
-        // choose the split dimension as one of the dimension inside TOP_DIM maximum variance
-        node.split_dim = SelectDivisionDimension(varianceValues);
-        // determine the threshold
-        node.split_value = meanValues[node.split_dim];
-    }
-
-    unsigned ComponentInitSPTAG_KDT::rand(unsigned high, unsigned low) {
-        return low + (unsigned) (float(high - low) * (std::rand() / (RAND_MAX + 1.0)));
-    }
-
-    unsigned ComponentInitSPTAG_KDT::SelectDivisionDimension(const std::vector<float> &varianceValues) {
-        unsigned m_numTopDimensionKDTSplit = 5;
-
-        // Record the top maximum variances
-        std::vector<unsigned> topind(m_numTopDimensionKDTSplit);
-        int num = 0;
-        // order the variances
-        for (unsigned i = 0; i < varianceValues.size(); i++) {
-            if (num < m_numTopDimensionKDTSplit || varianceValues[i] > varianceValues[topind[num - 1]]) {
-                if (num < m_numTopDimensionKDTSplit) {
-                    topind[num++] = i;
-                } else {
-                    topind[num - 1] = i;
-                }
-                int j = num - 1;
-                // order the TOP_DIM variances
-                while (j > 0 && varianceValues[topind[j]] > varianceValues[topind[j - 1]]) {
-                    std::swap(topind[j], topind[j - 1]);
-                    j--;
-                }
-            }
-        }
-        // randomly choose a dimension from TOP_DIM
-        return topind[rand(num)];
-    }
-
-    unsigned
-    ComponentInitSPTAG_KDT::Subdivide(const Index::KDTNode &node, std::vector<unsigned> &indices, const unsigned first,
-                                      const unsigned last) {
-        unsigned i = first;
-        unsigned j = last;
-        // decide which child one point belongs
-        while (i <= j) {
-            unsigned ind = indices[i];
-            const float *v = index->getBaseData() + index->getBaseDim() * ind;
-            float val = v[node.split_dim];
-            if (val < node.split_value) {
-                i++;
-            } else {
-                std::swap(indices[i], indices[j]);
-                j--;
-            }
-        }
-        // if all the points in the node are equal,equally split the node into 2
-        if ((i == first) || (i == last + 1)) {
-            i = (first + last + 1) / 2;
-        }
-        return i;
-    }
 
     /**
-     * SPTAG_BKT_new
+     * SPTAG_BKT
      */
-    void ComponentInitSPTAG_BKT_new::InitInner() {
+    void ComponentInitSPTAG_BKT::InitInner() {
         SetConfigs();
 
         BuildTrees();
@@ -2710,7 +2393,7 @@ namespace weavess {
 //        }
     }
 
-    void ComponentInitSPTAG_BKT_new::SetConfigs() {
+    void ComponentInitSPTAG_BKT::SetConfigs() {
         index->numOfThreads = index->getParam().get<unsigned>("numOfThreads");
 
         index->m_iTreeNumber = index->getParam().get<unsigned>("BKTNumber");
@@ -2724,13 +2407,13 @@ namespace weavess {
         index->m_iCEF = index->getParam().get<unsigned>("CEF");
     }
 
-    int ComponentInitSPTAG_BKT_new::rand(int high, int low) {
+    int ComponentInitSPTAG_BKT::rand(int high, int low) {
         return low + (int) (float(high - low) * (std::rand() / (RAND_MAX + 1.0)));
     }
 
-    float ComponentInitSPTAG_BKT_new::KmeansAssign(std::vector<int> &indices, const int first,
-                                                   const int last, Index::KmeansArgs<float> &args,
-                                                   const bool updateCenters, float lambda) {
+    float ComponentInitSPTAG_BKT::KmeansAssign(std::vector<int> &indices, const int first,
+                                               const int last, Index::KmeansArgs<float> &args,
+                                               const bool updateCenters, float lambda) {
         float currDist = 0;
         int subsize = (last - first - 1) / args._T + 1;
         const float MaxDist = (std::numeric_limits<float>::max)();
@@ -2810,16 +2493,16 @@ namespace weavess {
         return currDist;
     }
 
-    void ComponentInitSPTAG_BKT_new::InitCenters(std::vector<int> &indices, const int first,
-                                                 const int last, Index::KmeansArgs<float> &args, int samples,
-                                                 int tryIters) {
+    void ComponentInitSPTAG_BKT::InitCenters(std::vector<int> &indices, const int first,
+                                             const int last, Index::KmeansArgs<float> &args, int samples,
+                                             int tryIters) {
         const float MaxDist = (std::numeric_limits<float>::max)();
 
         int batchEnd = std::min(first + samples, last);
         float currDist, minClusterDist = MaxDist;
         for (int numKmeans = 0; numKmeans < tryIters; numKmeans++) {
             for (int k = 0; k < args._DK; k++) {
-                int randid = ComponentInitSPTAG_BKT_new::rand(last, first);
+                int randid = ComponentInitSPTAG_BKT::rand(last, first);
                 std::memcpy(args.centers + k * args._D, index->getBaseData() + index->getBaseDim() * indices[randid],
                             sizeof(float) * args._D);
             }
@@ -2834,7 +2517,7 @@ namespace weavess {
         }
     }
 
-    float ComponentInitSPTAG_BKT_new::RefineCenters(Index::KmeansArgs<float> &args) {
+    float ComponentInitSPTAG_BKT::RefineCenters(Index::KmeansArgs<float> &args) {
         //std::cout << "RefineCenters" << std::endl;
 //        for(int i = 0; i < args._DK; i ++)
 //            std::cout << args.clusterIdx[i] << std::endl;
@@ -2880,9 +2563,9 @@ namespace weavess {
         return diff;
     }
 
-    int ComponentInitSPTAG_BKT_new::KmeansClustering(std::vector<int> &indices, const int first,
-                                                     const int last, Index::KmeansArgs<float> &args,
-                                                     int samples) {
+    int ComponentInitSPTAG_BKT::KmeansClustering(std::vector<int> &indices, const int first,
+                                                 const int last, Index::KmeansArgs<float> &args,
+                                                 int samples) {
         const float MaxDist = (std::numeric_limits<float>::max)();
 
         //std::cout << "KmeansClustering" << std::endl;
@@ -2933,7 +2616,7 @@ namespace weavess {
         return numClusters;
     }
 
-    void ComponentInitSPTAG_BKT_new::BuildTrees() {
+    void ComponentInitSPTAG_BKT::BuildTrees() {
         struct BKTStackItem {
             int bkt_index, first, last;
 
@@ -3005,13 +2688,13 @@ namespace weavess {
         }
     }
 
-    bool ComponentInitSPTAG_BKT_new::Compare(const Index::SimpleNeighbor &lhs, const Index::SimpleNeighbor &rhs) {
+    bool ComponentInitSPTAG_BKT::Compare(const Index::SimpleNeighbor &lhs, const Index::SimpleNeighbor &rhs) {
         return ((lhs.distance < rhs.distance) || ((lhs.distance == rhs.distance) && (lhs.id < rhs.id)));
     }
 
-    void ComponentInitSPTAG_BKT_new::PartitionByTptree(std::vector<int> &indices, const int first,
-                                                       const int last,
-                                                       std::vector<std::pair<int, int>> &leaves) {
+    void ComponentInitSPTAG_BKT::PartitionByTptree(std::vector<int> &indices, const int first,
+                                                   const int last,
+                                                   std::vector<std::pair<int, int>> &leaves) {
         if (last - first <= index->m_iTPTLeafSize) {
             leaves.emplace_back(first, last);
         } else {
@@ -3043,7 +2726,7 @@ namespace weavess {
                     Variance[k].distance += dist * dist;
                 }
             }
-            std::sort(Variance.begin(), Variance.end(), ComponentInitSPTAG_BKT_new::Compare);
+            std::sort(Variance.begin(), Variance.end(), ComponentInitSPTAG_BKT::Compare);
             std::vector<int> indexs(index->m_numTopDimensionTPTSplit);
             std::vector<float> weight(index->m_numTopDimensionTPTSplit), bestweight(index->m_numTopDimensionTPTSplit);
             float bestvariance = Variance[index->getBaseDim() - 1].distance;
@@ -3121,7 +2804,7 @@ namespace weavess {
         }
     }
 
-    void ComponentInitSPTAG_BKT_new::AddNeighbor(int idx, float dist, int origin) {
+    void ComponentInitSPTAG_BKT::AddNeighbor(int idx, float dist, int origin) {
         int size = index->m_iNeighborhoodSize - 1;
 
         if (dist < index->getFinalGraph()[origin][size].distance ||
@@ -3144,7 +2827,7 @@ namespace weavess {
         }
     }
 
-    void ComponentInitSPTAG_BKT_new::BuildGraph() {
+    void ComponentInitSPTAG_BKT::BuildGraph() {
         // 初始化索引尺寸
         index->m_iNeighborhoodSize = index->m_iNeighborhoodSize * index->m_iNeighborhoodScale;
 
@@ -3212,551 +2895,6 @@ namespace weavess {
         auto t3 = std::chrono::high_resolution_clock::now();
         std::cout << "Process TPTree time (s): " << std::chrono::duration_cast<std::chrono::seconds>(t3 - t2).count()
                   << std::endl;
-    }
-
-
-    // SPTAG_BKT
-    void ComponentInitSPTAG_BKT::InitInner() {
-        SetConfigs();
-
-        BuildTrees();
-
-        BuildGraph();
-
-        for (int i = 0; i < 10; i++) {
-            std::cout << "len : " << index->getFinalGraph()[i].size() << std::endl;
-            for (int j = 0; j < index->getFinalGraph()[i].size(); j++) {
-                std::cout << index->getFinalGraph()[i][j].id << "|" << index->getFinalGraph()[i][j].distance << " ";
-            }
-            std::cout << std::endl;
-        }
-    }
-
-    void ComponentInitSPTAG_BKT::SetConfigs() {
-        index->numOfThreads = index->getParam().get<unsigned>("numOfThreads");
-
-        index->m_iTreeNumber = index->getParam().get<unsigned>("BKTNumber");
-
-        index->m_iNeighborhoodSize = index->getParam().get<unsigned>("NeighborhoodSize");
-
-        index->m_iNeighborhoodScale = index->getParam().get<unsigned>("GraphNeighborhoodScale");
-
-        index->m_iCEF = index->getParam().get<unsigned>("CEF");
-    }
-
-    void ComponentInitSPTAG_BKT::BuildTrees() {
-        struct BKTStackItem {
-            unsigned index, first, last;
-
-            BKTStackItem(unsigned index_, unsigned first_, unsigned last_) : index(index_), first(first_),
-                                                                             last(last_) {}
-        };
-        std::stack<BKTStackItem> ss;
-
-        std::vector<unsigned> localindices;
-        localindices.resize(index->getBaseLen());
-        for (unsigned i = 0; i < localindices.size(); i++) localindices[i] = i;
-
-        Index::KmeansArgs<float> args(index->m_iBKTKmeansK, index->getBaseDim(), localindices.size(),
-                                      index->numOfThreads);
-
-        index->m_pSampleCenterMap.clear();
-
-        unsigned m_iBKTLeafSize = 8;
-        // 构建 m_iTreeNumber 棵 BKT
-        for (int i = 0; i < index->m_iTreeNumber; i++) {
-            std::random_shuffle(localindices.begin(), localindices.end());
-
-            index->m_pTreeStart.push_back(index->m_pBKTreeRoots.size());
-            index->m_pBKTreeRoots.emplace_back(localindices.size());
-            std::cout << "Start to build BKTree : " << i + 1 << std::endl;
-
-            // 分治构建 BKT
-            ss.push(BKTStackItem(index->m_pTreeStart[i], 0, localindices.size()));
-            while (!ss.empty()) {
-                BKTStackItem item = ss.top();
-                ss.pop();
-                unsigned newBKTid = (unsigned) index->m_pBKTreeRoots.size();
-                index->m_pBKTreeRoots[item.index].childStart = newBKTid;
-
-                // 小于叶子结点个数
-                if (item.last - item.first <= m_iBKTLeafSize) {
-                    for (unsigned j = item.first; j < item.last; j++) {
-                        unsigned cid = localindices[j];
-                        index->m_pBKTreeRoots.emplace_back(cid);
-                    }
-                } else { // clustering the data into BKTKmeansK clusters
-                    int numClusters = KmeansClustering(localindices, item.first, item.last, args, index->m_iSamples);
-                    //std::cout << "wtf" << std::endl;
-                    if (numClusters <= 1) {
-                        //std::cout << "wtf" << std::endl;
-                        unsigned end = std::min(item.last + 1, (unsigned) localindices.size());
-                        std::sort(localindices.begin() + item.first, localindices.begin() + end);
-                        index->m_pBKTreeRoots[item.index].centerid = localindices[item.first];
-                        index->m_pBKTreeRoots[item.index].childStart = -index->m_pBKTreeRoots[item.index].childStart;
-                        for (unsigned j = item.first + 1; j < end; j++) {
-                            unsigned cid = localindices[j];
-                            index->m_pBKTreeRoots.emplace_back(cid);
-                            index->m_pSampleCenterMap[cid] = index->m_pBKTreeRoots[item.index].centerid;
-                        }
-                        index->m_pSampleCenterMap[-1 - index->m_pBKTreeRoots[item.index].centerid] = item.index;
-                    } else {
-                        //std::cout << "wtf" << std::endl;
-                        for (int k = 0; k < index->m_iBKTKmeansK; k++) {
-                            //std::cout << k << std::endl;
-                            if (args.counts[k] == 0) continue;
-                            unsigned cid = localindices[item.first + args.counts[k] - 1];
-                            index->m_pBKTreeRoots.emplace_back(cid);
-                            if (args.counts[k] > 1)
-                                ss.push(BKTStackItem(newBKTid++, item.first, item.first + args.counts[k] - 1));
-                            item.first += args.counts[k];
-                        }
-                    }
-                }
-                //std::cout << "wtf" << std::endl;
-                index->m_pBKTreeRoots[item.index].childEnd = (unsigned) index->m_pBKTreeRoots.size();
-                //std::cout << "wtf" << std::endl;
-            }
-            index->m_pBKTreeRoots.emplace_back(-1);
-            std::cout << i + 1 << " BKTree built, " << index->m_pBKTreeRoots.size() - index->m_pTreeStart[i] << " "
-                      << localindices.size() << std::endl;
-        }
-    }
-
-    void ComponentInitSPTAG_BKT::BuildGraph() {
-        index->m_iNeighborhoodSize = index->m_iNeighborhoodSize * index->m_iNeighborhoodScale;       // L
-
-        index->getFinalGraph().resize(index->getBaseLen());
-
-        float MaxDist = (std::numeric_limits<float>::max)();
-        unsigned MaxId = (std::numeric_limits<unsigned>::max)();
-
-        for (unsigned i = 0; i < index->getBaseLen(); i++) {
-            index->getFinalGraph()[i].resize(index->m_iNeighborhoodSize);
-            for (unsigned j = 0; j < index->m_iNeighborhoodSize; j++) {
-                Index::SimpleNeighbor neighbor(MaxId, MaxDist);
-                index->getFinalGraph()[i][j] = neighbor;
-            }
-        }
-
-        BuildInitKNNGraph();
-    }
-
-    void ComponentInitSPTAG_BKT::BuildInitKNNGraph() {
-        std::vector<std::vector<unsigned>> TptreeDataIndices(index->m_iTPTNumber,
-                                                             std::vector<unsigned>(index->getBaseLen()));
-        std::vector<std::vector<std::pair<unsigned, unsigned>>> TptreeLeafNodes(index->m_iTPTNumber,
-                                                                                std::vector<std::pair<unsigned, unsigned>>());
-
-#pragma omp parallel for schedule(dynamic)
-        for (int i = 0; i < index->m_iTPTNumber; i++) {
-            // 非多线程注意注释
-            //Sleep(i * 100);
-            std::srand(clock());
-            for (unsigned j = 0; j < index->getBaseLen(); j++) TptreeDataIndices[i][j] = j;
-            std::random_shuffle(TptreeDataIndices[i].begin(), TptreeDataIndices[i].end());
-            PartitionByTptree(TptreeDataIndices[i], 0, index->getBaseLen() - 1, TptreeLeafNodes[i]);
-            std::cout << "Finish Getting Leaves for Tree : " << i << std::endl;
-        }
-        std::cout << "Parallel TpTree Partition done" << std::endl;
-
-        for (int i = 0; i < index->m_iTPTNumber; i++) {
-#pragma omp parallel for schedule(dynamic)
-            for (unsigned j = 0; j < (unsigned) TptreeLeafNodes[i].size(); j++) {
-                unsigned start_index = TptreeLeafNodes[i][j].first;
-                unsigned end_index = TptreeLeafNodes[i][j].second;
-                if ((j * 5) % TptreeLeafNodes[i].size() == 0)
-                    std::cout << "Processing Tree : " << i
-                              << static_cast<int>(j * 1.0 / TptreeLeafNodes[i].size() * 100) << std::endl;
-
-                for (unsigned x = start_index; x < end_index; x++) {
-                    for (unsigned y = x + 1; y <= end_index; y++) {
-                        unsigned p1 = TptreeDataIndices[i][x];
-                        unsigned p2 = TptreeDataIndices[i][y];
-                        float dist = index->getDist()->compare(index->getBaseData() + index->getBaseDim() * p1,
-                                                               index->getBaseData() + index->getBaseDim() * p2,
-                                                               index->getBaseDim());
-
-                        AddNeighbor(p2, dist, p1, index->m_iNeighborhoodSize);
-                        AddNeighbor(p1, dist, p2, index->m_iNeighborhoodSize);
-                    }
-                }
-            }
-            TptreeDataIndices[i].clear();
-            TptreeLeafNodes[i].clear();
-        }
-        TptreeDataIndices.clear();
-        TptreeLeafNodes.clear();
-    }
-
-    int
-    ComponentInitSPTAG_BKT::KmeansClustering(std::vector<unsigned> &indices, const unsigned first, const unsigned last,
-                                             Index::KmeansArgs<float> &args, int samples) {
-
-//        const float MaxDist = (std::numeric_limits<float>::max)();
-//
-//        // 随机选取 _DK 个向量作为簇中心
-//        InitCenters(indices, first, last, args, samples, 3);
-//
-//        unsigned batchEnd = std::min(first + samples, last);
-//        float currDiff, currDist, minClusterDist = MaxDist;
-//        int noImprovement = 0;
-//        for (int iter = 0; iter < 100; iter++) {
-//            std::memcpy(args.centers, args.newTCenters, sizeof(float) * args._K * args._D);
-//            std::random_shuffle(indices.begin() + first, indices.begin() + last);
-//
-//            args.ClearCenters();
-//            args.ClearCounts();
-//            args.ClearDists(-MaxDist);
-//            currDist = KmeansAssign(indices, first, batchEnd, args, true, 1 / (100.0f * (batchEnd - first)));
-////            std::cout << "2" << std::endl;
-////            for(int i = 0; i < args._DK; i ++) {
-////                std::cout << args.clusterIdx[i] << " ";
-////            }
-////            std::cout << std::endl;
-//            std::memcpy(args.counts, args.newCounts, sizeof(unsigned) * args._K);
-//
-//            if (currDist < minClusterDist) {
-//                noImprovement = 0;
-//                minClusterDist = currDist;
-//            } else {
-//                noImprovement++;
-//            }
-//            currDiff = RefineCenters(args);
-//            if (currDiff < 1e-3 || noImprovement >= 5) break;
-//        }
-//
-//        //std::cout << "wt2f" << std::endl;
-//
-//        args.ClearCounts();
-//        args.ClearDists(MaxDist);
-//        currDist = KmeansAssign(indices, first, last, args, false, 0);
-//        std::memcpy(args.counts, args.newCounts, sizeof(unsigned) * args._K);
-//
-//        //std::cout << "wt2f" << std::endl;
-//
-//        int numClusters = 0;
-//        for (int i = 0; i < args._K; i++) if (args.counts[i] > 0) numClusters++;
-//
-//        if (numClusters <= 1) {
-//            return numClusters;
-//        }
-//        args.Shuffle(indices, first, last);
-//        return numClusters;
-        return 0;
-    }
-
-    void
-    ComponentInitSPTAG_BKT::PartitionByTptree(std::vector<unsigned> &indices, const unsigned first, const unsigned last,
-                                              std::vector<std::pair<unsigned, unsigned>> &leaves) {
-        unsigned m_numTopDimensionTPTSplit = 5;
-
-        if (last - first <= index->m_iTPTLeafSize) {
-            leaves.emplace_back(first, last);
-        } else {
-            std::vector<float> Mean(index->getBaseDim(), 0);
-
-            int iIteration = 100;
-            unsigned end = std::min(first + index->m_iSamples, last);
-            unsigned count = end - first + 1;
-            // calculate the mean of each dimension
-            for (unsigned j = first; j <= end; j++) {
-                const float *v = index->getBaseData() + indices[j] * index->getBaseDim();
-                for (unsigned k = 0; k < index->getBaseDim(); k++) {
-                    Mean[k] += v[k];
-                }
-            }
-            // 计算每个维度平均值
-            for (unsigned k = 0; k < index->getBaseDim(); k++) {
-                Mean[k] /= count;
-            }
-            std::vector<Index::SimpleNeighbor> Variance;
-            Variance.reserve(index->getBaseDim());
-            for (unsigned j = 0; j < index->getBaseDim(); j++) {
-                Variance.emplace_back(j, 0.0f);
-            }
-            // calculate the variance of each dimension
-            for (unsigned j = first; j <= end; j++) {
-                const float *v = index->getBaseData() + index->getBaseDim() * indices[j];
-                for (unsigned k = 0; k < index->getBaseDim(); k++) {
-                    float dist = v[k] - Mean[k];
-                    Variance[k].distance += dist * dist;
-                }
-            }
-            std::sort(Variance.begin(), Variance.end(), ComponentInitSPTAG_BKT::Compare);
-            std::vector<unsigned> indexs(m_numTopDimensionTPTSplit);
-            std::vector<float> weight(m_numTopDimensionTPTSplit), bestweight(m_numTopDimensionTPTSplit);
-            float bestvariance = Variance[index->getBaseDim() - 1].distance;
-            // 选出离散程度更大的 m_numTopDimensionTPTSplit 个维度
-            for (int i = 0; i < m_numTopDimensionTPTSplit; i++) {
-                indexs[i] = Variance[index->getBaseDim() - 1 - i].id;
-                bestweight[i] = 0;
-            }
-            bestweight[0] = 1;
-            float bestmean = Mean[indexs[0]];
-
-            std::vector<float> Val(count);
-            for (int i = 0; i < iIteration; i++) {
-                float sumweight = 0;
-                for (int j = 0; j < m_numTopDimensionTPTSplit; j++) {
-                    weight[j] = float(std::rand() % 10000) / 5000.0f - 1.0f;
-                    sumweight += weight[j] * weight[j];
-                }
-                sumweight = sqrt(sumweight);
-                for (int j = 0; j < m_numTopDimensionTPTSplit; j++) {
-                    weight[j] /= sumweight;
-                }
-                float mean = 0;
-                for (unsigned j = 0; j < count; j++) {
-                    Val[j] = 0;
-                    const float *v = index->getBaseData() + index->getBaseDim() * indices[first + j];
-                    for (int k = 0; k < m_numTopDimensionTPTSplit; k++) {
-                        Val[j] += weight[k] * v[indexs[k]];
-                    }
-                    mean += Val[j];
-                }
-                mean /= count;
-                float var = 0;
-                for (unsigned j = 0; j < count; j++) {
-                    float dist = Val[j] - mean;
-                    var += dist * dist;
-                }
-                if (var > bestvariance) {
-                    bestvariance = var;
-                    bestmean = mean;
-                    for (int j = 0; j < m_numTopDimensionTPTSplit; j++) {
-                        bestweight[j] = weight[j];
-                    }
-                }
-            }
-            unsigned i = first;
-            unsigned j = last;
-            // decide which child one point belongs
-            while (i <= j) {
-                float val = 0;
-                const float *v = index->getBaseData() + index->getBaseDim() * indices[i];
-                for (int k = 0; k < m_numTopDimensionTPTSplit; k++) {
-                    val += bestweight[k] * v[indexs[k]];
-                }
-                if (val < bestmean) {
-                    i++;
-                } else {
-                    std::swap(indices[i], indices[j]);
-                    j--;
-                }
-            }
-            // if all the points in the node are equal,equally split the node into 2
-            if ((i == first) || (i == last + 1)) {
-                i = (first + last + 1) / 2;
-            }
-
-            Mean.clear();
-            Variance.clear();
-            Val.clear();
-            indexs.clear();
-            weight.clear();
-            bestweight.clear();
-
-            PartitionByTptree(indices, first, i - 1, leaves);
-            PartitionByTptree(indices, i, last, leaves);
-        }
-    }
-
-    inline bool ComponentInitSPTAG_BKT::Compare(const Index::SimpleNeighbor &lhs, const Index::SimpleNeighbor &rhs) {
-        return ((lhs.distance < rhs.distance) || ((lhs.distance == rhs.distance) && (lhs.id < rhs.id)));
-    }
-
-    void ComponentInitSPTAG_BKT::AddNeighbor(unsigned idx, float dist, unsigned origin, unsigned size) {
-        size--;
-        if (dist < index->getFinalGraph()[origin][size].distance ||
-            (dist == index->getFinalGraph()[origin][size].distance && idx < index->getFinalGraph()[origin][size].id)) {
-            unsigned nb;
-
-            for (nb = 0; nb <= size && index->getFinalGraph()[origin][nb].id != idx; nb++);
-
-            if (nb > size) {
-                nb = size;
-                while (nb > 0 && (dist < index->getFinalGraph()[origin][nb - 1].distance ||
-                                  (dist == index->getFinalGraph()[origin][nb - 1].distance &&
-                                   idx < index->getFinalGraph()[origin][nb - 1].id))) {
-                    index->getFinalGraph()[origin][nb] = index->getFinalGraph()[origin][nb - 1];
-                    nb--;
-                }
-                index->getFinalGraph()[origin][nb].distance = dist;
-                index->getFinalGraph()[origin][nb].id = idx;
-            }
-        }
-    }
-
-    float ComponentInitSPTAG_BKT::RefineCenters(Index::KmeansArgs<float> &args) {
-        int maxcluster = -1;
-        unsigned maxCount = 0;
-        for (int k = 0; k < args._DK; k++) {
-            unsigned test = -1;
-            //std::cout << "k : " << k << " " << args._DK << " " << args.clusterIdx[k] << " " << test << std::endl;
-
-            if (args.clusterIdx[k] < 0 || args.clusterIdx[k] > index->getBaseLen()) continue;
-            float dist = index->getDist()->compare(index->getBaseData() + index->getBaseDim() * args.clusterIdx[k],
-                                                   args.centers + k * args._D,
-                                                   args._D);
-            if (args.counts[k] > maxCount && args.newCounts[k] > 0 && dist > 1e-6) {
-                maxcluster = k;
-                maxCount = args.counts[k];
-            }
-        }
-
-        if (maxcluster != -1 && (args.clusterIdx[maxcluster] < 0 || args.clusterIdx[maxcluster] >= index->getBaseLen()))
-            std::cout << "maxcluster:" << maxcluster << "(" << args.newCounts[maxcluster] << ")" << " Error dist:"
-                      << args.clusterDist[maxcluster] << std::endl;
-
-        //std::cout << "11" << std::endl;
-        float diff = 0;
-        for (int k = 0; k < args._DK; k++) {
-            float *TCenter = args.newTCenters + k * args._D;
-            if (args.counts[k] == 0) {
-                //std::cout << "wtf7" << std::endl;
-                if (maxcluster != -1) {
-                    //int nextid = Utils::rand_int(last, first);
-                    //while (args.label[nextid] != maxcluster) nextid = Utils::rand_int(last, first);
-                    int nextid = args.clusterIdx[maxcluster];
-                    std::memcpy(TCenter, index->getBaseData() + index->getBaseDim() * nextid, sizeof(float) * args._D);
-                } else {
-                    std::memcpy(TCenter, args.centers + k * args._D, sizeof(float) * args._D);
-                }
-                //std::cout << "wtf7" << std::endl;
-            } else {
-                //std::cout << "wtf8" << std::endl;
-                float *currCenters = args.newCenters + k * args._D;
-                for (unsigned j = 0; j < args._D; j++) currCenters[j] /= args.counts[k];
-                //std::cout << "wtf8" << std::endl;
-                for (unsigned j = 0; j < args._D; j++) TCenter[j] = (float) (currCenters[j]);
-                //std::cout << "wtf8" << std::endl;
-            }
-            diff += index->getDist()->compare(args.centers + k * args._D, TCenter, args._D);
-        }
-        return diff;
-    }
-
-    // 返回所有结点与当前所选簇中心的距离之和
-    inline float ComponentInitSPTAG_BKT::KmeansAssign(std::vector<unsigned> &indices,
-                                                      const unsigned first, const unsigned last,
-                                                      Index::KmeansArgs<float> &args,
-                                                      const bool updateCenters, float lambda) {
-//        const float MaxDist = (std::numeric_limits<float>::max)();
-//        float currDist = 0;
-//        unsigned subsize = (last - first - 1) / args._T + 1;
-//
-//        //并行已删除
-//        for (int tid = 0; tid < args._T; tid++) {
-//            unsigned istart = first + tid * subsize;
-//            unsigned iend = std::min(first + (tid + 1) * subsize, last);
-//            unsigned *inewCounts = args.newCounts + tid * args._K;
-//            float *inewCenters = args.newCenters + tid * args._K * args._D;
-//            unsigned *iclusterIdx = args.clusterIdx + tid * args._K;
-//            float *iclusterDist = args.clusterDist + tid * args._K;
-//            float idist = 0;
-//            for (unsigned i = istart; i < iend; i++) {
-//                int clusterid = 0;
-//                float smallestDist = MaxDist;
-//                // 寻找最小距离簇中心
-//                for (int k = 0; k < args._DK; k++) {
-//                    float dist = index->getDist()->compare(index->getBaseData() + index->getBaseDim() * indices[i],
-//                                                           args.centers + k * args._D,
-//                                                           args._D) + lambda * args.counts[k];
-//                    if (dist > -MaxDist && dist < smallestDist) {
-//                        clusterid = k;
-//                        smallestDist = dist;
-//                    }
-//                }
-//                // 标记当前结点所属簇
-//                args.label[i] = clusterid;
-//                inewCounts[clusterid]++;
-//                idist += smallestDist;
-//                if (updateCenters) {
-//                    // 待分类结点
-//                    const float *v = index->getBaseData() + index->getBaseDim() * indices[i];
-//                    // 结点所属簇中心
-//                    float *center = inewCenters + clusterid * args._D;
-//                    for (unsigned j = 0; j < args._D; j++) center[j] += v[j];
-//                    if (smallestDist > iclusterDist[clusterid]) {
-//                        iclusterDist[clusterid] = smallestDist;
-//                        iclusterIdx[clusterid] = indices[i];
-//                    }
-//                } else {
-//                    if (smallestDist <= iclusterDist[clusterid]) {
-//                        iclusterDist[clusterid] = smallestDist;
-//                        iclusterIdx[clusterid] = indices[i];
-//                    }
-//                }
-//            }
-//            currDist += idist;
-//        }
-
-//        std::cout << "4" << std::endl;
-//        for(int i = 0; i < args._DK; i ++) {
-//            std::cout << args.clusterIdx[i] << " ";
-//        }
-//        std::cout << std::endl;
-
-        // 基本没用
-        for (int i = 1; i < args._T; i++) {
-            for (int k = 0; k < args._DK; k++)
-                args.newCounts[k] += args.newCounts[i * args._K + k];
-        }
-
-        if (updateCenters) {
-            for (int i = 1; i < args._T; i++) {
-                float *currCenter = args.newCenters + i * args._K * args._D;
-                for (size_t j = 0; j < ((size_t) args._DK) * args._D; j++) args.newCenters[j] += currCenter[j];
-
-                for (int k = 0; k < args._DK; k++) {
-                    if (args.clusterIdx[i * args._K + k] != -1 &&
-                        args.clusterDist[i * args._K + k] > args.clusterDist[k]) {
-                        args.clusterDist[k] = args.clusterDist[i * args._K + k];
-                        args.clusterIdx[k] = args.clusterIdx[i * args._K + k];
-                    }
-                }
-            }
-        } else {
-            for (int i = 1; i < args._T; i++) {
-                for (int k = 0; k < args._DK; k++) {
-                    if (args.clusterIdx[i * args._K + k] != -1 &&
-                        args.clusterDist[i * args._K + k] <= args.clusterDist[k]) {
-                        args.clusterDist[k] = args.clusterDist[i * args._K + k];
-                        args.clusterIdx[k] = args.clusterIdx[i * args._K + k];
-                    }
-                }
-            }
-        }
-        //return currDist;
-        return 0;
-    }
-
-    unsigned ComponentInitSPTAG_BKT::rand(unsigned high, unsigned low) {
-        return low + (unsigned) (float(high - low) * (std::rand() / (RAND_MAX + 1.0)));
-    }
-
-    inline void
-    ComponentInitSPTAG_BKT::InitCenters(std::vector<unsigned> &indices, const unsigned first, const unsigned last,
-                                        Index::KmeansArgs<float> &args, int samples, int tryIters) {
-        const float MaxDist = (std::numeric_limits<float>::max)();
-        unsigned batchEnd = std::min(first + samples, last);
-        float currDist, minClusterDist = MaxDist;
-        for (int numKmeans = 0; numKmeans < tryIters; numKmeans++) {
-            for (int k = 0; k < args._DK; k++) {
-                unsigned randid = rand(last, first);
-                std::memcpy(args.centers + k * args._D, index->getBaseData() + index->getBaseDim() * indices[randid],
-                            sizeof(float) * args._D);
-            }
-            args.ClearCounts();
-            args.ClearDists(MaxDist);
-            currDist = KmeansAssign(indices, first, batchEnd, args, false, 0);
-            if (currDist < minClusterDist) {
-                minClusterDist = currDist;
-                memcpy(args.newTCenters, args.centers, sizeof(float) * args._K * args._D);
-                memcpy(args.counts, args.newCounts, sizeof(unsigned) * args._K);
-            }
-        }
     }
 
 
