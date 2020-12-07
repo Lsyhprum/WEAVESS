@@ -99,7 +99,7 @@ namespace weavess {
 
     void ComponentConnNSGDFS::get_neighbors(const float *query, std::vector<Index::Neighbor> &retset,
                                             std::vector<Index::Neighbor> &fullset) {
-        unsigned L = index->getParam().get<unsigned>("L_nsg");
+        unsigned L = index->getParam().get<unsigned>("L_refine");
 
         retset.resize(L + 1);
         std::vector<unsigned> init_ids(L);
