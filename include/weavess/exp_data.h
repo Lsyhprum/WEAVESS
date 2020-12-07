@@ -124,23 +124,23 @@ void NSG_PARA(std::string dataset, weavess::Parameters &parameters) {
     }else if (dataset == "mnist") {
         K = 25, L = 50, Iter = 8, S = 10, R = 100, L_refine = 100, R_refine = 50, C = 600;   // nsg
     }else if (dataset == "c_1") {
-        // K = 25, L = 50, Iter = 8, S = 10, R = 100, L_refine = 100, R_refine = 50, C = 600;   // nsg
+        K = 300, L = 310, Iter = 8, S = 20, R = 200, L_refine = 200, R_refine = 80, C = 400;   // nsg
     }else if (dataset == "c_10") {
-        // K = 25, L = 50, Iter = 8, S = 10, R = 100, L_refine = 100, R_refine = 50, C = 600;   // nsg
+        K = 200, L = 200, Iter = 8, S = 20, R = 100, L_refine = 100, R_refine = 80, C = 400;   // nsg
     }else if (dataset == "c_100") {
-        // K = 25, L = 50, Iter = 8, S = 10, R = 100, L_refine = 100, R_refine = 50, C = 600;   // nsg
+        K = 400, L = 410, Iter = 8, S = 20, R = 100, L_refine = 400, R_refine = 20, C = 400;   // nsg
     }else if (dataset == "d_8") {
-        // K = 25, L = 50, Iter = 8, S = 10, R = 100, L_refine = 100, R_refine = 50, C = 600;   // nsg
+        K = 100, L = 100, Iter = 8, S = 10, R = 100, L_refine = 150, R_refine = 20, C = 600;   // nsg
     }else if (dataset == "d_128") {
-        // K = 25, L = 50, Iter = 8, S = 10, R = 100, L_refine = 100, R_refine = 50, C = 600;   // nsg
+        K = 200, L = 210, Iter = 8, S = 10, R = 300, L_refine = 150, R_refine = 20, C = 400;   // nsg
     }else if (dataset == "n_10000") {
-        // K = 25, L = 50, Iter = 8, S = 10, R = 100, L_refine = 100, R_refine = 50, C = 600;   // nsg
+        K = 300, L = 300, Iter = 7, S = 15, R = 300, L_refine = 50, R_refine = 20, C = 500;   // nsg
     }else if (dataset == "n_1000000") {
-        // K = 25, L = 50, Iter = 8, S = 10, R = 100, L_refine = 100, R_refine = 50, C = 600;   // nsg
+        K = 200, L = 200, Iter = 12, S = 20, R = 100, L_refine = 100, R_refine = 80, C = 400;   // nsg
     }else if (dataset == "s_1") {
-        // K = 25, L = 50, Iter = 8, S = 10, R = 100, L_refine = 100, R_refine = 50, C = 600;   // nsg
+        K = 200, L = 220, Iter = 5, S = 25, R = 300, L_refine = 300, R_refine = 20, C = 500;   // nsg
     }else if (dataset == "s_10") {
-        // K = 25, L = 50, Iter = 8, S = 10, R = 100, L_refine = 100, R_refine = 50, C = 600;   // nsg
+        K = 300, L = 300, Iter = 9, S = 25, R = 300, L_refine = 200, R_refine = 80, C = 400;   // nsg
     }else {
         std::cout << "input dataset error!\n";
         exit(-1);
@@ -263,6 +263,55 @@ void DPG_PARA(std::string dataset, weavess::Parameters &parameters) {
     parameters.set<unsigned>("R", R);
 }
 
+void VAMANA_PARA(std::string dataset, weavess::Parameters &parameters) {
+    unsigned L, R;
+    if (dataset == "siftsmall") {
+        L = 100, R = 25;    // siftsmall
+    }else if (dataset == "sift1M") {
+        L = 70, R = 50;    // sift1M
+    }else if (dataset == "gist") {
+        L = 60, R = 50;    // gist
+    }else if (dataset == "glove-100") {
+        L = 120, R = 110;    // glove
+    }else if (dataset == "audio") {
+        L = 70, R = 50;    // audio
+    }else if (dataset == "crawl") {
+        L = 80, R = 50;    // crawl
+    }else if (dataset == "msong") {
+        L = 40, R = 30;    // msong
+    }else if (dataset == "uqv") {
+        L = 60, R = 30;    // uqv
+    }else if (dataset == "enron") {
+        L = 140, R = 110;    // enron
+    }else if (dataset == "mnist") {
+        L = 100, R = 25;    // mnist
+    }else if (dataset == "c_1") {
+        L = 140, R = 110;    // c_1
+    }else if (dataset == "c_10") {
+        L = 90, R = 70;    // c_10
+    }else if (dataset == "c_100") {
+        L = 60, R = 50;    // c_100
+    }else if (dataset == "d_8") {
+        L = 130, R = 110;    // d_8
+    }else if (dataset == "d_128") {
+        L = 80, R = 70;    // d_128
+    }else if (dataset == "n_10000") {
+        L = 60, R = 50;    // n_10000
+    }else if (dataset == "n_1000000") {
+        L = 80, R = 70;    // n_1000000
+    }else if (dataset == "s_1") {
+        L = 90, R = 70;    // s_1
+    }else if (dataset == "s_10") {
+        L = 120, R = 90;    // s_10
+    }else {
+        std::cout << "dataset error!\n";
+        exit(-1);
+    }
+    parameters.set<unsigned>("L", R);
+    parameters.set<unsigned>("L_refine", L);
+    parameters.set<unsigned>("R_refine", R);
+}
+
 void set_data_path(std::string dataset, weavess::Parameters &parameters) {
     // dataset root path
     std::string dataset_root = parameters.get<std::string>("dataset_root");
@@ -376,6 +425,9 @@ void set_data_path(std::string dataset, weavess::Parameters &parameters) {
 void set_para(std::string alg, std::string dataset, weavess::Parameters &parameters) {
     
     set_data_path(dataset, parameters);
+    if (parameters.get<std::string>("exc_type") == "search") {
+        return;
+    }
 
     if (alg == "fanng") {
         FANNG_PARA(dataset, parameters);
@@ -387,6 +439,8 @@ void set_para(std::string alg, std::string dataset, weavess::Parameters &paramet
         SSG_PARA(dataset, parameters);
     }else if (alg == "dpg") {
         DPG_PARA(dataset, parameters);
+    }else if (alg == "vamana") {
+        VAMANA_PARA(dataset, parameters);
     }
     else {
         std::cout << "algorithm input error!\n";

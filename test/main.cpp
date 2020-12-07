@@ -12,20 +12,21 @@ void KGraph(weavess::Parameters &parameters) {
     std::string graph_file = parameters.get<std::string>("graph_file");
     auto *builder = new weavess::IndexBuilder(num_threads);
 
-    // build
-    builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
-            -> init(weavess::TYPE::INIT_RANDOM, false);
-    std::cout << "Init cost: " << builder->GetBuildTime().count() << std::endl;
-    // 注意正式实验要关闭NN-Descent迭代图质量信息输出 index.h文件中
-    builder -> refine(weavess::TYPE::REFINE_NN_DESCENT, false)
-            -> save_graph(weavess::TYPE::INDEX_KGRAPH, &graph_file[0]);
-    std::cout << "Build cost: " << builder->GetBuildTime().count() << std::endl;
-    
-    // search
-    builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
-            -> load_graph(weavess::TYPE::INDEX_KGRAPH, &graph_file[0])
-            -> search(weavess::TYPE::SEARCH_ENTRY_RAND, weavess::TYPE::ROUTER_GREEDY, true);
-
+    if (parameters.get<std::string>("exc_type") == "build") {   // build
+        builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
+                -> init(weavess::TYPE::INIT_RANDOM, false);
+        std::cout << "Init cost: " << builder->GetBuildTime().count() << std::endl;
+        // 注意正式实验要关闭NN-Descent迭代图质量信息输出 index.h文件中
+        builder -> refine(weavess::TYPE::REFINE_NN_DESCENT, false)
+                -> save_graph(weavess::TYPE::INDEX_KGRAPH, &graph_file[0]);
+        std::cout << "Build cost: " << builder->GetBuildTime().count() << std::endl;
+    }else if (parameters.get<std::string>("exc_type") == "search") {    // search
+        builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
+                -> load_graph(weavess::TYPE::INDEX_KGRAPH, &graph_file[0])
+                -> search(weavess::TYPE::SEARCH_ENTRY_RAND, weavess::TYPE::ROUTER_GREEDY, true);
+    }else {
+        std::cout << "exc_type input error!" << std::endl;
+    }
 }
 
 void FANNG(weavess::Parameters &parameters) {
@@ -36,20 +37,21 @@ void FANNG(weavess::Parameters &parameters) {
     std::string ground_path = parameters.get<std::string>("ground_path");
     std::string graph_file = parameters.get<std::string>("graph_file");
     auto *builder = new weavess::IndexBuilder(num_threads);
-    
-    // build
-    builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
-            -> init(weavess::TYPE::INIT_FANNG);
-    std::cout << "Init cost: " << builder->GetBuildTime().count() << std::endl;
-    builder -> refine(weavess::TYPE::REFINE_FANNG, false)
-            -> save_graph(weavess::TYPE::INDEX_FANNG, &graph_file[0]);
-    std::cout << "Build cost: " << builder->GetBuildTime().count() << std::endl;
 
-    // seach
-    builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
-            -> load_graph(weavess::TYPE::INDEX_FANNG, &graph_file[0])
-            -> search(weavess::TYPE::SEARCH_ENTRY_RAND, weavess::TYPE::ROUTER_BACKTRACK, true);
-
+    if (parameters.get<std::string>("exc_type") == "build") {   // build
+        builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
+                -> init(weavess::TYPE::INIT_FANNG);
+        std::cout << "Init cost: " << builder->GetBuildTime().count() << std::endl;
+        builder -> refine(weavess::TYPE::REFINE_FANNG, false)
+                -> save_graph(weavess::TYPE::INDEX_FANNG, &graph_file[0]);
+        std::cout << "Build cost: " << builder->GetBuildTime().count() << std::endl;
+    }else if (parameters.get<std::string>("exc_type") == "search") {    // search
+        builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
+                -> load_graph(weavess::TYPE::INDEX_FANNG, &graph_file[0])
+                -> search(weavess::TYPE::SEARCH_ENTRY_RAND, weavess::TYPE::ROUTER_BACKTRACK, true);
+    }else {
+        std::cout << "exc_type input error!" << std::endl;
+    }
 }
 
 void NSG(weavess::Parameters &parameters) {
@@ -61,20 +63,21 @@ void NSG(weavess::Parameters &parameters) {
     std::string graph_file = parameters.get<std::string>("graph_file");
     auto *builder = new weavess::IndexBuilder(num_threads);
 
-    // build
-    builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
-            -> init(weavess::INIT_RANDOM)
-            -> refine(weavess::REFINE_NN_DESCENT, false);
-    std::cout << "Init cost: " << builder->GetBuildTime().count() << std::endl;
-    builder -> refine(weavess::REFINE_NSG, false)
-            -> save_graph(weavess::TYPE::INDEX_NSG, &graph_file[0]);
-    std::cout << "Build cost: " << builder->GetBuildTime().count() << std::endl;
-
-    // search
-    builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
-            -> load_graph(weavess::TYPE::INDEX_NSG, &graph_file[0])
-            -> search(weavess::TYPE::SEARCH_ENTRY_CENTROID, weavess::TYPE::ROUTER_GREEDY, true);
-
+    if (parameters.get<std::string>("exc_type") == "build") {   // build
+        builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
+                -> init(weavess::INIT_RANDOM)
+                -> refine(weavess::REFINE_NN_DESCENT, false);
+        std::cout << "Init cost: " << builder->GetBuildTime().count() << std::endl;
+        builder -> refine(weavess::REFINE_NSG, false)
+                -> save_graph(weavess::TYPE::INDEX_NSG, &graph_file[0]);
+        std::cout << "Build cost: " << builder->GetBuildTime().count() << std::endl;
+    }else if (parameters.get<std::string>("exc_type") == "search") {    // search
+        builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
+                -> load_graph(weavess::TYPE::INDEX_NSG, &graph_file[0])
+                -> search(weavess::TYPE::SEARCH_ENTRY_CENTROID, weavess::TYPE::ROUTER_GREEDY, true);
+    }else {
+        std::cout << "exc_type input error!" << std::endl;
+    }
 }
 
 void SSG(weavess::Parameters &parameters) {
@@ -86,19 +89,21 @@ void SSG(weavess::Parameters &parameters) {
     std::string graph_file = parameters.get<std::string>("graph_file");
     auto *builder = new weavess::IndexBuilder(num_threads);
 
-    // build
-    builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
-            -> init(weavess::INIT_RANDOM)
-            -> refine(weavess::REFINE_NN_DESCENT, false);
-    std::cout << "Init cost: " << builder->GetBuildTime().count() << std::endl;
-    builder -> refine(weavess::REFINE_SSG, false)
-            -> save_graph(weavess::TYPE::INDEX_SSG, &graph_file[0]);
-    std::cout << "Build cost: " << builder->GetBuildTime().count() << std::endl;
-
-    // search
-    builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
-            -> load_graph(weavess::TYPE::INDEX_SSG, &graph_file[0])
-            -> search(weavess::SEARCH_ENTRY_SUB_CENTROID, weavess::ROUTER_GREEDY, true);
+    if (parameters.get<std::string>("exc_type") == "build") {   // build
+        builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
+                -> init(weavess::INIT_RANDOM)
+                -> refine(weavess::REFINE_NN_DESCENT, false);
+        std::cout << "Init cost: " << builder->GetBuildTime().count() << std::endl;
+        builder -> refine(weavess::REFINE_SSG, false)
+                -> save_graph(weavess::TYPE::INDEX_SSG, &graph_file[0]);
+        std::cout << "Build cost: " << builder->GetBuildTime().count() << std::endl;
+    }else if (parameters.get<std::string>("exc_type") == "search") {    // search
+        builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
+                -> load_graph(weavess::TYPE::INDEX_SSG, &graph_file[0])
+                -> search(weavess::SEARCH_ENTRY_SUB_CENTROID, weavess::ROUTER_GREEDY, true);
+    }else {
+        std::cout << "exc_type input error!" << std::endl;
+    }
 }
 
 void DPG(weavess::Parameters &parameters) {
@@ -110,39 +115,47 @@ void DPG(weavess::Parameters &parameters) {
     std::string graph_file = parameters.get<std::string>("graph_file");
     auto *builder = new weavess::IndexBuilder(num_threads);
 
-    // build
-    builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
-            -> init(weavess::INIT_RANDOM)
-            -> refine(weavess::REFINE_NN_DESCENT, false);
-    std::cout << "Init cost: " << builder->GetBuildTime().count() << std::endl;
-    builder -> refine(weavess::REFINE_DPG, false)
-            -> save_graph(weavess::TYPE::INDEX_DPG,  &graph_file[0]);
-    std::cout << "Build cost: " << builder->GetBuildTime().count() << std::endl;
-    
-    // search
-    builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
-            -> load_graph(weavess::TYPE::INDEX_DPG,  &graph_file[0])
-            -> search(weavess::TYPE::SEARCH_ENTRY_RAND, weavess::TYPE::ROUTER_GREEDY, true);
+    if (parameters.get<std::string>("exc_type") == "build") {   // build
+        builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
+                -> init(weavess::INIT_RANDOM)
+                -> refine(weavess::REFINE_NN_DESCENT, false);
+        std::cout << "Init cost: " << builder->GetBuildTime().count() << std::endl;
+        builder -> refine(weavess::REFINE_DPG, false)
+                -> save_graph(weavess::TYPE::INDEX_DPG,  &graph_file[0]);
+        std::cout << "Build cost: " << builder->GetBuildTime().count() << std::endl;
+    }else if (parameters.get<std::string>("exc_type") == "search") {    // search
+        builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
+                -> load_graph(weavess::TYPE::INDEX_DPG,  &graph_file[0])
+                -> search(weavess::TYPE::SEARCH_ENTRY_RAND, weavess::TYPE::ROUTER_GREEDY, true);
+    }else {
+        std::cout << "exc_type input error!" << std::endl;
+    }
 }
 
-void VAMANA(std::string base_path, std::string query_path, std::string ground_path) {
-    weavess::Parameters parameters;
+void VAMANA(weavess::Parameters &parameters) {
 
-    const unsigned R = 70;
-    const unsigned L = 125;
+    const unsigned num_threads = parameters.get<unsigned>("n_threads");
+    std::string base_path = parameters.get<std::string>("base_path");
+    std::string query_path = parameters.get<std::string>("query_path");
+    std::string ground_path = parameters.get<std::string>("ground_path");
+    std::string graph_file = parameters.get<std::string>("graph_file");
+    auto *builder = new weavess::IndexBuilder(num_threads);
 
-    parameters.set<unsigned>("L", R);
-    parameters.set<unsigned>("L_refine", L);
-    parameters.set<unsigned>("R_refine", R);
-
-    auto *builder = new weavess::IndexBuilder(8);
-    builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
-            -> init(weavess::INIT_RAND)
-            -> refine(weavess::REFINE_VAMANA, true)
-            -> refine(weavess::REFINE_VAMANA, true)
-            -> search(weavess::TYPE::SEARCH_ENTRY_CENTROID, weavess::TYPE::ROUTER_GREEDY, false);
-
-    std::cout << "Time cost: " << builder->GetBuildTime().count() << std::endl;
+    if (parameters.get<std::string>("exc_type") == "build") {   // build
+        builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
+                -> init(weavess::INIT_RAND);
+        std::cout << "Init cost: " << builder->GetBuildTime().count() << std::endl;
+        builder -> refine(weavess::REFINE_VAMANA, false)
+                -> refine(weavess::REFINE_VAMANA, false)
+                -> save_graph(weavess::TYPE::INDEX_VAMANA, &graph_file[0]);
+        std::cout << "Build cost: " << builder->GetBuildTime().count() << std::endl;
+    }else if (parameters.get<std::string>("exc_type") == "search") {    // search
+        builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
+                -> load_graph(weavess::TYPE::INDEX_VAMANA, &graph_file[0])
+                -> search(weavess::TYPE::SEARCH_ENTRY_CENTROID, weavess::TYPE::ROUTER_GREEDY, true);
+    }else {
+        std::cout << "exc_type input error!" << std::endl;
+    }
 }
 
 void EFANNA(std::string base_path, std::string query_path, std::string ground_path) {
@@ -310,16 +323,23 @@ void SPTAG_BKT(std::string base_path, std::string query_path, std::string ground
 
 
 int main(int argc, char** argv) {
+    if (argc != 4) {
+        std::cout << "./main algorithm dataset exc_type"
+                << std::endl;
+        exit(-1);
+    }
     weavess::Parameters parameters;
     std::string dataset_root = R"(/Users/wmz/Documents/Postgraduate/Code/dataset/)";
     parameters.set<std::string>("dataset_root", dataset_root);
     parameters.set<unsigned>("n_threads", 8);
     std::string alg(argv[1]);
     std::string dataset(argv[2]);
+    std::string exc_type(argv[3]);
     std::cout << "algorithm: " << alg << std::endl;
     std::cout << "dataset: " << dataset << std::endl;
     std::string graph_file(alg + "_" + dataset + ".graph");
     parameters.set<std::string>("graph_file", graph_file);
+    parameters.set<std::string>("exc_type", exc_type);
     set_para(alg, dataset, parameters);
 
     // alg
@@ -333,7 +353,10 @@ int main(int argc, char** argv) {
         SSG(parameters);
     }else if (alg == "dpg") {
         DPG(parameters);
-    }else {
+    }else if (alg == "vamana") {
+        VAMANA(parameters);
+    }
+    else {
         std::cout << "alg input error!\n";
         exit(-1);
     }
