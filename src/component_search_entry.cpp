@@ -47,8 +47,8 @@ namespace weavess {
         // GenRandom(rng, init_ids.data(), L, (unsigned) index_->n_);
 
         unsigned tmp_l = 0;
-        for (; tmp_l < L && tmp_l < index->getFinalGraph()[index->ep_].size(); tmp_l++) {
-            init_ids[tmp_l] = index->getFinalGraph()[index->ep_][tmp_l].id;
+        for (; tmp_l < L && tmp_l < index->getLoadGraph()[index->ep_].size(); tmp_l++) {
+            init_ids[tmp_l] = index->getLoadGraph()[index->ep_][tmp_l];
             flags[init_ids[tmp_l]] = true;
         }
 
