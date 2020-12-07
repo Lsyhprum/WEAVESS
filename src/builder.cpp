@@ -322,7 +322,8 @@ namespace weavess {
                         L_sl < 0 ? L_sl : L_sl = -L_sl;
                     }
                 }else {
-                    L_sl = (int)(sg * (acc_set - acc + 0.0001));
+                    L_sl = (int)(sg * (acc_set - acc));
+                    if (L_sl == 0) L_sl++;
                     flag = false;
                 }
                 L += L_sl;
