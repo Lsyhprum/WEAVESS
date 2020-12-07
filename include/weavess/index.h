@@ -6,7 +6,6 @@
 #define WEAVESS_INDEX_H
 
 #define PARALLEL
-#define THREADS_NUM 10
 
 #define FLT_EPSILON 1.19209290E-07F
 
@@ -27,7 +26,6 @@
 
 // NGT
 #define NGT_SEED_SIZE 5
-#define NGT_EXPLORATION_COEFFICIENT 1.1
 
 #include <omp.h>
 #include <mutex>
@@ -41,7 +39,6 @@
 #include <fstream>
 #include <cassert>
 #include <iostream>
-// #include <windows.h>
 #include <algorithm>
 #include <unordered_set>
 #include <boost/dynamic_bitset.hpp>

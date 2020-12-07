@@ -67,10 +67,10 @@ namespace weavess {
             a = new ComponentInitANNG(final_index_);
         } else if (type == INIT_SPTAG_KDT) {
             std::cout << "__INIT : SPTAG_KDT__" << std::endl;
-            a = new ComponentInitSPTAG_KDT_new(final_index_);
+            a = new ComponentInitSPTAG_KDT(final_index_);
         } else if (type == INIT_SPTAG_BKT) {
             std::cout << "__INIT : SPTAG_BKT__" << std::endl;
-            a = new ComponentInitSPTAG_BKT_new(final_index_);
+            a = new ComponentInitSPTAG_BKT(final_index_);
         } else if (type == INIT_IEH) {
             std::cout << "__INIT : IEH__" << std::endl;
             a = new ComponentInitIEH(final_index_);
@@ -83,10 +83,13 @@ namespace weavess {
         } else if (type == INIT_RANDOM) {
             std::cout << "__INIT : RANDOM__" << std::endl;
             a = new ComponentInitRandom(final_index_);
+        } else if (type == INIT_KNNG) {
+            std::cout << "__INIT : KNNG__" << std::endl;
+            a = new ComponentInitKNNG(final_index_);
         }
 
         else {
-            std::cout << "__INIT : WRONG TYPE__" << std::endl;
+            std::cerr << "__INIT : WRONG TYPE__" << std::endl;
             exit(-1);
         }
 
@@ -139,13 +142,16 @@ namespace weavess {
             a = new ComponentRefineSPTAG_BKT(final_index_);
         } else if (type == REFINE_SPTAG_KDT) {
             std::cout << "__REFINE : SPTAG_KDT__" << std::endl;
-            a = new ComponentRefineSPTAG_KDT_new(final_index_);
+            a = new ComponentRefineSPTAG_KDT(final_index_);
         } else if (type == REFINE_FANNG) {
             std::cout << "__REFINE : FANNG__" << std::endl;
             a = new ComponentRefineFANNG(final_index_);
         } else if (type == REFINE_PANNG) {
             std::cout << "__REFINE : PANNG__" << std::endl;
             a = new ComponentRefinePANNG(final_index_);
+        } else if (type == REFINE_ONNG) {
+            std::cout << "__REFINE : ONNG__" << std::endl;
+            a = new ComponentRefineONNG(final_index_);
         }
 
         else {
@@ -155,10 +161,12 @@ namespace weavess {
         a->RefineInner();
 
         // 下面3行置于输出索引信息操作前面，以避免输出索引信息对索引构建时间的影响
+        std::cout << "===================" << std::endl;
         std::cout << "__REFINE : FINISH__" << std::endl;
         std::cout << "===================" << std::endl;
         e = std::chrono::high_resolution_clock::now();  
         if (debug) {
+            //print_graph();
             // degree
             std::unordered_map<unsigned, unsigned> in_degree;
             std::unordered_map<unsigned, unsigned> out_degree;
@@ -240,10 +248,10 @@ namespace weavess {
             b = new ComponentSearchRouteGuided(final_index_);
         } else if (route_type == ROUTER_SPTAG_KDT) {
             std::cout << "__ROUTER : SPTAG_KDT__" << std::endl;
-            b = new ComponentSearchRouteSPTAG_KDT_new(final_index_);
+            b = new ComponentSearchRouteSPTAG_KDT(final_index_);
         } else if (route_type == ROUTER_SPTAG_BKT) {
             std::cout << "__ROUTER : SPTAG_BKT__" << std::endl;
-            b = new ComponentSearchRouteSPTAG_BKT_new(final_index_);
+            b = new ComponentSearchRouteSPTAG_BKT(final_index_);
         } else if (route_type == ROUTER_NGT) {
             std::cout << "__ROUTER : NGT__" << std::endl;
             b = new ComponentSearchRouteNGT(final_index_);
@@ -413,7 +421,7 @@ namespace weavess {
      */
     void IndexBuilder::print_graph() {
         std::cout << "=====================" << std::endl;
-        for (int i = 0; i < final_index_->getBaseLen(); i ++) {
+        for (int i = 0; i < 10; i ++) {
             std::cout << i << " : " << final_index_->getFinalGraph()[i].size() << std::endl;
             for (int j = 0; j < final_index_->getFinalGraph()[i].size(); j ++) {
                 std::cout << final_index_->getFinalGraph()[i][j].id << "|" << final_index_->getFinalGraph()[i][j].distance << " ";
@@ -423,8 +431,9 @@ namespace weavess {
     }
 
     /**
-     * 输出图索引出度、入度信息
-     * @param degree 出度分布
+     * 索引出度、入度分析
+     * @param in_degree 入度统计
+     * @param out_degree 出度统计
      */
     void IndexBuilder::degree_info(std::unordered_map<unsigned, unsigned> &in_degree, std::unordered_map<unsigned, unsigned> &out_degree) {
         unsigned max_out_degree = 0, min_out_degree = 1e6;
@@ -540,6 +549,9 @@ namespace weavess {
             out.write((char *) tmp.data(), GK * sizeof(unsigned));
         }
         out.close();
+
+        // 回收 final_graph 内存
+        //std::vector<std::vector<Index::SimpleNeighbor>>().swap(final_index_->getFinalGraph());
         return this;
     }
 

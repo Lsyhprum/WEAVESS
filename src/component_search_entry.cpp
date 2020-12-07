@@ -5,6 +5,7 @@
 #include "weavess/component.h"
 
 namespace weavess {
+
     /**
      * L 个随机入口点
      * @param query 查询点
@@ -29,6 +30,7 @@ namespace weavess {
             index->addDistCount();
             pool[i] = Index::Neighbor(id, dist, true);
         }
+
         std::sort(pool.begin(), pool.begin() + L);
     }
 

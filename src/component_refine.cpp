@@ -1368,7 +1368,7 @@ namespace weavess {
 
         // CANDIDATE
         std::cout << "__CANDIDATE : SPTAG_BKT__" << std::endl;
-        auto *a = new ComponentCandidateSPTAG_BKT_new(index);
+        auto *a = new ComponentCandidateSPTAG_BKT(index);
 
         // PRUNE
         std::cout << "__PRUNE : NAIVE__" << std::endl;
@@ -1396,123 +1396,7 @@ namespace weavess {
     }
 
 
-    /**
-     * SPTAG_KDT Refine :
-     */
     void ComponentRefineSPTAG_KDT::RefineInner() {
-        auto *cut_graph_ = new Index::SimpleNeighbor[index->getBaseLen() * (size_t) index->m_iNeighborhoodSize];
-        index->getFinalGraph().resize(index->getBaseLen());
-
-        unsigned m_iRefineIter = 2;
-        for (int iter = 0; iter < m_iRefineIter - 1; iter++) {
-            index->L_refine = index->m_iCEF * index->m_iCEFScale;
-            index->R_refine = index->m_iNeighborhoodSize;
-            Link(cut_graph_);
-
-            for (size_t i = 0; i < index->getBaseLen(); i++) {
-                Index::SimpleNeighbor *pool = cut_graph_ + i * (size_t) index->m_iNeighborhoodSize;
-                unsigned pool_size = 0;
-                for (unsigned j = 0; j < index->m_iNeighborhoodSize; j++) {
-                    if (pool[j].distance == -1) break;
-                    pool_size = j;
-                }
-                pool_size++;
-                index->getFinalGraph()[i].resize(pool_size);
-                for (unsigned j = 0; j < pool_size; j++) {
-                    Index::SimpleNeighbor nn(pool[j].id, pool[j].distance);
-                    index->getFinalGraph()[i][j] = nn;
-                }
-            }
-        }
-
-        for(int i = 0; i < 10; i ++) {
-            std::cout << i << " " << index->getFinalGraph()[i].size() << std::endl;
-            for(int j = 0; j < index->getFinalGraph()[i].size(); j ++) {
-                std::cout << index->getFinalGraph()[i][j].id << " " << index->getFinalGraph()[i][j].distance << " ";
-//                if(index->getFinalGraph()[i][j].id > index->getBaseLen()) {
-//                    std::cout << "wtf" << std::endl;
-//                    std::cout << i << " " << j << " " << index->getFinalGraph()[i][j].id << " " << index->getFinalGraph()[i][j].distance << std::endl;
-//                }
-            }
-            std::cout << std::endl;
-        }
-
-//        index->m_iNeighborhoodSize /= index->m_iNeighborhoodScale;  //K
-//        auto *cut_graph2_ = new Index::SimpleNeighbor[index->getBaseLen() * index->m_iNeighborhoodSize];
-//
-//        if (m_iRefineIter > 0) {
-//            index->L_refine = index->m_iCEF;
-//            index->R_refine = index->m_iNeighborhoodSize;
-//            Link(cut_graph2_);
-//
-//            for (size_t i = 0; i < index->getBaseLen(); i++) {
-//                Index::SimpleNeighbor *pool = cut_graph2_ + i * (size_t) index->m_iNeighborhoodSize;
-//                unsigned pool_size = 0;
-//                for (unsigned j = 0; j < index->m_iNeighborhoodSize; j++) {
-//                    if (pool[j].distance == -1) break;
-//                    pool_size = j;
-//                }
-//                pool_size++;
-//                index->getFinalGraph()[i].resize(pool_size);
-//                for (unsigned j = 0; j < pool_size; j++) {
-//                    Index::SimpleNeighbor nn(pool[j].id, pool[j].distance);
-//                    index->getFinalGraph()[i][j] = nn;
-//                }
-//            }
-//        }
-
-        for(int i = 0; i < 10; i ++) {
-            std::cout << i << " " << index->getFinalGraph()[i].size() << std::endl;
-            for(int j = 0; j < index->getFinalGraph()[i].size(); j ++) {
-                std::cout << index->getFinalGraph()[i][j].id << " " << index->getFinalGraph()[i][j].distance << " ";
-//                if(index->getFinalGraph()[i][j].id > index->getBaseLen()) {
-//                    std::cout << "wtf" << std::endl;
-//                    std::cout << i << " " << j << " " << index->getFinalGraph()[i][j].id << " " << index->getFinalGraph()[i][j].distance << std::endl;
-//                }
-            }
-            std::cout << std::endl;
-        }
-        // ANNG : NSW（范围搜索）
-
-        // ONNG : ANNG -> 出入度调整
-        // PANNG : ANNG -> 裁边 路径调整
-    }
-
-    void ComponentRefineSPTAG_KDT::Link(Index::SimpleNeighbor *cut_graph_) {
-        std::vector<std::mutex> locks(index->getBaseLen());
-
-        // CANDIDATE
-        std::cout << "__CANDIDATE : SPTAG_KDT__" << std::endl;
-        auto *a = new ComponentCandidateSPTAG_KDT(index);
-
-        // PRUNE
-        std::cout << "__PRUNE : RNG__" << std::endl;
-        auto *b = new ComponentPruneNaive(index);
-
-#pragma omp parallel
-        {
-            std::vector<Index::SimpleNeighbor> pool;
-            boost::dynamic_bitset<> flags{index->getBaseLen(), 0};
-
-#pragma omp for schedule(dynamic, 100)
-            for (unsigned n = 0; n < index->getBaseLen(); ++n) {
-                std::cout << "prune " << n << std::endl;
-                pool.clear();
-                flags.reset();
-
-                a->CandidateInner(n, n, flags, pool);
-                //std::cout << "candidate finish" << std::endl;
-                //std::cout << n << " candidate : " << pool.size() << std::endl;
-                b->PruneInner(n, index->R_refine, flags, pool, cut_graph_);
-                //std::cout << "prune finish" << std::endl;
-                //std::cout << n << " prune : " << pool.size() << std::endl;
-            }
-
-            std::vector<Index::SimpleNeighbor>().swap(pool);
-        }
-    }
-
-    void ComponentRefineSPTAG_KDT_new::RefineInner() {
         auto *cut_graph_ = new Index::SimpleNeighbor[index->getBaseLen() * (size_t) index->m_iNeighborhoodSize];
 
         unsigned m_iRefineIter = 2;
@@ -1578,12 +1462,12 @@ namespace weavess {
 //        }
     }
 
-    void ComponentRefineSPTAG_KDT_new::Link(Index::SimpleNeighbor *cut_graph_) {
+    void ComponentRefineSPTAG_KDT::Link(Index::SimpleNeighbor *cut_graph_) {
         std::vector<std::mutex> locks(index->getBaseLen());
 
         // CANDIDATE
         std::cout << "__CANDIDATE : SPTAG_KDT__" << std::endl;
-        auto *a = new ComponentCandidateSPTAG_KDT_new(index);
+        auto *a = new ComponentCandidateSPTAG_KDT(index);
 
         // PRUNE
         std::cout << "__PRUNE : RNG__" << std::endl;
@@ -1614,7 +1498,7 @@ namespace weavess {
     }
 
 
-    void ComponentRefineONNG_right::RefineInner() {
+    void ComponentRefineONNG::RefineInner() {
         SetConfigs();
 
         if (index->numOfOutgoingEdges > 0 || index->numOfIncomingEdges > 0) {
@@ -1640,12 +1524,12 @@ namespace weavess {
         //optimizeSearchParameters(outIndexPath);
     }
 
-    void ComponentRefineONNG_right::SetConfigs() {
+    void ComponentRefineONNG::SetConfigs() {
         index->numOfIncomingEdges = index->getParam().get<unsigned>("numOfIncomingEdges");
         index->numOfOutgoingEdges = index->getParam().get<unsigned>("numOfOutgoingEdges");
     }
 
-    void ComponentRefineONNG_right::extractGraph(std::vector<std::vector<Index::SimpleNeighbor>> &outGraph) {
+    void ComponentRefineONNG::extractGraph(std::vector<std::vector<Index::SimpleNeighbor>> &outGraph) {
         outGraph.resize(index->getBaseLen());
 
         for(int i = 0; i < index->getBaseLen(); i ++) {
@@ -1655,7 +1539,7 @@ namespace weavess {
         }
     }
 
-    void ComponentRefineONNG_right::reconstructGraph(std::vector<std::vector<Index::SimpleNeighbor>> &graph) {
+    void ComponentRefineONNG::reconstructGraph(std::vector<std::vector<Index::SimpleNeighbor>> &graph) {
         if (index->numOfIncomingEdges > 10000) {
             std::cerr << "something wrong. Edge size=" << index->numOfIncomingEdges << std::endl;
             exit(1);
@@ -1667,7 +1551,7 @@ namespace weavess {
                 std::vector<Index::SimpleNeighbor> empty;
                 node.swap(empty);
             } else {
-                std::vector<Index::SimpleNeighbor> n = graph[id - 1];
+                std::vector<Index::SimpleNeighbor> n = graph[id];
                 if (n.size() < index->numOfOutgoingEdges) {
                     std::cerr << "GraphReconstructor: Warning. The edges are too few. " << n.size() << ":" << index->numOfOutgoingEdges << " for " << id << std::endl;
                     continue;
@@ -1702,7 +1586,13 @@ namespace weavess {
 //                if (id % 100000 == 0) {
 //                    std::cerr << "Processed " << id << " nodes" << std::endl;
 //                }
-            std::sort(n.begin(), n.end());
+            std::sort(n.begin(), n.end(), [](Index::SimpleNeighbor &a, Index::SimpleNeighbor &b) {
+                if (a.distance == b.distance) {
+                    return a.id < b.id;
+                } else {
+                    return a.distance < b.distance;
+                }
+            });
             unsigned prev = (std::numeric_limits<int>::max)();;
             for (auto it = n.begin(); it != n.end();) {
                 if (prev == (*it).id) {

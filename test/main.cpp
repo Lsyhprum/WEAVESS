@@ -242,23 +242,24 @@ void PANNG(std::string base_path, std::string query_path, std::string ground_pat
 }
 
 void ONNG(std::string base_path, std::string query_path, std::string ground_path) {
-    weavess::Parameters parameters;
-    parameters.set<unsigned>("edgeSizeForCreation", 10); // 初始化边数阈值
-    parameters.set<unsigned>("truncationThreshold", 10);
-    parameters.set<unsigned>("edgeSizeForSearch", 10);
-    parameters.set<unsigned>("size", 10);
+    std::string graph_file = R"(onng.graph)";
 
-    parameters.set<unsigned>("numOfOutgoingEdges", 10);
-    parameters.set<unsigned>("numOfIncomingEdges", 100);
+    weavess::Parameters parameters;
+    parameters.set<unsigned>("NN", 50);          // K
+    parameters.set<unsigned>("ef_construction", 100);        //L
+    parameters.set<unsigned>("n_threads_", 1);
+
+    parameters.set<unsigned>("numOfOutgoingEdges", 20);
+    parameters.set<unsigned>("numOfIncomingEdges", 50);
     parameters.set<unsigned>("numOfQueries", 200);
     parameters.set<unsigned>("numOfResultantObjects", 20);
 
     auto *builder = new weavess::IndexBuilder(8);
     builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
-            -> init(weavess::INIT_ANNG)
-            -> refine(weavess::REFINE_ONNG2, false)
-            -> refine(weavess::REFINE_PANNG, false);
-            //-> search(weavess::SEARCH_ENTRY_NONE, weavess::ROUTER_NGT);
+            -> init(weavess::INIT_ANNG, true)
+            -> refine(weavess::REFINE_ONNG, true)
+            -> refine(weavess::REFINE_PANNG, true)
+            -> search(weavess::SEARCH_ENTRY_VPT, weavess::ROUTER_NGT, true);
 
     std::cout << "Time cost: " << builder->GetBuildTime().count() << std::endl;
 }

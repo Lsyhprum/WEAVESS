@@ -48,6 +48,16 @@ namespace weavess {
         void GenRandom(std::mt19937 &rng, unsigned *addr, unsigned size);
     };
 
+    class ComponentInitKNNG : public ComponentInit {
+    public:
+        explicit ComponentInitKNNG(Index *index) : ComponentInit(index) {}
+
+        void InitInner() override;
+
+    private:
+        void SetConfigs();
+    };
+
     class ComponentInitRand : public ComponentInit {
     public:
         explicit ComponentInitRand(Index *index) : ComponentInit(index) {}
@@ -216,42 +226,6 @@ namespace weavess {
 
         void BuildInitKNNGraph();
 
-        void PartitionByTptree(std::vector<unsigned> &indices, const unsigned first, const unsigned last,
-                               std::vector<std::pair<unsigned, unsigned>> &leaves);
-
-        void AddNeighbor(unsigned idx, float dist, unsigned origin, unsigned size);
-
-        static inline bool Compare(const Index::SimpleNeighbor &lhs, const Index::SimpleNeighbor &rhs);
-
-        unsigned rand(unsigned high, unsigned low = 0);
-
-        void
-        DivideTree(std::vector<unsigned> &indices, unsigned first, unsigned last, unsigned index, unsigned &iTreeSize);
-
-        void ChooseDivision(Index::KDTNode &node, const std::vector<unsigned> &indices, const unsigned first,
-                            const unsigned last);
-
-        unsigned SelectDivisionDimension(const std::vector<float> &varianceValues);
-
-        unsigned Subdivide(const Index::KDTNode &node, std::vector<unsigned> &indices, const unsigned first,
-                           const unsigned last);
-    };
-
-    class ComponentInitSPTAG_KDT_new : public ComponentInit {
-    public:
-        explicit ComponentInitSPTAG_KDT_new(Index *index) : ComponentInit(index) {}
-
-        void InitInner() override;
-
-    private:
-        void SetConfigs();
-
-        void BuildTrees();
-
-        void BuildGraph();
-
-        void BuildInitKNNGraph();
-
         void PartitionByTptree(std::vector<int> &indices, const int first, const int last,
                                std::vector<std::pair<int, int>> &leaves);
 
@@ -276,44 +250,6 @@ namespace weavess {
     class ComponentInitSPTAG_BKT : public ComponentInit {
     public:
         explicit ComponentInitSPTAG_BKT(Index *index) : ComponentInit(index) {}
-
-        void InitInner() override;
-
-    protected:
-        void BuildTrees();
-
-        void BuildGraph();
-
-    private:
-        void SetConfigs();
-
-        unsigned rand(unsigned high, unsigned low = 0);
-
-        void BuildInitKNNGraph();
-
-        void PartitionByTptree(std::vector<unsigned> &indices, const unsigned first, const unsigned last,
-                               std::vector<std::pair<unsigned, unsigned>> &leaves);
-
-        static inline bool Compare(const Index::SimpleNeighbor &lhs, const Index::SimpleNeighbor &rhs);
-
-        void AddNeighbor(unsigned idx, float dist, unsigned origin, unsigned size);
-
-        int KmeansClustering(std::vector<unsigned> &indices, const unsigned first, const unsigned last,
-                             Index::KmeansArgs<float> &args, int samples = 1000);
-
-        inline void InitCenters(std::vector<unsigned> &indices, const unsigned first, const unsigned last,
-                                Index::KmeansArgs<float> &args, int samples, int tryIters);
-
-        inline float KmeansAssign(std::vector<unsigned> &indices,
-                                  const unsigned first, const unsigned last, Index::KmeansArgs<float> &args,
-                                  const bool updateCenters, float lambda);
-
-        float RefineCenters(Index::KmeansArgs<float> &args);
-    };
-
-    class ComponentInitSPTAG_BKT_new : public ComponentInit {
-    public:
-        explicit ComponentInitSPTAG_BKT_new(Index *index) : ComponentInit(index) {}
 
         void InitInner() override;
 
@@ -537,16 +473,6 @@ namespace weavess {
         void Link(Index::SimpleNeighbor *cut_graph_);
     };
 
-    class ComponentRefineSPTAG_KDT_new : public ComponentRefine {
-    public:
-        explicit ComponentRefineSPTAG_KDT_new(Index *index) : ComponentRefine(index) {}
-
-        void RefineInner() override;
-
-    private:
-        void Link(Index::SimpleNeighbor *cut_graph_);
-    };
-
     class ComponentRefineFANNG : public ComponentRefine {
     public:
         explicit ComponentRefineFANNG(Index *index) : ComponentRefine(index) {}
@@ -559,9 +485,9 @@ namespace weavess {
         void SetConfigs();
     };
 
-    class ComponentRefineONNG_right : public ComponentRefine {
+    class ComponentRefineONNG : public ComponentRefine {
     public:
-        explicit ComponentRefineONNG_right(Index *index) : ComponentRefine(index) {}
+        explicit ComponentRefineONNG(Index *index) : ComponentRefine(index) {}
 
         void RefineInner() override;
 
@@ -622,30 +548,9 @@ namespace weavess {
                             std::vector<Index::SimpleNeighbor> &pool) override;
     };
 
-    class ComponentCandidateSPTAG_BKT : public ComponentCandidate {
-    public:
-        explicit ComponentCandidateSPTAG_BKT(Index *index) : ComponentCandidate(index) {}
-
-        void CandidateInner(unsigned query, unsigned enter, boost::dynamic_bitset<> flags,
-                            std::vector<Index::SimpleNeighbor> &result) override;
-    };
-
     class ComponentCandidateSPTAG_KDT : public ComponentCandidate {
     public:
         explicit ComponentCandidateSPTAG_KDT(Index *index) : ComponentCandidate(index) {}
-
-        void CandidateInner(unsigned query, unsigned enter, boost::dynamic_bitset<> flags,
-                            std::vector<Index::SimpleNeighbor> &result) override;
-
-    private:
-        void KDTSearch(unsigned query, unsigned node, Index::Heap &m_NGQueue, Index::Heap &m_SPTQueue,
-                       Index::OptHashPosVector &nodeCheckStatus,
-                       unsigned &m_iNumberOfCheckedLeaves, unsigned &m_iNumberOfTreeCheckedLeaves);
-    };
-
-    class ComponentCandidateSPTAG_KDT_new : public ComponentCandidate {
-    public:
-        explicit ComponentCandidateSPTAG_KDT_new(Index *index) : ComponentCandidate(index) {}
 
         void CandidateInner(unsigned query, unsigned enter, boost::dynamic_bitset<> flags,
                             std::vector<Index::SimpleNeighbor> &result) override;
@@ -656,9 +561,9 @@ namespace weavess {
                        unsigned &m_iNumberOfCheckedLeaves, unsigned &m_iNumberOfTreeCheckedLeaves);
     };
 
-    class ComponentCandidateSPTAG_BKT_new : public ComponentCandidate {
+    class ComponentCandidateSPTAG_BKT : public ComponentCandidate {
     public:
-        explicit ComponentCandidateSPTAG_BKT_new(Index *index) : ComponentCandidate(index) {}
+        explicit ComponentCandidateSPTAG_BKT(Index *index) : ComponentCandidate(index) {}
 
         void CandidateInner(unsigned query, unsigned enter, boost::dynamic_bitset<> flags,
                             std::vector<Index::SimpleNeighbor> &result) override;
@@ -943,18 +848,6 @@ namespace weavess {
         void RouteInner(unsigned query, std::vector<Index::Neighbor> &pool, std::vector<unsigned> &res) override;
 
     private:
-        void KDTSearch(unsigned query, unsigned node, Index::Heap &m_NGQueue, Index::Heap &m_SPTQueue,
-                       Index::OptHashPosVector &nodeCheckStatus,
-                       unsigned &m_iNumberOfCheckedLeaves, unsigned &m_iNumberOfTreeCheckedLeaves);
-    };
-
-    class ComponentSearchRouteSPTAG_KDT_new : public ComponentSearchRoute {
-    public:
-        explicit ComponentSearchRouteSPTAG_KDT_new(Index *index) : ComponentSearchRoute(index) {}
-
-        void RouteInner(unsigned query, std::vector<Index::Neighbor> &pool, std::vector<unsigned> &res) override;
-
-    private:
         void KDTSearch(unsigned query, int node, Index::Heap &m_NGQueue, Index::Heap &m_SPTQueue,
                        Index::OptHashPosVector &nodeCheckStatus,
                        unsigned &m_iNumberOfCheckedLeaves, unsigned &m_iNumberOfTreeCheckedLeaves);
@@ -963,13 +856,6 @@ namespace weavess {
     class ComponentSearchRouteSPTAG_BKT : public ComponentSearchRoute {
     public:
         explicit ComponentSearchRouteSPTAG_BKT(Index *index) : ComponentSearchRoute(index) {}
-
-        void RouteInner(unsigned query, std::vector<Index::Neighbor> &pool, std::vector<unsigned> &res) override;
-    };
-
-    class ComponentSearchRouteSPTAG_BKT_new : public ComponentSearchRoute {
-    public:
-        explicit ComponentSearchRouteSPTAG_BKT_new(Index *index) : ComponentSearchRoute(index) {}
 
         void RouteInner(unsigned query, std::vector<Index::Neighbor> &pool, std::vector<unsigned> &res) override;
 
