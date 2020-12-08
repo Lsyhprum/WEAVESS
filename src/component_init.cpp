@@ -9,32 +9,10 @@
 namespace weavess {
 
     /**
-     * 随机 KNNG
+     * 随机 K 近邻图
      *
-     * TODO : 近邻 id 可能等于查询点 id，近邻个数 **小于等于** 初始近邻阈值 init_edges_num
-     * @param rng
-     * @param addr
-     * @param size
+     * 近邻个数 **小于等于** init_edges_num
      */
-    void ComponentInitRandom::GenRandom(std::mt19937 &rng, unsigned *addr, unsigned size) {
-        unsigned N = index->getBaseLen();
-
-        for (unsigned i = 0; i < size; ++i) {
-            addr[i] = rng() % (N - size);
-        }
-        std::sort(addr, addr + size);
-
-        for (unsigned i = 1; i < size; ++i) {
-            if (addr[i] <= addr[i - 1]) {
-                addr[i] = addr[i - 1] + 1;
-            }
-        }
-        unsigned off = rng() % N;
-        for (unsigned i = 0; i < size; ++i) {
-            addr[i] = (addr[i] + off) % N;
-        }
-    }
-
     void ComponentInitRandom::InitInner() {
         SetConfigs();
 
@@ -75,11 +53,40 @@ namespace weavess {
         index->setInitEdgesNum(index->getParam().get<unsigned>("S"));
     }
 
+    /**
+     * 获取随机近邻
+     *
+     * TODO : 近邻 id 可能等于查询点 id，近邻个数 **小于等于** 初始近邻阈值 init_edges_num
+     * @param rng
+     * @param addr
+     * @param size
+     */
+    void ComponentInitRandom::GenRandom(std::mt19937 &rng, unsigned *addr, unsigned size) {
+        unsigned N = index->getBaseLen();
+
+        for (unsigned i = 0; i < size; ++i) {
+            addr[i] = rng() % (N - size);
+        }
+        std::sort(addr, addr + size);
+
+        for (unsigned i = 1; i < size; ++i) {
+            if (addr[i] <= addr[i - 1]) {
+                addr[i] = addr[i - 1] + 1;
+            }
+        }
+        unsigned off = rng() % N;
+        for (unsigned i = 0; i < size; ++i) {
+            addr[i] = (addr[i] + off) % N;
+        }
+    }
+
+
+
 
     /**
-     * 精确 KNNG
+     * 精确 K 近邻图
      *
-     * KNNG 近邻个数 **等于** init_edges_num
+     * 近邻个数 **等于** init_edges_num
      *
      */
     void ComponentInitKNNG::InitInner() {
@@ -127,127 +134,408 @@ namespace weavess {
 
 
 
-    // FANNG
-    void ComponentInitFANNG::InitInner() {
+    /**
+     * 构建随机截断 KD-tree, 并构建初始图
+     *
+     * 近邻个数 **等于** init_edges_num
+     */
+    void ComponentInitKDTree::InitInner() {
         SetConfigs();
 
-        init();
+        unsigned seed = 1998;
+        const auto TreeNum = index->nTrees;
+        const auto TreeNumBuild = index->nTrees;
 
-        // graph_ -> final_graph
-        index->getFinalGraph().resize(index->getBaseLen());
-#ifdef PARALLEL
-#pragma omp parallel for
-#endif
-        for (unsigned i = 0; i < index->getBaseLen(); i++) {
-            std::vector<Index::SimpleNeighbor> tmp;
+        index->graph_.resize(index->getBaseLen());
+        index->knn_graph.resize(index->getBaseLen());
 
-            for (int j = 0; j < index->L; j++) {
-                tmp.push_back(Index::SimpleNeighbor(index->graph_[i].pool[j].id, index->graph_[i].pool[j].distance));
-            }
-
-//            for (auto &j : index->graph_[i].pool)
-//                tmp.push_back(Index::SimpleNeighbor(j.id, j.distance));
-
-            index->getFinalGraph()[i] = tmp;
-
-            // 内存释放
-            std::vector<Index::Neighbor>().swap(index->graph_[i].pool);
-            std::vector<unsigned>().swap(index->graph_[i].nn_new);
-            std::vector<unsigned>().swap(index->graph_[i].nn_old);
-            std::vector<unsigned>().swap(index->graph_[i].rnn_new);
-            std::vector<unsigned>().swap(index->graph_[i].rnn_new);
+        // 构建树根
+        std::vector<int> indices(index->getBaseLen());
+        index->LeafLists.resize(TreeNum);
+        std::vector<Index::EFANNA::Node *> ActiveSet;
+        std::vector<Index::EFANNA::Node *> NewSet;
+        for (unsigned i = 0; i < (unsigned) TreeNum; i++) {
+            auto *node = new Index::EFANNA::Node;
+            node->DivDim = -1;
+            node->Lchild = nullptr;
+            node->Rchild = nullptr;
+            node->StartIdx = 0;
+            node->EndIdx = index->getBaseLen();
+            node->treeid = i;
+            index->tree_roots_.push_back(node);
+            ActiveSet.push_back(node);
         }
 
-        // 内存释放
-        std::vector<Index::nhood>().swap(index->graph_);
-    }
-
-    void ComponentInitFANNG::SetConfigs() {
-        index->L = index->getParam().get<unsigned>("L");
-    }
-
-    void ComponentInitFANNG::init() {
-        index->graph_.resize(index->getBaseLen());
-#ifdef PARALLEL
 #pragma omp parallel for
-#endif
-        for (unsigned i = 0; i < index->getBaseLen(); i++) {
-            std::vector<Index::Neighbor> tmp;
-            for (unsigned j = 0; j < index->getBaseLen(); j++) {
-                if (i == j) continue;
+        for (unsigned i = 0; i < index->getBaseLen(); i++)indices[i] = i;
+#pragma omp parallel for
+        for (unsigned i = 0; i < (unsigned) TreeNum; i++) {
+            std::vector<unsigned> &myids = index->LeafLists[i];
+            myids.resize(index->getBaseLen());
+            std::copy(indices.begin(), indices.end(), myids.begin());
+            std::random_shuffle(myids.begin(), myids.end());
+        }
+        omp_init_lock(&index->rootlock);
+        // 构建随机截断树
+        while (!ActiveSet.empty() && ActiveSet.size() < 1100) {
+#pragma omp parallel for
+            for (unsigned i = 0; i < ActiveSet.size(); i++) {
+                Index::EFANNA::Node *node = ActiveSet[i];
+                unsigned mid;
+                unsigned cutdim;
+                float cutval;
+                std::mt19937 rng(seed ^ omp_get_thread_num());
+                std::vector<unsigned> &myids = index->LeafLists[node->treeid];
 
+                // 根据特征值进行划分
+                meanSplit(rng, &myids[0] + node->StartIdx, node->EndIdx - node->StartIdx, mid, cutdim, cutval);
+
+                node->DivDim = cutdim;
+                node->DivVal = cutval;
+                //node->StartIdx = offset;
+                //node->EndIdx = offset + count;
+                auto *nodeL = new Index::EFANNA::Node();
+                auto *nodeR = new Index::EFANNA::Node();
+                nodeR->treeid = nodeL->treeid = node->treeid;
+                nodeL->StartIdx = node->StartIdx;
+                nodeL->EndIdx = node->StartIdx + mid;
+                nodeR->StartIdx = nodeL->EndIdx;
+                nodeR->EndIdx = node->EndIdx;
+                node->Lchild = nodeL;
+                node->Rchild = nodeR;
+                omp_set_lock(&index->rootlock);
+                if (mid > index->getInitEdgesNum())NewSet.push_back(nodeL);
+                if (nodeR->EndIdx - nodeR->StartIdx > index->getInitEdgesNum())NewSet.push_back(nodeR);
+                omp_unset_lock(&index->rootlock);
+            }
+            ActiveSet.resize(NewSet.size());
+            std::copy(NewSet.begin(), NewSet.end(), ActiveSet.begin());
+            NewSet.clear();
+        }
+
+#pragma omp parallel for
+        for (unsigned i = 0; i < ActiveSet.size(); i++) {
+            Index::EFANNA::Node *node = ActiveSet[i];
+            //omp_set_lock(&rootlock);
+            //std::cout<<i<<":"<<node->EndIdx-node->StartIdx<<std::endl;
+            //omp_unset_lock(&rootlock);
+            std::mt19937 rng(seed ^ omp_get_thread_num());
+            // 查找树根对应节点
+            std::vector<unsigned> &myids = index->LeafLists[node->treeid];
+            // 添加规定深度下的所有子节点
+            DFSbuild(node, rng, &myids[0] + node->StartIdx, node->EndIdx - node->StartIdx, node->StartIdx);
+        }
+        //DFStest(0,0,tree_roots_[0]);
+        std::cout << "build tree completed" << std::endl;
+
+        for (size_t i = 0; i < (unsigned) TreeNumBuild; i++) {
+            getMergeLevelNodeList(index->tree_roots_[i], i, 0);
+        }
+
+        std::cout << "merge node list size: " << index->mlNodeList.size() << std::endl;
+        if (index->error_flag) {
+            std::cout << "merge level deeper than tree, max merge deepth is " << index->max_deepth - 1 << std::endl;
+        }
+
+#pragma omp parallel for
+        for (size_t i = 0; i < index->mlNodeList.size(); i++) {
+            mergeSubGraphs(index->mlNodeList[i].second, index->mlNodeList[i].first);
+        }
+
+        std::cout << "merge tree completed" << std::endl;
+
+        index->getFinalGraph().resize(index->getBaseLen());
+        std::mt19937 rng(seed ^ omp_get_thread_num());
+        std::set<Index::SimpleNeighbor> result;
+        for (unsigned i = 0; i < index->getBaseLen(); i++) {
+            std::vector<Index::SimpleNeighbor> tmp;
+            typename Index::CandidateHeap::reverse_iterator it = index->knn_graph[i].rbegin();
+            for (; it != index->knn_graph[i].rend(); it++) {
                 float dist = index->getDist()->compare(index->getBaseData() + index->getBaseDim() * i,
-                                                       index->getBaseData() + index->getBaseDim() * j,
+                                                       index->getBaseData() + index->getBaseDim() * it->row_id,
                                                        index->getBaseDim());
-                tmp.emplace_back(Index::Neighbor(j, dist, true));
+                tmp.push_back(Index::SimpleNeighbor(it->row_id, dist));
             }
-            std::make_heap(tmp.begin(), tmp.end(), std::greater<Index::Neighbor>());
-            index->graph_[i].pool.reserve(index->L);
-            for (unsigned j = 0; j < index->L; j++) {
-                index->graph_[i].pool.emplace_back(tmp[0]);
-                std::pop_heap(tmp.begin(), tmp.end(), std::greater<Index::Neighbor>());
-                tmp.pop_back();
+            if (tmp.size() < index->getInitEdgesNum()) {
+                //std::cout << "node "<< i << " only has "<< tmp.size() <<" neighbors!" << std::endl;
+                result.clear();
+                size_t vlen = tmp.size();
+                for (size_t j = 0; j < vlen; j++) {
+                    result.insert(tmp[j]);
+                }
+                while (result.size() < index->getInitEdgesNum()) {
+                    unsigned id = rng() % index->getBaseLen();
+                    float dist = index->getDist()->compare(index->getBaseData() + index->getBaseDim() * i,
+                                                           index->getBaseData() + index->getBaseDim() * id,
+                                                           index->getBaseDim());
+                    result.insert(Index::SimpleNeighbor(id, dist));
+                }
+                tmp.clear();
+                std::set<Index::SimpleNeighbor>::iterator it;
+                for (it = result.begin(); it != result.end(); it++) {
+                    tmp.push_back(*it);
+                }
+                //std::copy(result.begin(),result.end(),tmp.begin());
             }
-        }
-    }
-
-
-    // RAND
-    void ComponentInitRand::InitInner() {
-        SetConfigs();
-
-        index->graph_.resize(index->getBaseLen());
-        std::mt19937 rng(rand());
-
-#pragma omp parallel for
-        for (unsigned i = 0; i < index->getBaseLen(); i++) {
-            std::vector<unsigned> tmp(index->L);
-
-            weavess::GenRandom(rng, tmp.data(), index->L, index->getBaseLen());
-
-            for (unsigned j = 0; j < index->L; j++) {
-                unsigned id = tmp[j];
-
-                if (id == i)continue;
-                float dist = index->getDist()->compare(index->getBaseData() + i * index->getBaseDim(),
-                                                       index->getBaseData() + id * index->getBaseDim(),
-                                                       (unsigned) index->getBaseDim());
-
-                index->graph_[i].pool.emplace_back(id, dist, true);
-            }
-            std::make_heap(index->graph_[i].pool.begin(), index->graph_[i].pool.end());
-            index->graph_[i].pool.reserve(index->L);
-        }
-
-        index->getFinalGraph().resize(index->getBaseLen());
-        for (unsigned i = 0; i < index->getBaseLen(); i++) {
-            std::vector<Index::SimpleNeighbor> tmp;
-
-            std::sort(index->graph_[i].pool.begin(), index->graph_[i].pool.end());
-
-            for (auto &j : index->graph_[i].pool) {
-                tmp.push_back(Index::SimpleNeighbor(j.id, j.distance));
-            }
-
+            tmp.reserve(index->getInitEdgesNum());
             index->getFinalGraph()[i] = tmp;
-
-            // 内存释放
-            std::vector<Index::Neighbor>().swap(index->graph_[i].pool);
-            std::vector<unsigned>().swap(index->graph_[i].nn_new);
-            std::vector<unsigned>().swap(index->graph_[i].nn_old);
-            std::vector<unsigned>().swap(index->graph_[i].rnn_new);
-            std::vector<unsigned>().swap(index->graph_[i].rnn_new);
         }
-
         std::vector<Index::nhood>().swap(index->graph_);
     }
 
-    void ComponentInitRand::SetConfigs() {
-        index->L = index->getParam().get<unsigned>("L");
+    void ComponentInitKDTree::SetConfigs() {
+        index->mLevel = index->getParam().get<unsigned>("mLevel");
+        index->nTrees = index->getParam().get<unsigned>("nTrees");
+
+        index->setInitEdgesNum(index->getParam().get<unsigned>("S"));
+    }
+
+    void ComponentInitKDTree::meanSplit(std::mt19937 &rng, unsigned *indices, unsigned count, unsigned &index1,
+                                     unsigned &cutdim, float &cutval) {
+        float *mean_ = new float[index->getBaseDim()];
+        float *var_ = new float[index->getBaseDim()];
+        memset(mean_, 0, index->getBaseDim() * sizeof(float));
+        memset(var_, 0, index->getBaseDim() * sizeof(float));
+
+        /* Compute mean values.  Only the first SAMPLE_NUM values need to be
+          sampled to get a good estimate.
+         */
+        unsigned cnt = std::min((unsigned) index->SAMPLE_NUM + 1, count);
+        for (unsigned j = 0; j < cnt; ++j) {
+            const float *v = index->getBaseData() + indices[j] * index->getBaseDim();
+            for (size_t k = 0; k < index->getBaseDim(); ++k) {
+                mean_[k] += v[k];
+            }
+        }
+        float div_factor = float(1) / cnt;
+        for (size_t k = 0; k < index->getBaseDim(); ++k) {
+            mean_[k] *= div_factor;
+        }
+
+        /* Compute variances (no need to divide by count). */
+
+        for (unsigned j = 0; j < cnt; ++j) {
+            const float *v = index->getBaseData() + indices[j] * index->getBaseDim();
+            for (size_t k = 0; k < index->getBaseDim(); ++k) {
+                float dist = v[k] - mean_[k];
+                var_[k] += dist * dist;
+            }
+        }
+
+        /* Select one of the highest variance indices at random. */
+        cutdim = selectDivision(rng, var_);
+
+        cutval = mean_[cutdim];
+
+        unsigned lim1, lim2;
+
+        planeSplit(indices, count, cutdim, cutval, lim1, lim2);
+        //cut the subtree using the id which best balances the tree
+        if (lim1 > count / 2) index1 = lim1;
+        else if (lim2 < count / 2) index1 = lim2;
+        else index1 = count / 2;
+
+        /* If either list is empty, it means that all remaining features
+         * are identical. Split in the middle to maintain a balanced tree.
+         */
+        if ((lim1 == count) || (lim2 == 0)) index1 = count / 2;
+        delete[] mean_;
+        delete[] var_;
+    }
+
+    int ComponentInitKDTree::selectDivision(std::mt19937 &rng, float *v) {
+        int num = 0;
+        size_t topind[index->RAND_DIM];
+
+        //Create a list of the indices of the top index->RAND_DIM values.
+        for (size_t i = 0; i < index->getBaseDim(); ++i) {
+            if ((num < index->RAND_DIM) || (v[i] > v[topind[num - 1]])) {
+                // Put this element at end of topind.
+                if (num < index->RAND_DIM) {
+                    topind[num++] = i;            // Add to list.
+                } else {
+                    topind[num - 1] = i;         // Replace last element.
+                }
+                // Bubble end value down to right location by repeated swapping. sort the varience in decrease order
+                int j = num - 1;
+                while (j > 0 && v[topind[j]] > v[topind[j - 1]]) {
+                    std::swap(topind[j], topind[j - 1]);
+                    --j;
+                }
+            }
+        }
+        // Select a random integer in range [0,num-1], and return that index.
+        int rnd = rng() % num;
+        return (int) topind[rnd];
+    }
+
+    void ComponentInitKDTree::planeSplit(unsigned *indices, unsigned count, unsigned cutdim, float cutval, unsigned &lim1,
+                                      unsigned &lim2) {
+        /* Move vector indices for left subtree to front of list. */
+        int left = 0;
+        int right = count - 1;
+        for (;;) {
+            const float *vl = index->getBaseData() + indices[left] * index->getBaseDim();
+            const float *vr = index->getBaseData() + indices[right] * index->getBaseDim();
+            while (left <= right && vl[cutdim] < cutval) {
+                ++left;
+                vl = index->getBaseData() + indices[left] * index->getBaseDim();
+            }
+            while (left <= right && vr[cutdim] >= cutval) {
+                --right;
+                vr = index->getBaseData() + indices[right] * index->getBaseDim();
+            }
+            if (left > right) break;
+            std::swap(indices[left], indices[right]);
+            ++left;
+            --right;
+        }
+        lim1 = left;//lim1 is the id of the leftmost point <= cutval
+        right = count - 1;
+        for (;;) {
+            const float *vl = index->getBaseData() + indices[left] * index->getBaseDim();
+            const float *vr = index->getBaseData() + indices[right] * index->getBaseDim();
+            while (left <= right && vl[cutdim] <= cutval) {
+                ++left;
+                vl = index->getBaseData() + indices[left] * index->getBaseDim();
+            }
+            while (left <= right && vr[cutdim] > cutval) {
+                --right;
+                vr = index->getBaseData() + indices[right] * index->getBaseDim();
+            }
+            if (left > right) break;
+            std::swap(indices[left], indices[right]);
+            ++left;
+            --right;
+        }
+        lim2 = left;//lim2 is the id of the leftmost point >cutval
+    }
+
+    void ComponentInitKDTree::DFSbuild(Index::EFANNA::Node *node, std::mt19937 &rng, unsigned *indices, unsigned count,
+                                    unsigned offset) {
+        //omp_set_lock(&rootlock);
+        //std::cout<<node->treeid<<":"<<offset<<":"<<count<<std::endl;
+        //omp_unset_lock(&rootlock);
+
+        if (count <= index->TNS) {
+            node->DivDim = -1;
+            node->Lchild = nullptr;
+            node->Rchild = nullptr;
+            node->StartIdx = offset;
+            node->EndIdx = offset + count;
+            //add points
+
+        } else {
+            unsigned idx;
+            unsigned cutdim;
+            float cutval;
+            meanSplit(rng, indices, count, idx, cutdim, cutval);
+            node->DivDim = cutdim;
+            node->DivVal = cutval;
+            node->StartIdx = offset;
+            node->EndIdx = offset + count;
+            auto *nodeL = new Index::EFANNA::Node();
+            auto *nodeR = new Index::EFANNA::Node();
+            node->Lchild = nodeL;
+            nodeL->treeid = node->treeid;
+            DFSbuild(nodeL, rng, indices, idx, offset);
+            node->Rchild = nodeR;
+            nodeR->treeid = node->treeid;
+            DFSbuild(nodeR, rng, indices + idx, count - idx, offset + idx);
+        }
+    }
+
+    void ComponentInitKDTree::getMergeLevelNodeList(Index::EFANNA::Node *node, size_t treeid, unsigned deepth) {
+        auto ml = index->getParam().get<unsigned>("mLevel");
+        if (node->Lchild != nullptr && node->Rchild != nullptr && deepth < ml) {
+            deepth++;
+            getMergeLevelNodeList(node->Lchild, treeid, deepth);
+            getMergeLevelNodeList(node->Rchild, treeid, deepth);
+        } else if (deepth == ml) {
+            index->mlNodeList.emplace_back(node, treeid);
+        } else {
+            index->error_flag = true;
+            if (deepth < index->max_deepth)index->max_deepth = deepth;
+        }
+    }
+
+    void ComponentInitKDTree::mergeSubGraphs(size_t treeid, Index::EFANNA::Node *node) {
+
+        if (node->Lchild != nullptr && node->Rchild != nullptr) {
+            mergeSubGraphs(treeid, node->Lchild);
+            mergeSubGraphs(treeid, node->Rchild);
+
+            size_t numL = node->Lchild->EndIdx - node->Lchild->StartIdx;
+            size_t numR = node->Rchild->EndIdx - node->Rchild->StartIdx;
+            size_t start, end;
+            Index::EFANNA::Node *root;
+            if (numL < numR) {
+                root = node->Rchild;
+                start = node->Lchild->StartIdx;
+                end = node->Lchild->EndIdx;
+            } else {
+                root = node->Lchild;
+                start = node->Rchild->StartIdx;
+                end = node->Rchild->EndIdx;
+            }
+
+            //std::cout << start << " " << end << std::endl;
+
+            for (; start < end; start++) {
+
+                size_t feature_id = index->LeafLists[treeid][start];
+
+                Index::EFANNA::Node *leaf = SearchToLeaf(root, feature_id);
+                for (size_t i = leaf->StartIdx; i < leaf->EndIdx; i++) {
+                    size_t tmpfea = index->LeafLists[treeid][i];
+                    float dist = index->getDist()->compare(index->getBaseData() + tmpfea * index->getBaseDim(),
+                                                           index->getBaseData() + feature_id * index->getBaseDim(),
+                                                           index->getBaseDim());
+
+                    {
+                        Index::LockGuard guard(index->graph_[tmpfea].lock);
+                        if (index->knn_graph[tmpfea].size() < index->getInitEdgesNum() || dist < index->knn_graph[tmpfea].begin()->distance) {
+                            Index::Candidate c1(feature_id, dist);
+                            index->knn_graph[tmpfea].insert(c1);
+                            if (index->knn_graph[tmpfea].size() > index->getInitEdgesNum())
+                                index->knn_graph[tmpfea].erase(index->knn_graph[tmpfea].begin());
+                        }
+                    }
+
+                    {
+                        Index::LockGuard guard(index->graph_[feature_id].lock);
+                        if (index->knn_graph[feature_id].size() < index->getInitEdgesNum() ||
+                            dist < index->knn_graph[feature_id].begin()->distance) {
+                            Index::Candidate c1(tmpfea, dist);
+                            index->knn_graph[feature_id].insert(c1);
+                            if (index->knn_graph[feature_id].size() > index->getInitEdgesNum())
+                                index->knn_graph[feature_id].erase(index->knn_graph[feature_id].begin());
+
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    Index::EFANNA::Node *ComponentInitKDTree::SearchToLeaf(Index::EFANNA::Node *node, size_t id) {
+        if (node->Lchild != nullptr && node->Rchild != nullptr) {
+            const float *v = index->getBaseData() + id * index->getBaseDim();
+            if (v[node->DivDim] < node->DivVal)
+                return SearchToLeaf(node->Lchild, id);
+            else
+                return SearchToLeaf(node->Rchild, id);
+        } else
+            return node;
     }
 
 
-    // KDT
+
+
+
+    /**
+     * 构建随机截断树，并生成子图
+     */
     void ComponentInitKDT::InitInner() {
         SetConfigs();
 
@@ -666,6 +954,139 @@ namespace weavess {
             }
         }
     }
+
+
+
+
+    /**
+     * @deprecated
+     *
+     * 已废弃，由 ComponentInitKNNG 代替
+     */
+    void ComponentInitFANNG::InitInner() {
+        SetConfigs();
+
+        init();
+
+        // graph_ -> final_graph
+        index->getFinalGraph().resize(index->getBaseLen());
+#ifdef PARALLEL
+#pragma omp parallel for
+#endif
+        for (unsigned i = 0; i < index->getBaseLen(); i++) {
+            std::vector<Index::SimpleNeighbor> tmp;
+
+            for (int j = 0; j < index->L; j++) {
+                tmp.push_back(Index::SimpleNeighbor(index->graph_[i].pool[j].id, index->graph_[i].pool[j].distance));
+            }
+
+//            for (auto &j : index->graph_[i].pool)
+//                tmp.push_back(Index::SimpleNeighbor(j.id, j.distance));
+
+            index->getFinalGraph()[i] = tmp;
+
+            // 内存释放
+            std::vector<Index::Neighbor>().swap(index->graph_[i].pool);
+            std::vector<unsigned>().swap(index->graph_[i].nn_new);
+            std::vector<unsigned>().swap(index->graph_[i].nn_old);
+            std::vector<unsigned>().swap(index->graph_[i].rnn_new);
+            std::vector<unsigned>().swap(index->graph_[i].rnn_new);
+        }
+
+        // 内存释放
+        std::vector<Index::nhood>().swap(index->graph_);
+    }
+
+    void ComponentInitFANNG::SetConfigs() {
+        index->L = index->getParam().get<unsigned>("L");
+    }
+
+    void ComponentInitFANNG::init() {
+        index->graph_.resize(index->getBaseLen());
+#ifdef PARALLEL
+#pragma omp parallel for
+#endif
+        for (unsigned i = 0; i < index->getBaseLen(); i++) {
+            std::vector<Index::Neighbor> tmp;
+            for (unsigned j = 0; j < index->getBaseLen(); j++) {
+                if (i == j) continue;
+
+                float dist = index->getDist()->compare(index->getBaseData() + index->getBaseDim() * i,
+                                                       index->getBaseData() + index->getBaseDim() * j,
+                                                       index->getBaseDim());
+                tmp.emplace_back(Index::Neighbor(j, dist, true));
+            }
+            std::make_heap(tmp.begin(), tmp.end(), std::greater<Index::Neighbor>());
+            index->graph_[i].pool.reserve(index->L);
+            for (unsigned j = 0; j < index->L; j++) {
+                index->graph_[i].pool.emplace_back(tmp[0]);
+                std::pop_heap(tmp.begin(), tmp.end(), std::greater<Index::Neighbor>());
+                tmp.pop_back();
+            }
+        }
+    }
+
+
+    /**
+     * @deprecated
+     *
+     * 已废弃，由 ComponentInitRandom 代替
+     */
+    void ComponentInitRand::InitInner() {
+        SetConfigs();
+
+        index->graph_.resize(index->getBaseLen());
+        std::mt19937 rng(rand());
+
+#pragma omp parallel for
+        for (unsigned i = 0; i < index->getBaseLen(); i++) {
+            std::vector<unsigned> tmp(index->L);
+
+            weavess::GenRandom(rng, tmp.data(), index->L, index->getBaseLen());
+
+            for (unsigned j = 0; j < index->L; j++) {
+                unsigned id = tmp[j];
+
+                if (id == i)continue;
+                float dist = index->getDist()->compare(index->getBaseData() + i * index->getBaseDim(),
+                                                       index->getBaseData() + id * index->getBaseDim(),
+                                                       (unsigned) index->getBaseDim());
+
+                index->graph_[i].pool.emplace_back(id, dist, true);
+            }
+            std::make_heap(index->graph_[i].pool.begin(), index->graph_[i].pool.end());
+            index->graph_[i].pool.reserve(index->L);
+        }
+
+        index->getFinalGraph().resize(index->getBaseLen());
+        for (unsigned i = 0; i < index->getBaseLen(); i++) {
+            std::vector<Index::SimpleNeighbor> tmp;
+
+            std::sort(index->graph_[i].pool.begin(), index->graph_[i].pool.end());
+
+            for (auto &j : index->graph_[i].pool) {
+                tmp.push_back(Index::SimpleNeighbor(j.id, j.distance));
+            }
+
+            index->getFinalGraph()[i] = tmp;
+
+            // 内存释放
+            std::vector<Index::Neighbor>().swap(index->graph_[i].pool);
+            std::vector<unsigned>().swap(index->graph_[i].nn_new);
+            std::vector<unsigned>().swap(index->graph_[i].nn_old);
+            std::vector<unsigned>().swap(index->graph_[i].rnn_new);
+            std::vector<unsigned>().swap(index->graph_[i].rnn_new);
+        }
+
+        std::vector<Index::nhood>().swap(index->graph_);
+    }
+
+    void ComponentInitRand::SetConfigs() {
+        index->L = index->getParam().get<unsigned>("L");
+    }
+
+
+
 
 
     // IEH

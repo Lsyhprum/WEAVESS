@@ -58,6 +58,31 @@ namespace weavess {
         void SetConfigs();
     };
 
+    class ComponentInitKDTree : public ComponentInit {
+    public:
+        explicit ComponentInitKDTree(Index *index) : ComponentInit(index) {}
+
+        void InitInner() override;
+
+    private:
+        void SetConfigs();
+
+        void meanSplit(std::mt19937 &rng, unsigned *indices, unsigned count, unsigned &index, unsigned &cutdim, float &cutval);
+
+        void
+        planeSplit(unsigned *indices, unsigned count, unsigned cutdim, float cutval, unsigned &lim1, unsigned &lim2);
+
+        int selectDivision(std::mt19937 &rng, float *v);
+
+        void DFSbuild(Index::EFANNA::Node *node, std::mt19937 &rng, unsigned *indices, unsigned count, unsigned offset);
+
+        void getMergeLevelNodeList(Index::EFANNA::Node *node, size_t treeid, unsigned deepth);
+
+        Index::EFANNA::Node *SearchToLeaf(Index::EFANNA::Node *node, size_t id);
+
+        void mergeSubGraphs(size_t treeid, Index::EFANNA::Node *node);
+    };
+
     class ComponentInitRand : public ComponentInit {
     public:
         explicit ComponentInitRand(Index *index) : ComponentInit(index) {}

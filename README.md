@@ -4,21 +4,24 @@
 
 ## Algorithms
 
-|  Algo  |       TYPE       |          Init         |       Refine      |    Search Entry    |    Search Route    |
-|:------:|:----------------:| :--------------------:| :---------------: | :-----------------:| :-----------------:|
-| KGraph |    Refinement    |         Random        |     NN-Descent    |      Random        |       Greedy       |
-| FANNG  |    Refinement    |         KNNG          |       Query       | PROPAGATION 1 |     RNG      |              |      Random        |      Backtrack     |
-| NSG    |    Refinement    |       NN-Descent      |      Centroid     |     Greedy    |     RNG      | Reverse+DFS  |     Centroid       |       Greedy       |
-| SSG    |    Refinement    |       NN-Descent      |       Query       | PROPAGATION 2 |     SSG      | Reverse+DFS  |    Sub Centroid    |       Greedy       |
-| DPG    |    Refinement    |       NN-Descent      |       Query       | PROPAGATION 1 |     DPG      |    Reverse   |      Random        |       Greedy       |
-| VAMANA |    Refinement    |         Random        |      Centroid     |     Greedy    |    VAMANA    |    Reverse   |     Centroid       |       Greedy       |
-| EFANNA |    Refinement    |                       |      KD-tree      |   NN-Descent  |              |              |      KD-tree       |       Greedy       |
-| IEH    |    Refinement    |         KNNG          |                   |               |              |              |        LSH         |       Greedy       |
-| NSW    |    Increment     |                       |     First Node    |               |              |              |                    |                    |
-| HNSW   |    Increment     |                       |   Top Layer Node  |               |     RNG      |              |                    |                    |
-| NGT    |    Increment     |         ANNG          |                   |               |     ONNG     |              |      DVPTree       |       Greedy       |
-| SPTAG  |  Divide&Conquer  |                       | KD-tree / BK-tree |               |     RNG      |              |                    |                    |
-| HCNNG  |  Divide&Conquer  |Hierarchical Clustering|                   |               |              |              |      KD-tree       |       Guided       |
+|   ALGO   |     TYPE     |   INIT   |    REFINE    |  SEEDS   |  ROUTE      |
+|:--------:|:------------:|:--------:|:------------:|:--------:|:-----------:|
+|  KGraph  |  Refinement  |  Random  |  NN-Descent  |  Random  |   Greedy    |
+|  FANNG   |  Refinement  |   KNNG   |     RNG      |  Random  |  Backtrack  |
+
+|  NSG        |    Refinement    |       NN-Descent      |      Centroid     |     Greedy    |     RNG      | Reverse+DFS  |     Centroid       |       Greedy       |
+|  SSG        |    Refinement    |       NN-Descent      |       Query       | PROPAGATION 2 |     SSG      | Reverse+DFS  |    Sub Centroid    |       Greedy       |
+|  DPG        |    Refinement    |       NN-Descent      |       Query       | PROPAGATION 1 |     DPG      |    Reverse   |      Random        |       Greedy       |
+|  VAMANA     |    Refinement    |         Random        |      Centroid     |     Greedy    |    VAMANA    |    Reverse   |     Centroid       |       Greedy       |
+|  EFANNA     |    Refinement    |                       |      KD-tree      |   NN-Descent  |              |              |      KD-tree       |       Greedy       |
+|  IEH        |    Refinement    |         KNNG          |                   |               |              |              |        LSH         |       Greedy       |
+|  NSW        |    Increment     |                       |     First Node    |               |              |              |                    |                    |
+|  HNSW       |    Increment     |                       |   Top Layer Node  |               |     RNG      |              |                    |                    |
+|  NGT_PANNG  |    Increment     |         ANNG          |                   |               |     ONNG     |              |      DVPTree       |       Greedy       |
+|  NGT_ONNG   |    Increment     |         ANNG          |                   |               |     ONNG     |              |      DVPTree       |       Greedy       |
+|  SPTAG_KDT  |  Divide&Conquer  |                       | KD-tree  |               |     RNG      |              |                    |                    |
+|  SPTAG_BKT  |  Divide&Conquer  |                       | BK-tree |               |     RNG      |              |                    |                    |
+|  HCNNG      |  Divide&Conquer  |Hierarchical Clustering|                   |               |              |              |      KD-tree       |       Guided       |
 
 
 ## Parameters
@@ -123,10 +126,10 @@
 
 ### PANNG
 
-|  Name             |  Default  |  Description  |  sift1M |  gist |  glove-100 |  crawl |  audio |  msong |  uqv |  enron |  c_1  |  c_10 |  c_100  |  d_8   |  d_32  |  d_128 | n_10000 |n_100000|n_1000000 |  s_1  |    s_5     |  s_10  |
-|:-----------------:|:---------:|:-------------:|:-------:|:-----:|:----------:|:------:|:------:|:------:|:----:|:------:|:-----:|:-----:|:-------:|:------:|:------:|:------:|:-------:|:------:|:--------:|:-----:|:----------:|:------:|
-|  K                |           |               |         |       |            |        |        |        |      |        |  40   |  50   |  60     |  80    |        |  50    |         |        |          |  50   |            |  60    |
-|  L                |           |               |         |       |            |        |        |        |      |        |  80   |  80   |  80     |  110   |        |  90    |         |        |          |  80   |            |  80    |
+|  Name             |  Interval       |  Description  |  sift1M |  gist |  glove-100 |  crawl |  audio |  msong |  uqv |  enron |  c_1  |  c_10 |  c_100  |  d_8   |  d_32  |  d_128 | n_10000 |n_100000|n_1000000 |  s_1  |    s_5     |  s_10  |
+|:-----------------:|:---------------:|:-------------:|:-------:|:-----:|:----------:|:------:|:------:|:------:|:----:|:------:|:-----:|:-----:|:-------:|:------:|:------:|:------:|:-------:|:------:|:--------:|:-----:|:----------:|:------:|
+|  K                | [40 : 100 : 10] |               |  40     |  40   |  40        |  40    |  40    |  40    |  40  |        |  40   |  50   |  60     |  80    |        |  50    |  40     |        |          |  50   |            |  60    |
+|  L                | [K:K+50:10]     |               |  50     |  40   |  40        |  70    |  40    |  70    |  60  |        |  80   |  80   |  80     |  110   |        |  90    |  80     |        |          |  80   |            |  80    |
 
 ### ONNG
 
@@ -145,12 +148,12 @@
 
 |  Name          |      Interval      |  Description  |  sift1M |  gist |  glove-100 |  crawl |  audio |  msong |  uqv |  enron |   c_1   |  c_10 |  c_100  |  d_8   |  d_32  |  d_128 | n_10000 |n_100000|n_1000000 |  s_1  |    s_5     |  s_10  |
 |:--------------:|:------------------:|:-------------:|:-------:|:-----:|:----------:|:------:|:------:|:------:|:----:|:------:|:-------:|:-----:|:-------:|:------:|:------:|:------:|:-------:|:------:|:--------:|:-----:|:----------:|:------:|
-|  BKT_number    |    [1 , 2 , 4]     |               |  1      |       |            |        |        |        |      |        |         |       |         |   1    |        |   4    |         |        |          |  1    |            |  1     |
-|  BKT_kmeas_k   |   [16 , 32 , 64]   |               |  16     |       |            |        |        |        |      |        |         |       |         |   32   |        |   16   |         |        |          |  16   |            |  32    |
-|  TPT_number    |   [16 , 32 , 64]   |               |  16     |       |            |        |        |        |      |        |         |       |         |   16   |        |   32   |         |        |          |  16   |            |  64    |
-|  TPT_leaf_size | [500 : 2500 : 500] |               |  1000   |       |            |        |        |        |      |        |         |       |         |   1000 |        |   500  |         |        |          |  1000 |            |  2000  |
-|  scale         |    [2 , 8 , 32]    |               |  2      |       |            |        |        |        |      |        |         |       |         |   2    |        |   2    |         |        |          |  2    |            |  8     |
-|  CEF           | [500 : 2000 : 500] |               |  1000   |       |            |        |        |        |      |        |         |       |         |   1000 |        |   500  |         |        |          |  500  |            |  1500  |
+|  BKT_number    |    [1 , 2 , 4]     |               |  1      |       |  4         |  4     |        |        |      |        |   1     |  2    |  2      |   1    |        |   4    |         |        |          |  1    |            |  1     |
+|  BKT_kmeas_k   |   [16 , 32 , 64]   |               |  16     |       |  16        |  32    |        |        |      |        |   16    |  32   |  32     |   32   |        |   16   |         |        |          |  16   |            |  32    |
+|  TPT_number    |   [16 , 32 , 64]   |               |  16     |       |  16        |  32    |        |        |      |        |   16    |  16   |  16     |   16   |        |   32   |         |        |          |  16   |            |  64    |
+|  TPT_leaf_size | [500 : 2500 : 500] |               |  1000   |       |  500       |  1000  |        |        |      |        |   1000  |  1500 |  1500   |   1000 |        |   500  |         |        |          |  1000 |            |  2000  |
+|  scale         |    [2 , 8 , 32]    |               |  2      |       |  8         |  32    |        |        |      |        |   2     |  2    |  2      |   2    |        |   2    |         |        |          |  2    |            |  8     |
+|  CEF           | [500 : 2000 : 500] |               |  1000   |       |  1500      |  500   |        |        |      |        |   1000  |  500  |  500    |   1000 |        |   500  |         |        |          |  500  |            |  1500  |
  
 
 ### HCNNG
@@ -163,49 +166,14 @@
 
 ## TODO
 
-#### Optimal Parameter
-
-- [x] KGraph
-
-- [] NSG
-
-- [x] NSSG
-
-- [x] DPG
-
-- [x] EFANNA
-
-- [x] IEH
-
-- [x] VAMANA
-
-- [x] HCNNG
-
-- [x] FANNG
-
-- [x] NSW
-
-- [x] HNSW
-
-- [] ANNG
-
-- [] ONNG
-
-- [] SPTAG-KDT
-
-- [] SPTAG-BKT
-
-sptag_kdt c1 100000
-
-
-### TODO
+* 增加 INIT NN-Descent
+* OpenMP 增加 default
 
 * n2 引入third_party 方法
 * VAMANA REFINE 速度慢
 * 检查个算法candidate init 后排序情况
 * efanna 算法问题
 * FANNG RNG -> HNSW prune
-* 检查 search getQueryData
 * search entry -> pool -> seeds
 * panng 路径调整 根据id 排序
 * HNSWNode 结点距离
