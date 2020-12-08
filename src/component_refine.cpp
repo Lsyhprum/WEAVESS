@@ -66,9 +66,6 @@ namespace weavess {
             }
         }
 
-#ifdef PARALLEL
-#pragma omp for schedule(dynamic, 100)
-#endif
         for (unsigned n = 0; n < index->getBaseLen(); ++n) {
             Index::SimpleNeighbor *src_pool = cut_graph_ + n * range;
             int len = 0;
@@ -311,9 +308,6 @@ namespace weavess {
             }
         }
 
-#ifdef PARALLEL
-#pragma omp for schedule(dynamic, 100)
-#endif
         for (unsigned n = 0; n < index->getBaseLen(); ++n) {
             Index::SimpleNeighbor *src_pool = cut_graph_ + n * range;
             int len = 0;
@@ -414,11 +408,11 @@ namespace weavess {
             }
 
             std::vector<Index::SimpleNeighbor>().swap(pool);
-        }
 
 #pragma omp for schedule(dynamic, 100)
-        for (unsigned n = 0; n < index->getBaseLen(); ++n) {
-            InterInsert(n, index->R_refine, locks, cut_graph_);
+            for (unsigned n = 0; n < index->getBaseLen(); ++n) {
+                InterInsert(n, index->R_refine, locks, cut_graph_);
+            }
         }
     }
 
@@ -588,7 +582,7 @@ namespace weavess {
 
         double kPi = std::acos(-1);
         float threshold = std::cos(index->A / 180 * kPi);
-
+#pragma omp parallel
 #pragma omp for schedule(dynamic, 100)
         for (unsigned n = 0; n < index->getBaseLen(); ++n) {
             InterInsert(n, index->R_refine, threshold, locks, cut_graph_);
@@ -810,11 +804,12 @@ namespace weavess {
 
                 b->PruneInner(n, index->R_refine, flags, pool, cut_graph_);
             }
-        }
+
 
 #pragma omp for schedule(dynamic, 100)
-        for (unsigned n = 0; n < index->getBaseLen(); ++n) {
-            InterInsert(n, index->R_refine, locks, cut_graph_);
+            for (unsigned n = 0; n < index->getBaseLen(); ++n) {
+                InterInsert(n, index->R_refine, locks, cut_graph_);
+            }
         }
 
         // set step 2 alpha
@@ -1112,7 +1107,7 @@ namespace weavess {
     void ComponentRefineEFANNA::generate_control_set(std::vector<unsigned> &c,
                                         std::vector<std::vector<unsigned> > &v,
                                         unsigned N){
-    #pragma omp parallel for
+#pragma omp parallel for
     for(unsigned i=0; i<c.size(); i++){
         std::vector<NNDescent::Neighbor> tmp;
         for(unsigned j=0; j<N; j++){
