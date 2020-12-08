@@ -185,7 +185,7 @@ namespace weavess {
      * @param route_type 路由策略
      * @return 当前建造者指针
      */
-    IndexBuilder *IndexBuilder::search(TYPE entry_type, TYPE route_type, bool IsControlRecall) {
+    IndexBuilder *IndexBuilder::search(TYPE entry_type, TYPE route_type, TYPE L_type) {
         std::cout << "__SEARCH__" << std::endl;
 
         unsigned K = 10;
@@ -260,7 +260,7 @@ namespace weavess {
             exit(-1);
         }
 
-        if (IsControlRecall) {
+        if (L_type == L_SEARCH_SET_RECALL) {
             unsigned sg = 1000; //计算L步长的参数
             bool flag = false;
             int L_sl = 1;   // 可能取负值
@@ -339,7 +339,7 @@ namespace weavess {
                 }
                 L += L_sl;
             }
-        }else {
+        }else if (L_type == L_SEARCH_ASCEND) {
             unsigned L_st = 5;
             unsigned L_st2 = 8;
             for (unsigned i = 0; i < 10; i ++) {
@@ -414,6 +414,54 @@ namespace weavess {
                 float acc = 1 - (float) cnt / (final_index_->getGroundLen() * K);
                 std::cout << K << " NN accuracy: " << acc << std::endl;
             }
+        } else if (L_type == L_SEARCH_ASSIGN) {
+
+            unsigned L = final_index_->getParam().get<unsigned>("L_search");
+            std::cout << "SEARCH_L : " << L << std::endl;
+            if (L < K) {
+                std::cout << "search_L cannot be smaller than search_K! " << std::endl;
+                exit(-1);
+            }
+
+            auto s1 = std::chrono::high_resolution_clock::now();
+
+            res.clear();
+            res.resize(final_index_->getBaseLen());
+
+            for (unsigned i = 0; i < final_index_->getQueryLen(); i++) {
+                pool.clear();
+
+                a->SearchEntryInner(i, pool);
+
+                b->RouteInner(i, pool, res[i]);
+
+            }
+
+            auto e1 = std::chrono::high_resolution_clock::now();
+            std::chrono::duration<double> diff = e1 - s1;
+            std::cout << "search time: " << diff.count() << "\n";
+
+            //float speedup = (float)(index_->n_ * query_num) / (float)distcount;
+            std::cout << "DistCount: " << final_index_->getDistCount() << std::endl;
+            std::cout << "HopCount: " << final_index_->getHopCount() << std::endl;
+            final_index_->resetDistCount();
+            final_index_->resetHopCount();
+            //结果评估
+            int cnt = 0;
+            for (unsigned i = 0; i < final_index_->getGroundLen(); i++) {
+                for (unsigned j = 0; j < K; j++) {
+                    unsigned k = 0;
+                    for (; k < K; k++) {
+                        if (res[i][j] == final_index_->getGroundData()[i * final_index_->getGroundDim() + k])
+                            break;
+                    }
+                    if (k == K)
+                        cnt++;
+                }
+            }
+
+            float acc = 1 - (float) cnt / (final_index_->getGroundLen() * K);
+            std::cout << K << " NN accuracy: " << acc << std::endl;
         }
 
         e = std::chrono::high_resolution_clock::now();
@@ -552,7 +600,7 @@ namespace weavess {
         info.close();
         
     }
-    
+
     /**
     * 保存图索引
     * @param index_type 图索引类型

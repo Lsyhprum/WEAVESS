@@ -1,8 +1,3 @@
-#ifdef _WIN32
-#include <process.h>
-#else
-#include <unistd.h>
-#endif
 #include <weavess/builder.h>
 #include <weavess/exp_data.h>
 #include <iostream>
@@ -28,7 +23,7 @@ void KGraph(weavess::Parameters &parameters) {
     }else if (parameters.get<std::string>("exc_type") == "search") {    // search
         builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
                 -> load_graph(weavess::TYPE::INDEX_KGRAPH, &graph_file[0])
-                -> search(weavess::TYPE::SEARCH_ENTRY_RAND, weavess::TYPE::ROUTER_GREEDY, true);
+                -> search(weavess::TYPE::SEARCH_ENTRY_RAND, weavess::TYPE::ROUTER_GREEDY, weavess::TYPE::L_SEARCH_ASSIGN);
         builder -> peak_memory_footprint();
     }else {
         std::cout << "exc_type input error!" << std::endl;
@@ -54,7 +49,7 @@ void FANNG(weavess::Parameters &parameters) {
     }else if (parameters.get<std::string>("exc_type") == "search") {    // search
         builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
                 -> load_graph(weavess::TYPE::INDEX_FANNG, &graph_file[0])
-                -> search(weavess::TYPE::SEARCH_ENTRY_RAND, weavess::TYPE::ROUTER_BACKTRACK, true);
+                -> search(weavess::TYPE::SEARCH_ENTRY_RAND, weavess::TYPE::ROUTER_BACKTRACK, weavess::TYPE::L_SEARCH_SET_RECALL);
         builder -> peak_memory_footprint();
     }else {
         std::cout << "exc_type input error!" << std::endl;
@@ -81,7 +76,7 @@ void NSG(weavess::Parameters &parameters) {
     }else if (parameters.get<std::string>("exc_type") == "search") {    // search
         builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
                 -> load_graph(weavess::TYPE::INDEX_NSG, &graph_file[0])
-                -> search(weavess::TYPE::SEARCH_ENTRY_CENTROID, weavess::TYPE::ROUTER_GREEDY, true);
+                -> search(weavess::TYPE::SEARCH_ENTRY_CENTROID, weavess::TYPE::ROUTER_GREEDY, weavess::TYPE::L_SEARCH_SET_RECALL);
         builder -> peak_memory_footprint();
     }else {
         std::cout << "exc_type input error!" << std::endl;
@@ -108,7 +103,7 @@ void SSG(weavess::Parameters &parameters) {
     }else if (parameters.get<std::string>("exc_type") == "search") {    // search
         builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
                 -> load_graph(weavess::TYPE::INDEX_SSG, &graph_file[0])
-                -> search(weavess::SEARCH_ENTRY_SUB_CENTROID, weavess::ROUTER_GREEDY, true);
+                -> search(weavess::SEARCH_ENTRY_SUB_CENTROID, weavess::ROUTER_GREEDY, weavess::TYPE::L_SEARCH_SET_RECALL);
         builder -> peak_memory_footprint();
     }else {
         std::cout << "exc_type input error!" << std::endl;
@@ -135,7 +130,7 @@ void DPG(weavess::Parameters &parameters) {
     }else if (parameters.get<std::string>("exc_type") == "search") {    // search
         builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
                 -> load_graph(weavess::TYPE::INDEX_DPG,  &graph_file[0])
-                -> search(weavess::TYPE::SEARCH_ENTRY_RAND, weavess::TYPE::ROUTER_GREEDY, true);
+                -> search(weavess::TYPE::SEARCH_ENTRY_RAND, weavess::TYPE::ROUTER_GREEDY, weavess::TYPE::L_SEARCH_SET_RECALL);
         builder -> peak_memory_footprint();
     }else {
         std::cout << "exc_type input error!" << std::endl;
@@ -162,7 +157,7 @@ void VAMANA(weavess::Parameters &parameters) {
     }else if (parameters.get<std::string>("exc_type") == "search") {    // search
         builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
                 -> load_graph(weavess::TYPE::INDEX_VAMANA, &graph_file[0])
-                -> search(weavess::TYPE::SEARCH_ENTRY_CENTROID, weavess::TYPE::ROUTER_GREEDY, true);
+                -> search(weavess::TYPE::SEARCH_ENTRY_CENTROID, weavess::TYPE::ROUTER_GREEDY, weavess::TYPE::L_SEARCH_SET_RECALL);
         builder -> peak_memory_footprint();
     }else {
         std::cout << "exc_type input error!" << std::endl;
@@ -203,7 +198,7 @@ void IEH(std::string base_path, std::string query_path, std::string ground_path)
     auto *builder = new weavess::IndexBuilder(8);
     builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters) // useless
             -> init(weavess::INIT_IEH)
-            -> search(weavess::SEARCH_ENTRY_HASH, weavess::ROUTER_IEH, false);
+            -> search(weavess::SEARCH_ENTRY_HASH, weavess::ROUTER_IEH, weavess::TYPE::L_SEARCH_SET_RECALL);
 
     std::cout << "Time cost: " << builder->GetBuildTime().count() << std::endl;
 }
@@ -217,7 +212,7 @@ void NSW(std::string base_path, std::string query_path, std::string ground_path)
     auto *builder = new weavess::IndexBuilder(8);
     builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
             -> init(weavess::INIT_NSW)
-            -> search(weavess::SEARCH_ENTRY_NONE, weavess::ROUTER_NSW, false);
+            -> search(weavess::SEARCH_ENTRY_NONE, weavess::ROUTER_NSW, weavess::TYPE::L_SEARCH_SET_RECALL);
 
     std::cout << "Time cost: " << builder->GetBuildTime().count() << std::endl;
 }
@@ -233,7 +228,7 @@ void HNSW(std::string base_path, std::string query_path, std::string ground_path
     auto *builder = new weavess::IndexBuilder(8);
     builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
             -> init(weavess::INIT_HNSW)
-            -> search(weavess::SEARCH_ENTRY_NONE, weavess::ROUTER_HNSW, false);
+            -> search(weavess::SEARCH_ENTRY_NONE, weavess::ROUTER_HNSW, weavess::TYPE::L_SEARCH_SET_RECALL);
 
     std::cout << "Time cost: " << builder->GetBuildTime().count() << std::endl;
 }
@@ -249,7 +244,7 @@ void PANNG(std::string base_path, std::string query_path, std::string ground_pat
     builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
             -> init(weavess::INIT_ANNG)
             -> refine(weavess::REFINE_PANNG, false)
-            -> search(weavess::SEARCH_ENTRY_VPT, weavess::ROUTER_NGT, false);
+            -> search(weavess::SEARCH_ENTRY_VPT, weavess::ROUTER_NGT, weavess::TYPE::L_SEARCH_SET_RECALL);
 
     std::cout << "Time cost: " << builder->GetBuildTime().count() << std::endl;
 }
@@ -272,7 +267,7 @@ void ONNG(std::string base_path, std::string query_path, std::string ground_path
             -> init(weavess::INIT_ANNG, true)
             -> refine(weavess::REFINE_ONNG, true)
             -> refine(weavess::REFINE_PANNG, true)
-            -> search(weavess::SEARCH_ENTRY_VPT, weavess::ROUTER_NGT, true);
+            -> search(weavess::SEARCH_ENTRY_VPT, weavess::ROUTER_NGT, weavess::TYPE::L_SEARCH_SET_RECALL);
 
     std::cout << "Time cost: " << builder->GetBuildTime().count() << std::endl;
 }
@@ -289,7 +284,7 @@ void HCNNG(std::string base_path, std::string query_path, std::string ground_pat
     auto *builder = new weavess::IndexBuilder(8);
     builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
             -> init(weavess::INIT_HCNNG)
-            -> search(weavess::SEARCH_ENTRY_KDT, weavess::ROUTER_GREEDY, false);
+            -> search(weavess::SEARCH_ENTRY_KDT, weavess::ROUTER_GREEDY, weavess::TYPE::L_SEARCH_SET_RECALL);
 
     std::cout << "Time cost: " << builder->GetBuildTime().count() << std::endl;
 }
@@ -308,7 +303,7 @@ void SPTAG_KDT(std::string base_path, std::string query_path, std::string ground
     builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
             -> init(weavess::INIT_SPTAG_KDT)
             -> refine(weavess::REFINE_SPTAG_KDT, false)
-            -> search(weavess::SEARCH_ENTRY_NONE, weavess::ROUTER_SPTAG_KDT, false);
+            -> search(weavess::SEARCH_ENTRY_NONE, weavess::ROUTER_SPTAG_KDT, weavess::TYPE::L_SEARCH_SET_RECALL);
     std::cout << "Time cost: " << builder->GetBuildTime().count() << std::endl;
 }
 
@@ -328,15 +323,15 @@ void SPTAG_BKT(std::string base_path, std::string query_path, std::string ground
     builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
             -> init(weavess::INIT_SPTAG_BKT)
             -> refine(weavess::REFINE_SPTAG_BKT, false)
-            -> search(weavess::SEARCH_ENTRY_NONE, weavess::ROUTER_SPTAG_BKT, false);
+            -> search(weavess::SEARCH_ENTRY_NONE, weavess::ROUTER_SPTAG_BKT, weavess::TYPE::L_SEARCH_SET_RECALL);
 
     std::cout << "Time cost: " << builder->GetBuildTime().count() << std::endl;
 }
 
 
 int main(int argc, char** argv) {
-    if (argc != 4) {
-        std::cout << "./main algorithm dataset exc_type"
+    if (argc < 4 || argc > 5) {
+        std::cout << "./main algorithm dataset exc_type [L_search]"
                 << std::endl;
         exit(-1);
     }
@@ -347,6 +342,10 @@ int main(int argc, char** argv) {
     std::string alg(argv[1]);
     std::string dataset(argv[2]);
     std::string exc_type(argv[3]);
+    if (argc == 5) {
+        unsigned L_search = (unsigned)atoi(argv[4]);
+        parameters.set<unsigned>("L_search", L_search);
+    }
     std::cout << "algorithm: " << alg << std::endl;
     std::cout << "dataset: " << dataset << std::endl;
     std::string graph_file(alg + "_" + dataset + ".graph");

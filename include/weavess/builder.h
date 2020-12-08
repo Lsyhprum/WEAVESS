@@ -29,7 +29,7 @@ namespace weavess {
 
         IndexBuilder *refine(TYPE type, bool debug);
 
-        IndexBuilder *search(TYPE entry_type, TYPE route_type, bool IsControlRecall);
+        IndexBuilder *search(TYPE entry_type, TYPE route_type, TYPE L_type);
 
         void print_graph();
 
