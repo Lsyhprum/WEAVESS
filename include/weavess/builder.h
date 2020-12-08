@@ -45,6 +45,8 @@ namespace weavess {
 
         std::chrono::duration<double> GetBuildTime() { return e - s; }
 
+        void peak_memory_footprint();
+
     private:
         Index *final_index_;
 

@@ -1,3 +1,8 @@
+#ifdef _WIN32
+#include <process.h>
+#else
+#include <unistd.h>
+#endif
 #include <weavess/builder.h>
 #include <weavess/exp_data.h>
 #include <iostream>
@@ -24,6 +29,7 @@ void KGraph(weavess::Parameters &parameters) {
         builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
                 -> load_graph(weavess::TYPE::INDEX_KGRAPH, &graph_file[0])
                 -> search(weavess::TYPE::SEARCH_ENTRY_RAND, weavess::TYPE::ROUTER_GREEDY, true);
+        builder -> peak_memory_footprint();
     }else {
         std::cout << "exc_type input error!" << std::endl;
     }
@@ -49,6 +55,7 @@ void FANNG(weavess::Parameters &parameters) {
         builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
                 -> load_graph(weavess::TYPE::INDEX_FANNG, &graph_file[0])
                 -> search(weavess::TYPE::SEARCH_ENTRY_RAND, weavess::TYPE::ROUTER_BACKTRACK, true);
+        builder -> peak_memory_footprint();
     }else {
         std::cout << "exc_type input error!" << std::endl;
     }
@@ -75,6 +82,7 @@ void NSG(weavess::Parameters &parameters) {
         builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
                 -> load_graph(weavess::TYPE::INDEX_NSG, &graph_file[0])
                 -> search(weavess::TYPE::SEARCH_ENTRY_CENTROID, weavess::TYPE::ROUTER_GREEDY, true);
+        builder -> peak_memory_footprint();
     }else {
         std::cout << "exc_type input error!" << std::endl;
     }
@@ -101,6 +109,7 @@ void SSG(weavess::Parameters &parameters) {
         builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
                 -> load_graph(weavess::TYPE::INDEX_SSG, &graph_file[0])
                 -> search(weavess::SEARCH_ENTRY_SUB_CENTROID, weavess::ROUTER_GREEDY, true);
+        builder -> peak_memory_footprint();
     }else {
         std::cout << "exc_type input error!" << std::endl;
     }
@@ -127,6 +136,7 @@ void DPG(weavess::Parameters &parameters) {
         builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
                 -> load_graph(weavess::TYPE::INDEX_DPG,  &graph_file[0])
                 -> search(weavess::TYPE::SEARCH_ENTRY_RAND, weavess::TYPE::ROUTER_GREEDY, true);
+        builder -> peak_memory_footprint();
     }else {
         std::cout << "exc_type input error!" << std::endl;
     }
@@ -153,6 +163,7 @@ void VAMANA(weavess::Parameters &parameters) {
         builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
                 -> load_graph(weavess::TYPE::INDEX_VAMANA, &graph_file[0])
                 -> search(weavess::TYPE::SEARCH_ENTRY_CENTROID, weavess::TYPE::ROUTER_GREEDY, true);
+        builder -> peak_memory_footprint();
     }else {
         std::cout << "exc_type input error!" << std::endl;
     }
@@ -361,6 +372,5 @@ int main(int argc, char** argv) {
         std::cout << "alg input error!\n";
         exit(-1);
     }
-
     return 0;
 }
