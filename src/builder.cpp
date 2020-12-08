@@ -296,7 +296,10 @@ namespace weavess {
 
                 //float speedup = (float)(index_->n_ * query_num) / (float)distcount;
                 std::cout << "DistCount: " << final_index_->getDistCount() << std::endl;
+                std::cout << "HopCount: " << final_index_->getHopCount() << std::endl;
                 final_index_->resetDistCount();
+                final_index_->resetHopCount();
+                
                 //结果评估
                 int cnt = 0;
                 for (unsigned i = 0; i < final_index_->getGroundLen(); i++) {
@@ -382,7 +385,9 @@ namespace weavess {
 
                 //float speedup = (float)(index_->n_ * query_num) / (float)distcount;
                 std::cout << "DistCount: " << final_index_->getDistCount() << std::endl;
+                std::cout << "HopCount: " << final_index_->getHopCount() << std::endl;
                 final_index_->resetDistCount();
+                final_index_->resetHopCount();
                 //结果评估
                 int cnt = 0;
                 for (unsigned i = 0; i < final_index_->getGroundLen(); i++) {

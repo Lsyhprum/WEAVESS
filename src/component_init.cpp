@@ -90,7 +90,7 @@ namespace weavess {
         index->getFinalGraph().resize(index->getBaseLen());
 
 #ifdef PARALLEL
-#pragma omp parallel for num_threads(THREADS_NUM)
+#pragma omp parallel for
 #endif
         for (unsigned i = 0; i < index->getBaseLen(); i ++) {
             index->getFinalGraph()[i].resize(range);

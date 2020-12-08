@@ -1757,6 +1757,19 @@ namespace weavess {
         void addDistCount() {
             dist_count += 1;
         }
+
+        unsigned int getHopCount() const {
+            return hop_count;
+        }
+
+        void resetHopCount() {
+            hop_count = 0;
+        }
+
+        void addHopCount() {
+            hop_count += 1;
+        }
+        
         void setNumThreads(const unsigned numthreads) {
             omp_set_num_threads(numthreads);
         }
@@ -1788,6 +1801,7 @@ namespace weavess {
         TYPE conn_type;
 
         unsigned dist_count = 0;
+        unsigned hop_count = 0;
     };
 }
 

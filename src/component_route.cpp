@@ -27,6 +27,7 @@ namespace weavess {
                 pool[k].flag = false;
                 unsigned n = pool[k].id;
 
+                index->addHopCount();
                 // 查找邻居的邻居
                 for (unsigned m = 0; m < index->getLoadGraph()[n].size(); ++m) {
                     unsigned id = index->getLoadGraph()[n][m];
@@ -121,6 +122,7 @@ namespace weavess {
             std::unique_lock<std::mutex> lock(candidate_node->GetAccessGuard());
             const std::vector<Index::HnswNode *> &neighbors = candidate_node->GetFriends(level);
             candidates.pop();
+            index->addHopCount();
             for (const auto &neighbor : neighbors) {
                 int id = neighbor->GetId();
                 if (visited_list->NotVisited(id)) {
@@ -182,6 +184,7 @@ namespace weavess {
                 std::unique_lock<std::mutex> local_lock(cur_node->GetAccessGuard());
                 const std::vector<Index::HnswNode *> &neighbors = cur_node->GetFriends(i);
 
+                index->addHopCount();
                 for (auto iter = neighbors.begin(); iter != neighbors.end(); ++iter) {
                     if(visited[(*iter)->GetId()] != visited_mark) {
                         visited[(*iter)->GetId()] = visited_mark;
@@ -261,6 +264,7 @@ namespace weavess {
             float minimum_distance = farthest_distance;
             int size = cur_node->GetFriends(0).size();
 
+            index->addHopCount();
             //std::cout << "wtf2" << std::endl;
             for (auto j = 1; j < size; ++j) {
                 int node_id = cur_node->GetFriends(0)[j]->GetId();
@@ -345,6 +349,7 @@ namespace weavess {
         while (niter++ < iterlimit) {
             auto it = cands.rbegin();
             std::vector<int> ids;
+            index->addHopCount();
             for (int j = 0; it != cands.rend() && j < expand; it++, j++) {
                 int neighbor = it->row_id;
                 auto nnit = index->knntable[neighbor].rbegin();
@@ -447,6 +452,7 @@ namespace weavess {
                 queue.push(Index::FANNGCloserFirst(nnid, dist));
                 full.push(Index::FANNGCloserFirst(nnid, dist));
             }
+            index->addHopCount();
 
             //std::cout << 4 << std::endl;
         }
@@ -498,6 +504,7 @@ namespace weavess {
                     nn = index->Tn[n].right;
                 }
 
+                index->addHopCount();
                 for (unsigned m = 0; m < MaxM; ++m) {
                     unsigned id = nn[m];
                     if (flags[id]) continue;
@@ -639,6 +646,7 @@ namespace weavess {
             }
             float upperBound = std::max(p_query.worstDist(), gnode.distance);
             bool bLocalOpt = true;
+            index->addHopCount();
             for (unsigned i = 0; i < index->R_refine; i++) {
                 int nn_index = node[i].id;
                 if (nn_index < 0) break;
@@ -788,6 +796,7 @@ namespace weavess {
                     return;
                 }
             }
+            index->addHopCount();
             for (unsigned i = 0; i <= checkPos; i++) {
                 int nn_index = node[i].id;
                 if (nn_index < 0) break;
@@ -868,6 +877,7 @@ namespace weavess {
                 continue;
             }
 
+            index->addHopCount();
             for (unsigned neighborptr = 0; neighborptr < neighbors.size(); ++neighborptr){
                 //sc.visitCount++;
                 Index::SimpleNeighbor neighbor = index->getFinalGraph()[target.id][neighborptr];
