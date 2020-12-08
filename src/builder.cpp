@@ -579,6 +579,29 @@ namespace weavess {
     }
 
     /**
+    * 最大内存需求（VmPeak）
+    */
+    void IndexBuilder::peak_memory_footprint() {
+
+        unsigned iPid = (unsigned)getpid();
+
+        std::cout<<"PID: "<<iPid<<std::endl;
+
+        std::string status_file = "/proc/" + std::to_string(iPid) + "/status";
+        std::ifstream info(status_file);
+        if (!info.is_open()) {
+            std::cout << "memory information open error!" << std::endl;
+        }
+        std::string tmp;
+        while(getline(info, tmp)) {
+            if (tmp.find("Name:") != std::string::npos || tmp.find("VmPeak:") != std::string::npos || tmp.find("VmHWM:") != std::string::npos)
+            std::cout << tmp << std::endl;
+        }
+        info.close();
+        
+    }
+    
+    /**
     * 保存图索引
     * @param index_type 图索引类型
     * @param graph_file 图索引保存地址
