@@ -1784,9 +1784,9 @@ namespace weavess {
         unsigned base_dim_, query_dim_, ground_dim_;
 
         Parameters param_;
-        unsigned init_edges_num;
-        unsigned candidates_edges_num;
-        unsigned result_edges_num;
+        unsigned init_edges_num; // S
+        unsigned candidates_edges_num; // L
+        unsigned result_edges_num; // K
 
         Distance *dist_;
 

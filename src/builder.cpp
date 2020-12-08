@@ -53,6 +53,7 @@ namespace weavess {
         } else if (type == INIT_KDT) {
             std::cout << "__INIT : KDT__" << std::endl;
             a = new ComponentInitKDT(final_index_);
+            //a = new ComponentInitKDTree(final_index_);
         } else if (type == INIT_IEH) {
             std::cout << "__INIT : IEH__" << std::endl;
             a = new ComponentInitIEH(final_index_);
@@ -86,16 +87,14 @@ namespace weavess {
         } else if (type == INIT_KNNG) {
             std::cout << "__INIT : KNNG__" << std::endl;
             a = new ComponentInitKNNG(final_index_);
-        }
-
-        else {
+        } else {
             std::cerr << "__INIT : WRONG TYPE__" << std::endl;
             exit(-1);
         }
 
         a->InitInner();
 
-        if(debug) {
+        if (debug) {
             //print_graph();
             std::unordered_map<unsigned, unsigned> in_degree;
             std::unordered_map<unsigned, unsigned> out_degree;
@@ -152,9 +151,7 @@ namespace weavess {
         } else if (type == REFINE_ONNG) {
             std::cout << "__REFINE : ONNG__" << std::endl;
             a = new ComponentRefineONNG(final_index_);
-        }
-
-        else {
+        } else {
             std::cerr << "__REFINE : WRONG TYPE__" << std::endl;
         }
 
@@ -164,7 +161,7 @@ namespace weavess {
         std::cout << "===================" << std::endl;
         std::cout << "__REFINE : FINISH__" << std::endl;
         std::cout << "===================" << std::endl;
-        e = std::chrono::high_resolution_clock::now();  
+        e = std::chrono::high_resolution_clock::now();
         if (debug) {
             //print_graph();
             // degree
@@ -319,7 +316,7 @@ namespace weavess {
                 if (acc_set - acc <= 0) {
                     if (L == K || L_sl == 1) {
                         break;
-                    }else {
+                    } else {
                         if (flag == false) {
                             L_sl < 0 ? L_sl-- : L_sl++;
                             flag = true;
@@ -342,7 +339,7 @@ namespace weavess {
         }else if (L_type == L_SEARCH_ASCEND) {
             unsigned L_st = 5;
             unsigned L_st2 = 8;
-            for (unsigned i = 0; i < 10; i ++) {
+            for (unsigned i = 0; i < 10; i++) {
                 unsigned L = L_st + L_st2;
                 L_st = L_st2;
                 L_st2 = L;
@@ -364,19 +361,19 @@ namespace weavess {
 
                     a->SearchEntryInner(i, pool);
 
-    //                for(unsigned j = 0; j < pool.size(); j ++) {
-    //                    std::cout << pool[j].id << "|" << pool[j].distance << " ";
-    //                }
-    //                std::cout << std::endl;
-    //
-    //                std::cout << pool.size() << std::endl;
+                    //                for(unsigned j = 0; j < pool.size(); j ++) {
+                    //                    std::cout << pool[j].id << "|" << pool[j].distance << " ";
+                    //                }
+                    //                std::cout << std::endl;
+                    //
+                    //                std::cout << pool.size() << std::endl;
 
                     b->RouteInner(i, pool, res[i]);
 
-    //                for(unsigned j = 0; j < res[i].size(); j ++) {
-    //                    std::cout << res[i][j] << " ";
-    //                }
-    //                std::cout << std::endl;
+                    //                for(unsigned j = 0; j < res[i].size(); j ++) {
+                    //                    std::cout << res[i][j] << " ";
+                    //                }
+                    //                std::cout << std::endl;
                 }
 
                 auto e1 = std::chrono::high_resolution_clock::now();
@@ -401,14 +398,14 @@ namespace weavess {
                             cnt++;
                     }
 
-    //                for(unsigned j = 0; j < K; j ++) {
-    //                    std::cout << res[i][j] << " ";
-    //                }
-    //                std::cout << std::endl;
-    //                for(unsigned j = 0; j < K; j ++) {
-    //                    std::cout << final_index_->getGroundData()[i * final_index_->getGroundDim() + j] << " ";
-    //                }
-    //                std::cout << std::endl;
+                    //                for(unsigned j = 0; j < K; j ++) {
+                    //                    std::cout << res[i][j] << " ";
+                    //                }
+                    //                std::cout << std::endl;
+                    //                for(unsigned j = 0; j < K; j ++) {
+                    //                    std::cout << final_index_->getGroundData()[i * final_index_->getGroundDim() + j] << " ";
+                    //                }
+                    //                std::cout << std::endl;
                 }
 
                 float acc = 1 - (float) cnt / (final_index_->getGroundLen() * K);
@@ -475,10 +472,11 @@ namespace weavess {
      */
     void IndexBuilder::print_graph() {
         std::cout << "=====================" << std::endl;
-        for (int i = 0; i < 10; i ++) {
+        for (int i = 0; i < 10; i++) {
             std::cout << i << " : " << final_index_->getFinalGraph()[i].size() << std::endl;
-            for (int j = 0; j < final_index_->getFinalGraph()[i].size(); j ++) {
-                std::cout << final_index_->getFinalGraph()[i][j].id << "|" << final_index_->getFinalGraph()[i][j].distance << " ";
+            for (int j = 0; j < final_index_->getFinalGraph()[i].size(); j++) {
+                std::cout << final_index_->getFinalGraph()[i][j].id << "|"
+                          << final_index_->getFinalGraph()[i][j].distance << " ";
             }
             std::cout << std::endl;
         }
@@ -489,7 +487,8 @@ namespace weavess {
      * @param in_degree 入度统计
      * @param out_degree 出度统计
      */
-    void IndexBuilder::degree_info(std::unordered_map<unsigned, unsigned> &in_degree, std::unordered_map<unsigned, unsigned> &out_degree) {
+    void IndexBuilder::degree_info(std::unordered_map<unsigned, unsigned> &in_degree,
+                                   std::unordered_map<unsigned, unsigned> &out_degree) {
         unsigned max_out_degree = 0, min_out_degree = 1e6;
         double avg_out_degree = 0.0;
 
@@ -503,10 +502,12 @@ namespace weavess {
             min_out_degree = min_out_degree > size ? size : min_out_degree;
             avg_out_degree += size;
 
-            for (unsigned j = 0; j < final_index_->getFinalGraph()[i].size(); j ++) {
-                in_degree[final_index_->getFinalGraph()[i][j].id] ++;
-                max_in_degree = max_in_degree < in_degree[final_index_->getFinalGraph()[i][j].id] ? in_degree[final_index_->getFinalGraph()[i][j].id] : max_in_degree;
-                min_in_degree = min_in_degree > in_degree[final_index_->getFinalGraph()[i][j].id] ? in_degree[final_index_->getFinalGraph()[i][j].id] : min_in_degree;
+            for (unsigned j = 0; j < final_index_->getFinalGraph()[i].size(); j++) {
+                in_degree[final_index_->getFinalGraph()[i][j].id]++;
+                max_in_degree = max_in_degree < in_degree[final_index_->getFinalGraph()[i][j].id]
+                                ? in_degree[final_index_->getFinalGraph()[i][j].id] : max_in_degree;
+                min_in_degree = min_in_degree > in_degree[final_index_->getFinalGraph()[i][j].id]
+                                ? in_degree[final_index_->getFinalGraph()[i][j].id] : min_in_degree;
             }
         }
         for (auto it : in_degree) {
@@ -515,8 +516,10 @@ namespace weavess {
 
         avg_out_degree /= final_index_->getBaseLen();
         avg_in_degree /= final_index_->getBaseLen();
-        printf("Degree Statistics: Max out degree = %d, Min out degree= %d, Avg out degree = %lf\n", max_out_degree, min_out_degree, avg_out_degree);
-        printf("Degree Statistics: Max in degree = %d, Min in degree= %d, Avg in degree = %lf\n", max_in_degree, min_in_degree, avg_in_degree);
+        printf("Degree Statistics: Max out degree = %d, Min out degree= %d, Avg out degree = %lf\n", max_out_degree,
+               min_out_degree, avg_out_degree);
+        printf("Degree Statistics: Max in degree = %d, Min in degree= %d, Avg in degree = %lf\n", max_in_degree,
+               min_in_degree, avg_in_degree);
     }
 
     /**
@@ -578,6 +581,51 @@ namespace weavess {
         }
     }
 
+    int DepthFirstWrite(std::fstream& out, struct Index::Node *root){
+        if(root==nullptr) return 0;
+        int left_cnt = DepthFirstWrite(out, root->Lchild);
+        int right_cnt = DepthFirstWrite(out, root->Rchild);
+
+        //std::cout << root->StartIdx <<":" << root->EndIdx<< std::endl;
+        out.write((char *)&(root->DivDim), sizeof(root->DivDim));
+        out.write((char *)&(root->DivVal), sizeof(root->DivVal));
+        out.write((char *)&(root->StartIdx), sizeof(root->StartIdx));
+        out.write((char *)&(root->EndIdx), sizeof(root->EndIdx));
+        out.write((char *)&(root->Lchild), sizeof(root->Lchild));
+        out.write((char *)&(root->Rchild), sizeof(root->Rchild));
+        return (left_cnt + right_cnt + 1);
+    }
+
+    struct Index::Node* DepthFirstBuildTree(std::vector<struct Index::Node *>& tree_nodes){
+        std::vector<Index::Node*> root_serial;
+        typename std::vector<struct Index::Node*>::iterator it = tree_nodes.begin();
+        for( ; it!=tree_nodes.end(); it++){
+            Index::Node* tmp = *it;
+            size_t rsize = root_serial.size();
+            if(rsize<2){
+                root_serial.push_back(tmp);
+                //continue;
+            }
+            else{
+                Index::Node *last1 = root_serial[rsize-1];
+                Index::Node *last2 = root_serial[rsize-2];
+                if(last1->EndIdx == tmp->EndIdx && last2->StartIdx == tmp->StartIdx){
+                    tmp->Rchild = last1;
+                    tmp->Lchild = last2;
+                    root_serial.pop_back();
+                    root_serial.pop_back();
+                }
+                root_serial.push_back(tmp);
+            }
+
+        }
+        if(root_serial.size()!=1){
+            std::cout << "Error constructing trees" << std::endl;
+            return NULL;
+        }
+        return root_serial[0];
+    }
+
     /**
     * 最大内存需求（VmPeak）
     */
@@ -608,13 +656,54 @@ namespace weavess {
     * @return 当前建造者指针
     */
     IndexBuilder *IndexBuilder::save_graph(TYPE type, char *graph_file) {
-        std::ofstream out(graph_file, std::ios::binary | std::ios::out);
+        std::fstream out(graph_file, std::ios::binary | std::ios::out);
         if (type == INDEX_NSG || type == INDEX_VAMANA) {
-            out.write((char *)&final_index_->ep_, sizeof(unsigned));
-        }else if (type == INDEX_SSG) {
-            unsigned n_ep=final_index_->eps_.size();
-            out.write((char *)&n_ep, sizeof(unsigned));
-            out.write((char *)final_index_->eps_.data(), n_ep*sizeof(unsigned));
+            out.write((char *) &final_index_->ep_, sizeof(unsigned));
+        } else if (type == INDEX_SSG) {
+            unsigned n_ep = final_index_->eps_.size();
+            out.write((char *) &n_ep, sizeof(unsigned));
+            out.write((char *) final_index_->eps_.data(), n_ep * sizeof(unsigned));
+        } else if (type == INDEX_HNSW) {
+
+        } else if (type == INDEX_EFANNA) {
+            unsigned nTrees = final_index_->nTrees;
+            unsigned mLevel = final_index_->mLevel;
+            unsigned K = final_index_->K;
+
+            out.write((char *) &nTrees, sizeof(unsigned));
+            out.write((char *) &mLevel, sizeof(unsigned));
+            out.write((char *) &K, sizeof(unsigned));
+
+            std::vector<Index::Node*>::iterator it;
+            for(it = final_index_->tree_roots_.begin(); it != final_index_->tree_roots_.end(); it ++) {
+                //write tree nodes with depth first trace
+
+
+                size_t offset_node_num = out.tellp();
+
+                out.seekp(sizeof(int),std::ios::cur);
+
+                unsigned int node_size = sizeof(struct Index::Node);
+                out.write((char *)&(node_size), sizeof(int));
+
+                unsigned int node_num = DepthFirstWrite(out, *it);
+
+                out.seekg(offset_node_num,std::ios::beg);
+
+                out.write((char *)&(node_num), sizeof(int));
+
+                out.seekp(0,std::ios::end);
+                //std::cout<<"tree: "<<cnt++<<" written, node: "<<node_num<<" at offset " << offset_node_num <<std::endl;
+            }
+
+            if(final_index_->LeafLists.size()!=nTrees){ std::cout << "leaf_size!=tree_num" << std::endl; exit(-6); }
+
+            for(unsigned int i=0; i<nTrees; i++){
+                for(unsigned int j=0;j<final_index_->getBaseLen();j++){
+                    out.write((char *)&(final_index_->LeafLists[i][j]), sizeof(int));
+                }
+            }
+
         }
         for (unsigned i = 0; i < final_index_->getBaseLen(); i++) {
             unsigned GK = (unsigned) final_index_->getFinalGraph()[i].size();
@@ -641,19 +730,65 @@ namespace weavess {
     IndexBuilder *IndexBuilder::load_graph(TYPE type, char *graph_file) {
         std::ifstream in(graph_file, std::ios::binary);
         if (type == INDEX_NSG || type == INDEX_VAMANA) {
-            in.read((char *)&final_index_->ep_, sizeof(unsigned));
-        }else if (type == INDEX_SSG) {
-            unsigned n_ep=0;
-            in.read((char *)&n_ep, sizeof(unsigned));
+            in.read((char *) &final_index_->ep_, sizeof(unsigned));
+        } else if (type == INDEX_SSG) {
+            unsigned n_ep = 0;
+            in.read((char *) &n_ep, sizeof(unsigned));
             final_index_->eps_.resize(n_ep);
-            in.read((char *)final_index_->eps_.data(), n_ep*sizeof(unsigned));
+            in.read((char *) final_index_->eps_.data(), n_ep * sizeof(unsigned));
+        } else if (type == INDEX_EFANNA) {
+            size_t K;
+
+            //read file head
+            in.read((char*)&(final_index_->nTrees),sizeof(unsigned));
+            in.read((char*)&(final_index_->mLevel), sizeof(unsigned));
+            in.read((char*)&(K),sizeof(unsigned));
+
+            final_index_->tree_roots_.clear();
+            for(unsigned int i=0;i<final_index_->nTrees;i++){// for each tree
+                int node_num, node_size;
+                in.read((char*)&(node_num),sizeof(int));
+                in.read((char*)&(node_size),sizeof(int));
+
+                std::vector<struct Index::Node *> tree_nodes;
+                for(int j=0;j<node_num;j++){
+                    struct Index::Node *tmp = new struct Index::Node();
+                    in.read((char*)&(tmp->DivDim),sizeof(tmp->DivDim));
+                    in.read((char*)&(tmp->DivVal),sizeof(tmp->DivVal));
+                    in.read((char*)&(tmp->StartIdx),sizeof(tmp->StartIdx));
+                    in.read((char*)&(tmp->EndIdx),sizeof(tmp->EndIdx));
+                    in.read((char*)&(tmp->Lchild),sizeof(tmp->Lchild));
+                    in.read((char*)&(tmp->Rchild),sizeof(tmp->Rchild));
+                    tmp->Lchild = nullptr;
+                    tmp->Rchild = nullptr;
+                    tmp->treeid = i;
+                    tree_nodes.push_back(tmp);
+                }
+                //std::cout<<"build "<<i<<std::endl;
+                struct Index::Node *root = DepthFirstBuildTree(tree_nodes);
+                if(root==nullptr){ exit(-11); }
+                final_index_->tree_roots_.push_back(root);
+            }
+
+            //read index range
+            final_index_->LeafLists.clear();
+            for(unsigned int i=0;i<final_index_->nTrees;i++){
+
+                std::vector<unsigned> leaves;
+                for(unsigned int j=0;j<final_index_->getBaseLen(); j++){
+                    unsigned leaf;
+                    in.read((char*)&(leaf),sizeof(int));
+                    leaves.push_back(leaf);
+                }
+                final_index_->LeafLists.push_back(leaves);
+            }
         }
         while (!in.eof()) {
             unsigned GK;
-            in.read((char *)&GK, sizeof(unsigned));
+            in.read((char *) &GK, sizeof(unsigned));
             if (in.eof()) break;
             std::vector<unsigned> tmp(GK);
-            in.read((char *)tmp.data(), GK * sizeof(unsigned));
+            in.read((char *) tmp.data(), GK * sizeof(unsigned));
             final_index_->getLoadGraph().push_back(tmp);
         }
         return this;
