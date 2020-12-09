@@ -312,6 +312,59 @@ void VAMANA_PARA(std::string dataset, weavess::Parameters &parameters) {
     parameters.set<unsigned>("R_refine", R);
 }
 
+void EFANNA_PARA(std::string dataset, weavess::Parameters &parameters) {
+    unsigned nTrees, mLevel, K, L, Iter, S, R;
+    if (dataset == "siftsmall") {
+        nTrees = 8, mLevel = 4, K = 60, L = 70, Iter = 10, S = 15, R = 150;    // siftsmall
+    }else if (dataset == "sift1M") {
+        nTrees = 8, mLevel = 8, K = 60, L = 70, Iter = 10, S = 15, R = 150;    // sift1M
+    }else if (dataset == "gist") {
+        nTrees = 16, mLevel = 8, K = 100, L = 190, Iter = 7, S = 30, R = 50;    // gist
+    }else if (dataset == "glove-100") {
+        nTrees = 8, mLevel = 8, K = 100, L = 170, Iter = 7, S = 10, R = 100;    // glove
+    }else if (dataset == "audio") {
+        nTrees = 16, mLevel = 8, K = 40, L = 10, Iter = 10, S = 30, R = 100;    // audio
+    }else if (dataset == "crawl") {
+        nTrees = 16, mLevel = 8, K = 100, L = 120, Iter = 8, S = 25, R = 100;    // crawl
+    }else if (dataset == "msong") {
+        nTrees = 8, mLevel = 8, K = 50, L = 130, Iter = 7, S = 10, R = 150;    // msong
+    }else if (dataset == "uqv") {
+        nTrees = 4, mLevel = 8, K = 40, L = 50, Iter = 7, S = 10, R = 150;    // uqv
+    }else if (dataset == "enron") {
+        nTrees = 4, mLevel = 8, K = 40, L = 140, Iter = 5, S = 35, R = 150;    // enron
+    }else if (dataset == "mnist") {
+        nTrees = 4, mLevel = 8, K = 40, L = 140, Iter = 5, S = 35, R = 150;    // mnist
+    }else if (dataset == "c_1") {
+        nTrees = 4, mLevel = 8, K = 90, L = 190, Iter = 7, S = 15, R = 50;    // c_1
+    }else if (dataset == "c_10") {
+        nTrees = 4, mLevel = 8, K = 100, L = 160, Iter = 7, S = 15, R = 100;    // c_10
+    }else if (dataset == "c_100") {
+        nTrees = 4, mLevel = 8, K = 70, L = 160, Iter = 7, S = 35, R = 150;    // c_100
+    }else if (dataset == "d_8") {
+        nTrees = 8, mLevel = 8, K = 50, L = 120, Iter = 7, S = 15, R = 50;    // d_8
+    }else if (dataset == "d_128") {
+        nTrees = 4, mLevel = 8, K = 40, L = 40, Iter = 7, S = 25, R = 150;    // d_128
+    }else if (dataset == "n_10000") {
+        nTrees = 4, mLevel = 8, K = 80, L = 140, Iter = 7, S = 25, R = 150;    // n_10000
+    }else if (dataset == "n_1000000") {
+        nTrees = 4, mLevel = 8, K = 100, L = 160, Iter = 7, S = 15, R = 100;    // n_1000000
+    }else if (dataset == "s_1") {
+        nTrees = 32, mLevel = 8, K = 100, L = 160, Iter = 7, S = 35, R = 150;    // s_1
+    }else if (dataset == "s_10") {
+        nTrees = 32, mLevel = 8, K = 100, L = 110, Iter = 7, S = 30, R = 100;    // s_10
+    }else {
+        std::cout << "dataset error!\n";
+        exit(-1);
+    }
+    parameters.set<unsigned>("nTrees", nTrees);
+    parameters.set<unsigned>("mLevel", mLevel);
+    parameters.set<unsigned>("K", K);
+    parameters.set<unsigned>("L", L);
+    parameters.set<unsigned>("ITER", Iter);
+    parameters.set<unsigned>("S", S);
+    parameters.set<unsigned>("R", R);
+}
+
 void set_data_path(std::string dataset, weavess::Parameters &parameters) {
     // dataset root path
     std::string dataset_root = parameters.get<std::string>("dataset_root");
@@ -441,6 +494,8 @@ void set_para(std::string alg, std::string dataset, weavess::Parameters &paramet
         DPG_PARA(dataset, parameters);
     }else if (alg == "vamana") {
         VAMANA_PARA(dataset, parameters);
+    }else if (alg == "efanna") {
+        EFANNA_PARA(dataset, parameters);
     }
     else {
         std::cout << "algorithm input error!\n";
