@@ -23,7 +23,7 @@ void EFANNA(std::string base_path, std::string query_path, std::string ground_pa
             -> refine(weavess::REFINE_EFANNA, true)
             //-> save_graph(weavess::INDEX_EFANNA, &graph[0])
             //-> load_graph(weavess::INDEX_EFANNA, &graph[0])
-            -> search(weavess::SEARCH_ENTRY_KDT, weavess::ROUTER_GREEDY, false);
+            -> search(weavess::SEARCH_ENTRY_KDT, weavess::ROUTER_GREEDY, weavess::TYPE::L_SEARCH_ASCEND);
 
     std::cout << "Time cost: " << builder->GetBuildTime().count() << std::endl;
 }
@@ -37,7 +37,7 @@ void NSW(std::string base_path, std::string query_path, std::string ground_path)
     auto *builder = new weavess::IndexBuilder(8);
     builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
             -> init(weavess::INIT_NSW)
-            -> search(weavess::SEARCH_ENTRY_NONE, weavess::ROUTER_NSW, false);
+            -> search(weavess::SEARCH_ENTRY_NONE, weavess::ROUTER_NSW, weavess::TYPE::L_SEARCH_ASCEND);
 
     std::cout << "Time cost: " << builder->GetBuildTime().count() << std::endl;
 }
@@ -53,7 +53,7 @@ void PANNG(std::string base_path, std::string query_path, std::string ground_pat
     builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
             -> init(weavess::INIT_ANNG)
             -> refine(weavess::REFINE_PANNG, false)
-            -> search(weavess::SEARCH_ENTRY_VPT, weavess::ROUTER_NGT, false);
+            -> search(weavess::SEARCH_ENTRY_VPT, weavess::ROUTER_NGT, weavess::TYPE::L_SEARCH_ASCEND);
 
     std::cout << "Time cost: " << builder->GetBuildTime().count() << std::endl;
 }

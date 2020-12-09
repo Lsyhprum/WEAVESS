@@ -258,11 +258,12 @@ namespace weavess {
         }
 
         if (L_type == L_SEARCH_SET_RECALL) {
-            unsigned sg = 1000; //计算L步长的参数
+            unsigned sg = 1000; // 计算L步长的参数
+            float acc_set = 0.99;   // 指定的最小acc
             bool flag = false;
-            int L_sl = 1;   // 可能取负值
+            int L_sl = 1;   // L步长，可能取负值
             unsigned L = K;
-            float acc_set = 0.99;
+            unsigned L_min = 0x7fffffff; // acc超过acc_set的最小L值
             while (true) {
                 // unsigned L_pre = L;
                 std::cout << "SEARCH_L : " << L << std::endl;
@@ -314,6 +315,7 @@ namespace weavess {
                 float acc = 1 - (float) cnt / (final_index_->getGroundLen() * K);
                 std::cout << K << " NN accuracy: " << acc << std::endl;
                 if (acc_set - acc <= 0) {
+                    if (L_min > L) L_min = L;
                     if (L == K || L_sl == 1) {
                         break;
                     } else {
@@ -330,12 +332,14 @@ namespace weavess {
                         L_sl < 0 ? L_sl : L_sl = -L_sl;
                     }
                 }else {
+                    if (L_min < L) break;
                     L_sl = (int)(sg * (acc_set - acc));
                     if (L_sl == 0) L_sl++;
                     flag = false;
                 }
                 L += L_sl;
             }
+            std::cout << "L_min: " << L_min << std::endl;
         }else if (L_type == L_SEARCH_ASCEND) {
             unsigned L_st = 5;
             unsigned L_st2 = 8;
