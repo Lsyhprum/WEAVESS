@@ -537,6 +537,7 @@ namespace weavess {
      * 构建随机截断树，并生成子图
      */
     void ComponentInitKDT::InitInner() {
+        omp_init_lock(&index->rootlock);
         SetConfigs();
 
         unsigned seed = 1998;
@@ -574,7 +575,7 @@ namespace weavess {
             std::copy(indices.begin(), indices.end(), myids.begin());
             std::random_shuffle(myids.begin(), myids.end());
         }
-        omp_init_lock(&index->rootlock);
+        // omp_init_lock(&index->rootlock);
         // 构建随机截断树
         while (!ActiveSet.empty() && ActiveSet.size() < 1100) {
 #pragma omp parallel for
