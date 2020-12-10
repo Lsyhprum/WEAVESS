@@ -1366,8 +1366,8 @@ namespace weavess {
         auto *a = new ComponentCandidateSPTAG_BKT(index);
 
         // PRUNE
-        std::cout << "__PRUNE : NAIVE__" << std::endl;
-        auto *b = new ComponentPruneNaive(index);
+        std::cout << "__PRUNE : RNG__" << std::endl;
+        auto *b = new ComponentPruneHeuristic(index);
 
 #pragma omp parallel
         {
@@ -1465,8 +1465,8 @@ namespace weavess {
         auto *a = new ComponentCandidateSPTAG_KDT(index);
 
         // PRUNE
-        std::cout << "__PRUNE : RNG__" << std::endl;
-        auto *b = new ComponentPruneHeuristic(index);
+        std::cout << "__PRUNE : Naive__" << std::endl;
+        auto *b = new ComponentPruneNaive(index);
 
 #pragma omp parallel
         {
@@ -1505,6 +1505,7 @@ namespace weavess {
 //            graphIndex.saveGraph(outIndexPath);
 //            prop.graphType = NGT::NeighborhoodGraph::GraphTypeONNG;
 //            graphIndex.saveProperty(outIndexPath);
+            std::vector<std::vector<Index::SimpleNeighbor>>().swap(graph);
         }
 
         //if (shortcutReduction) {
@@ -1578,9 +1579,7 @@ namespace weavess {
 
         for (size_t id = 0; id < index->getBaseLen(); id++) {
             std::vector<Index::SimpleNeighbor> &n = index->getFinalGraph()[id];
-//                if (id % 100000 == 0) {
-//                    std::cerr << "Processed " << id << " nodes" << std::endl;
-//                }
+
             std::sort(n.begin(), n.end(), [](Index::SimpleNeighbor &a, Index::SimpleNeighbor &b) {
                 if (a.distance == b.distance) {
                     return a.id < b.id;
@@ -1597,8 +1596,8 @@ namespace weavess {
                 prev = (*it).id;
                 it++;
             }
-            std::vector<Index::SimpleNeighbor> tmp = n;
-            n.swap(tmp);
+            //std::vector<Index::SimpleNeighbor> tmp = n;
+            //n.swap(tmp);
         }
     }
 }

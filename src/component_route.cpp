@@ -632,7 +632,7 @@ namespace weavess {
 
         while (!m_NGQueue.empty()) {
             Index::HeapCell gnode = m_NGQueue.pop();
-            std::vector<Index::SimpleNeighbor> node = index->getFinalGraph()[gnode.node];
+            std::vector<unsigned> node = index->getLoadGraph()[gnode.node];
 
             if (!p_query.AddPoint(gnode.node, gnode.distance) && m_iNumberOfCheckedLeaves > index->m_iMaxCheck) {
                 p_query.SortResult();
@@ -647,8 +647,8 @@ namespace weavess {
             float upperBound = std::max(p_query.worstDist(), gnode.distance);
             bool bLocalOpt = true;
             index->addHopCount();
-            for (unsigned i = 0; i < index->R_refine; i++) {
-                int nn_index = node[i].id;
+            for (unsigned i = 0; i < node.size(); i++) {
+                unsigned nn_index = node[i];
                 if (nn_index < 0) break;
                 if (nodeCheckStatus.CheckAndSet(nn_index)) continue;
                 float distance2leaf = index->getDist()->compare(index->getQueryData() + index->getQueryDim() * query,
@@ -670,13 +670,14 @@ namespace weavess {
                 }
             }
         }
+
         p_query.SortResult();
         for(int i = 0; i < p_query.GetResultNum(); i ++) {
             if(p_query.GetResult(i)->Dist == MaxDist) break;
             result.emplace_back(p_query.GetResult(i)->VID);
-            //std::cout << p_query.GetResult(i)->VID << "|" << p_query.GetResult(i)->Dist << " ";
+//            std::cout << p_query.GetResult(i)->VID << "|" << p_query.GetResult(i)->Dist << " ";
         }
-        //std::cout << std::endl;
+//        std::cout << std::endl;
         result.resize(result.size() > K ? K : result.size());
     }
 
@@ -769,13 +770,13 @@ namespace weavess {
 
         BKTSearch(query, m_NGQueue, m_SPTQueue, nodeCheckStatus, m_iNumberOfCheckedLeaves, m_iNumberOfTreeCheckedLeaves, index->m_iNumberOfInitialDynamicPivots);
 
-        const unsigned checkPos = index->getFinalGraph()[0].size() - 1;
+        const unsigned checkPos = index->getLoadGraph()[0].size() - 1;
         while (!m_NGQueue.empty()) {
             Index::HeapCell gnode = m_NGQueue.pop();
             int tmpNode = gnode.node;
-            std::vector<Index::SimpleNeighbor> node = index->getFinalGraph()[tmpNode];
+            std::vector<unsigned> node = index->getLoadGraph()[tmpNode];
             if (gnode.distance <= p_query.worstDist()) {
-                int checkNode = node[checkPos].id;
+                int checkNode = node[checkPos];
                 if (checkNode < -1) {
                     const Index::BKTNode& tnode = index->m_pBKTreeRoots[-2 - checkNode];
                     m_iNumOfContinuousNoBetterPropagation = 0;
@@ -798,7 +799,7 @@ namespace weavess {
             }
             index->addHopCount();
             for (unsigned i = 0; i <= checkPos; i++) {
-                int nn_index = node[i].id;
+                int nn_index = node[i];
                 if (nn_index < 0) break;
                 if (nodeCheckStatus.CheckAndSet(nn_index)) continue;
                 float distance2leaf = index->getDist()->compare(index->getQueryData() + index->getQueryDim() * query,

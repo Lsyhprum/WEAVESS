@@ -300,7 +300,7 @@ void HCNNG(std::string base_path, std::string query_path, std::string ground_pat
     auto *builder = new weavess::IndexBuilder(8);
     builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
             -> init(weavess::INIT_HCNNG)
-            -> search(weavess::SEARCH_ENTRY_KDT, weavess::ROUTER_GREEDY, weavess::TYPE::L_SEARCH_SET_RECALL);
+            -> search(weavess::SEARCH_ENTRY_KDT, weavess::ROUTER_GUIDE, weavess::TYPE::L_SEARCH_SET_RECALL);
 
     std::cout << "Time cost: " << builder->GetBuildTime().count() << std::endl;
 }

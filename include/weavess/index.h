@@ -753,7 +753,7 @@ namespace weavess {
             typedef ValueSorter<unsigned, DistanceObtainer> ValueSorterType;
         public:
 
-            VPTree(const size_t non_leaf_branching_factor = 2, const size_t leaf_branching_factor = 2)
+            VPTree(const size_t non_leaf_branching_factor = 2, const size_t leaf_branching_factor = 10)
                     : m_root(new VPNodeType())
                     , m_non_leaf_branching_factor(non_leaf_branching_factor)
                     , m_leaf_branching_factor(leaf_branching_factor)
@@ -775,16 +775,6 @@ namespace weavess {
 
             virtual ~VPTree()
             {
-            }
-
-            void set_non_leaf_branching_factor(const size_t branching_factor)
-            {
-                m_non_leaf_branching_factor = branching_factor;
-            }
-
-            void set_leaf_branching_factor(const size_t branching_factor)
-            {
-                m_leaf_branching_factor = branching_factor;
             }
 
             const VPNodePtr& get_root() const
@@ -829,44 +819,6 @@ namespace weavess {
                         get_object_count(obj_count, node->m_child_list[c_pos]);
                 }
             }
-
-
-//            void InsertSplitLeafRoot(VPNodePtr& root, const unsigned& new_value)
-//            {
-//                if(m_out) *m_out << "	spit leaf root" << std::endl;
-//                // Split the root node if root is the leaf
-//                //
-//                VPNodePtr s1(new VPNodeType);
-//                VPNodePtr s2(new VPNodeType);
-//
-//                // Set vantage point to root
-//                root->set_value(root->m_objects_list[0]);
-//                //root->m_objects_list.clear();
-//
-//                //s1->AddObject(root->get_value());
-//
-//                root->AddChild(0, s1);
-//                s1->set_parent(root);
-//                s1->set_leaf_node(true);
-//
-//                root->AddChild(1, s2);
-//                s2->set_parent(root);
-//                s2->set_leaf_node(true);
-//
-//                root->set_leaf_node(false);
-//
-//                for(size_t c_pos = 0; c_pos < root->get_objects_count(); ++c_pos)
-//                    Insert(root->m_objects_list[c_pos], root);
-//
-//                root->m_objects_list.clear();
-//
-//                Insert(new_value, root);
-//
-//                //RedistributeAmongLeafNodes(root, new_value);
-//
-//                //m_root->m_mu_list[0] = 0;
-//                //m_root->set_value(new_value); // Set Vantage Point
-//            }
 
         public:
             VPNodePtr m_root;
