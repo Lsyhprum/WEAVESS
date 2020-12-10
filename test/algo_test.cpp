@@ -159,19 +159,19 @@ void HCNNG(std::string base_path, std::string query_path, std::string ground_pat
 }
 
 int main(int argc, char** argv) {
-//    std::string base_path = R"(G:\ANNS\dataset\n100000\random_base_n100000_d32_c10_s5.fvecs)";
-//    std::string query_path = R"(G:\ANNS\dataset\n100000\random_query_n1000_d32_c10_s5.fvecs)";
-//    std::string ground_path = R"(G:\ANNS\dataset\n100000\random_ground_truth_n1000_d32_c10_s5.ivecs)";
+    std::string base_path = R"(G:\ANNS\dataset\n100000\random_base_n100000_d32_c10_s5.fvecs)";
+    std::string query_path = R"(G:\ANNS\dataset\n100000\random_query_n1000_d32_c10_s5.fvecs)";
+    std::string ground_path = R"(G:\ANNS\dataset\n100000\random_ground_truth_n1000_d32_c10_s5.ivecs)";
 
-    std::string base_path = R"(G:\ANNS\dataset\siftsmall\siftsmall_base.fvecs)";
-    std::string query_path = R"(G:\ANNS\dataset\siftsmall\siftsmall_query.fvecs)";
-    std::string ground_path = R"(G:\ANNS\dataset\siftsmall\siftsmall_groundtruth.ivecs)";
+//    std::string base_path = R"(G:\ANNS\dataset\siftsmall\siftsmall_base.fvecs)";
+//    std::string query_path = R"(G:\ANNS\dataset\siftsmall\siftsmall_query.fvecs)";
+//    std::string ground_path = R"(G:\ANNS\dataset\siftsmall\siftsmall_groundtruth.ivecs)";
 
 //    std::string base_path = R"(G:\ANNS\dataset\sift1M\sift_base.fvecs)";
 //    std::string query_path = R"(G:\ANNS\dataset\sift1M\sift_query.fvecs)";
 //    std::string ground_path = R"(G:\ANNS\dataset\sift1M\sift_groundtruth.ivecs)";
 
-    HCNNG(base_path, query_path, ground_path);
+    PANNG(base_path, query_path, ground_path);
 
     //HCNNG(base_path, query_path, ground_path);
 

@@ -1606,17 +1606,19 @@ namespace weavess {
         SetConfigs();
 
         index->nodes_.resize(index->getBaseLen());
-        Index::HnswNode *first = new Index::HnswNode(0, 0, index->NN_, index->NN_);
+        // 防止自动扩容导致占用内存过大
+        //index->vp_tree.m_root->m_objects_list.reserve(index->getBaseLen());
+        auto *first = new Index::HnswNode(0, 0, index->NN_, index->NN_);
         index->nodes_[0] = first;
         index->enterpoint_ = first;
         std::vector<unsigned> obj = {0};
         MakeVPTree(obj);
-//#pragma omp parallel num_threads(index->n_threads_)
+
+#pragma omp parallel num_threads(index->n_threads_)
         {
             auto *visited_list = new Index::VisitedList(index->getBaseLen());
-//#pragma omp for schedule(dynamic, 128)
+#pragma omp for schedule(dynamic, 128)
             for (size_t i = 1; i < index->getBaseLen(); ++i) {
-                std::cout << i << std::endl;
                 auto *qnode = new Index::HnswNode(i, 0, index->NN_, index->NN_);
                 index->nodes_[i] = qnode;
                 InsertNode(qnode, visited_list);
@@ -1637,6 +1639,8 @@ namespace weavess {
             }
             //std::cout << index->nodes_[i]->GetFriends(0).size() << std::endl;
         }
+
+        std::vector<Index::HnswNode*>().swap(index->nodes_);
     }
 
     void ComponentInitANNG::SetConfigs() {
