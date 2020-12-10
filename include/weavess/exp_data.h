@@ -365,6 +365,54 @@ void EFANNA_PARA(std::string dataset, weavess::Parameters &parameters) {
     parameters.set<unsigned>("R", R);
 }
 
+void NSW_PARA(std::string dataset, weavess::Parameters &parameters) {
+    unsigned max_m0, ef_construction;
+    if (dataset == "siftsmall") {
+        max_m0 = 10, ef_construction = 100;    // siftsmall
+    }else if (dataset == "sift1M") {
+        max_m0 = 40, ef_construction = 300;    // sift1M
+    }else if (dataset == "gist") {
+        max_m0 = 60, ef_construction = 200;    // gist
+    }else if (dataset == "glove-100") {
+        max_m0 = 80, ef_construction = 100;    // glove
+    }else if (dataset == "audio") {
+        max_m0 = 40, ef_construction = 800;    // audio
+    }else if (dataset == "crawl") {
+        max_m0 = 60, ef_construction = 400;    // crawl
+    }else if (dataset == "msong") {
+        max_m0 = 60, ef_construction = 300;    // msong
+    }else if (dataset == "uqv") {
+        max_m0 = 30, ef_construction = 400;    // uqv
+    }else if (dataset == "enron") {
+        max_m0 = 80, ef_construction = 600;    // enron
+    }else if (dataset == "mnist") {
+        max_m0 = 10, ef_construction = 25;    // mnist
+    }else if (dataset == "c_1") {
+        max_m0 = 100, ef_construction = 500;    // c_1
+    }else if (dataset == "c_10") {
+        max_m0 = 30, ef_construction = 100;    // c_10
+    }else if (dataset == "c_100") {
+        max_m0 = 70, ef_construction = 400;    // c_100
+    }else if (dataset == "d_8") {
+        max_m0 = 50, ef_construction = 500;    // d_8
+    }else if (dataset == "d_128") {
+        max_m0 = 80, ef_construction = 1000;    // d_128
+    }else if (dataset == "n_10000") {
+        max_m0 = 20, ef_construction = 300;    // n_10000
+    }else if (dataset == "n_1000000") {
+        max_m0 = 100, ef_construction = 400;    // n_1000000
+    }else if (dataset == "s_1") {
+        max_m0 = 60, ef_construction = 600;    // s_1
+    }else if (dataset == "s_10") {
+        max_m0 = 50, ef_construction = 1000;    // s_10
+    }else {
+        std::cout << "dataset error!\n";
+        exit(-1);
+    }
+    parameters.set<unsigned>("NN", max_m0);
+    parameters.set<unsigned>("ef_construction", ef_construction);
+}
+
 void set_data_path(std::string dataset, weavess::Parameters &parameters) {
     // dataset root path
     std::string dataset_root = parameters.get<std::string>("dataset_root");
@@ -496,6 +544,8 @@ void set_para(std::string alg, std::string dataset, weavess::Parameters &paramet
         VAMANA_PARA(dataset, parameters);
     }else if (alg == "efanna") {
         EFANNA_PARA(dataset, parameters);
+    }else if (alg == "nsw") {
+        NSW_PARA(dataset, parameters);
     }
     else {
         std::cout << "algorithm input error!\n";

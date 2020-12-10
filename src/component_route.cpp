@@ -72,7 +72,7 @@ namespace weavess {
 
         auto *visited_list = new Index::VisitedList(index->getBaseLen());
 
-        Index::HnswNode *enterpoint = index->enterpoint_;
+        Index::HnswNode *enterpoint = index->nodes_[0];
         std::priority_queue<Index::FurtherFirst> result;
         std::priority_queue<Index::CloserFirst> tmp;
 

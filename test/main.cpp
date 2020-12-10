@@ -209,18 +209,28 @@ void IEH(std::string base_path, std::string query_path, std::string ground_path)
     std::cout << "Time cost: " << builder->GetBuildTime().count() << std::endl;
 }
 
-void NSW(std::string base_path, std::string query_path, std::string ground_path) {
-    weavess::Parameters parameters;
-    parameters.set<unsigned>("NN", 10);          // K
-    parameters.set<unsigned>("ef_construction", 50);        //L
-    parameters.set<unsigned>("n_threads_", 1);
+void NSW(weavess::Parameters &parameters) {
 
-    auto *builder = new weavess::IndexBuilder(8);
-    builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
-            -> init(weavess::INIT_NSW)
-            -> search(weavess::SEARCH_ENTRY_NONE, weavess::ROUTER_NSW, weavess::TYPE::L_SEARCH_SET_RECALL);
+    const unsigned num_threads = parameters.get<unsigned>("n_threads");
+    std::string base_path = parameters.get<std::string>("base_path");
+    std::string query_path = parameters.get<std::string>("query_path");
+    std::string ground_path = parameters.get<std::string>("ground_path");
+    std::string graph_file = parameters.get<std::string>("graph_file");
+    auto *builder = new weavess::IndexBuilder(num_threads);
 
-    std::cout << "Time cost: " << builder->GetBuildTime().count() << std::endl;
+    if (parameters.get<std::string>("exc_type") == "build") {   // build
+        builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
+                -> init(weavess::INIT_NSW)
+                -> save_graph(weavess::TYPE::INDEX_NSW, &graph_file[0]);
+        std::cout << "Build cost: " << builder->GetBuildTime().count() << std::endl;
+    }else if (parameters.get<std::string>("exc_type") == "search") {    // search
+        builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
+                -> load_graph(weavess::TYPE::INDEX_NSW, &graph_file[0])
+                -> search(weavess::TYPE::SEARCH_ENTRY_NONE, weavess::TYPE::ROUTER_NSW, weavess::TYPE::L_SEARCH_SET_RECALL);
+        builder -> peak_memory_footprint();
+    }else {
+        std::cout << "exc_type input error!" << std::endl;
+    }
 }
 
 void HNSW(std::string base_path, std::string query_path, std::string ground_path) {
@@ -374,6 +384,8 @@ int main(int argc, char** argv) {
         VAMANA(parameters);
     }else if (alg == "efanna") {
         EFANNA(parameters);
+    }else if (alg == "nsw") {
+        NSW(parameters);
     }
     else {
         std::cout << "alg input error!\n";

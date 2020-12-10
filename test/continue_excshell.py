@@ -22,9 +22,9 @@ def isinstance(pids, pid) :
 if __name__ == "__main__" :
     pid = '38534'
     while isinstance(get_all_pid(), pid) :
-        current_time = time.asctime(time.localtime(time.time()))
-        print('%s is running..., current time: %s' % (pid, current_time))
+        # current_time = time.asctime(time.localtime(time.time()))
+        # print('%s is running..., current time: %s' % (pid, current_time))
         time.sleep(60)
     
-    print('%s is over' % pid)
+    # print('%s is over' % pid)
     evaluation()

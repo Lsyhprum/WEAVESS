@@ -1320,7 +1320,7 @@ namespace weavess {
     void ComponentInitNSW::SetConfigs() {
         index->NN_ = index->getParam().get<unsigned>("NN");
         index->ef_construction_ = index->getParam().get<unsigned>("ef_construction");
-        index->n_threads_ = index->getParam().get<unsigned>("n_threads_");
+        index->n_threads_ = index->getParam().get<unsigned>("n_threads");
     }
 
     void ComponentInitNSW::InsertNode(Index::HnswNode *qnode, Index::VisitedList *visited_list) {

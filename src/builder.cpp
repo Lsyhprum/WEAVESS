@@ -708,7 +708,22 @@ namespace weavess {
                 }
             }
 
+        } else if (type == INDEX_NSW) {
+            for (unsigned i = 0; i < final_index_->nodes_.size(); i++) {
+                unsigned GK = (unsigned) final_index_->nodes_[i]->GetFriends(0).size();
+                unsigned node_id = final_index_->nodes_[i]->GetId();
+                std::vector<unsigned> tmp;
+                for (unsigned j = 0; j < GK; j++) {
+                    tmp.push_back((unsigned)final_index_->nodes_[i]->GetFriends(0)[j]->GetId());
+                }
+                out.write((char *) &node_id, sizeof(unsigned));
+                out.write((char *) &GK, sizeof(unsigned));
+                out.write((char *) tmp.data(), GK * sizeof(unsigned));
+            }
+            out.close();
+            return this;
         }
+
         for (unsigned i = 0; i < final_index_->getBaseLen(); i++) {
             unsigned GK = (unsigned) final_index_->getFinalGraph()[i].size();
             std::vector<unsigned> tmp;
@@ -786,6 +801,25 @@ namespace weavess {
                 }
                 final_index_->LeafLists.push_back(leaves);
             }
+        } else if (type == INDEX_NSW) {
+            final_index_->nodes_.resize(final_index_->getBaseLen());
+            for (unsigned i = 0; i < final_index_->getBaseLen(); i++) {
+                final_index_->nodes_[i] = new weavess::HNSW::HnswNode(0, 0, 0, 0);
+            }
+            while (!in.eof()) {
+                unsigned GK, node_id;
+                in.read((char *) &node_id, sizeof(unsigned));
+                in.read((char *) &GK, sizeof(unsigned));
+                final_index_->nodes_[node_id]->SetId(node_id);
+                if (in.eof()) break;
+                std::vector<unsigned> tmp(GK);
+                in.read((char *) tmp.data(), GK * sizeof(unsigned));
+                for (unsigned j = 0; j < tmp.size(); j++) {
+                    final_index_->nodes_[tmp[j]]->SetId(tmp[j]);
+                    final_index_->nodes_[node_id]->AddFriends(final_index_->nodes_[tmp[j]], false);
+                }
+            }
+            return this;
         }
         while (!in.eof()) {
             unsigned GK;

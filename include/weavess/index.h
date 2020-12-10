@@ -393,6 +393,7 @@ namespace weavess {
             }
 
             inline int GetId() const { return id_; }
+            inline int SetId(int id) {id_ = id; }
             inline int GetLevel() const { return level_; }
             inline size_t GetMaxM() const { return max_m_; }
             inline size_t GetMaxM0() const { return max_m0_; }
