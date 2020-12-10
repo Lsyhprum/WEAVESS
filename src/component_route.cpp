@@ -770,13 +770,13 @@ namespace weavess {
 
         BKTSearch(query, m_NGQueue, m_SPTQueue, nodeCheckStatus, m_iNumberOfCheckedLeaves, m_iNumberOfTreeCheckedLeaves, index->m_iNumberOfInitialDynamicPivots);
 
-        const unsigned checkPos = index->getFinalGraph()[0].size() - 1;
+        const unsigned checkPos = index->getLoadGraph()[0].size() - 1;
         while (!m_NGQueue.empty()) {
             Index::HeapCell gnode = m_NGQueue.pop();
             int tmpNode = gnode.node;
-            std::vector<Index::SimpleNeighbor> node = index->getFinalGraph()[tmpNode];
+            std::vector<unsigned> node = index->getLoadGraph()[tmpNode];
             if (gnode.distance <= p_query.worstDist()) {
-                int checkNode = node[checkPos].id;
+                int checkNode = node[checkPos];
                 if (checkNode < -1) {
                     const Index::BKTNode& tnode = index->m_pBKTreeRoots[-2 - checkNode];
                     m_iNumOfContinuousNoBetterPropagation = 0;
@@ -799,7 +799,7 @@ namespace weavess {
             }
             index->addHopCount();
             for (unsigned i = 0; i <= checkPos; i++) {
-                int nn_index = node[i].id;
+                int nn_index = node[i];
                 if (nn_index < 0) break;
                 if (nodeCheckStatus.CheckAndSet(nn_index)) continue;
                 float distance2leaf = index->getDist()->compare(index->getQueryData() + index->getQueryDim() * query,

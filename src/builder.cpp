@@ -714,7 +714,15 @@ namespace weavess {
             unsigned treeNodeSize = final_index_->m_pKDTreeRoots.size();
             out.write((char *) &treeNodeSize, sizeof(unsigned));
             out.write((char *) final_index_->m_pKDTreeRoots.data(), sizeof(Index::KDTNode) * treeNodeSize);
+        } else if (type == INDEX_SPTAG_BKT) {
+            out.write((char *) &(final_index_->m_iTreeNumber), sizeof(unsigned));
+            out.write((char *) final_index_->m_pTreeStart.data(), sizeof(int) * final_index_->m_iTreeNumber);
+            unsigned treeNodeSize = final_index_->m_pBKTreeRoots.size();
+            out.write((char *) &treeNodeSize, sizeof(unsigned));
+            out.write((char *) final_index_->m_pBKTreeRoots.data(), sizeof(Index::BKTNode) * treeNodeSize);
         }
+
+
         for (unsigned i = 0; i < final_index_->getBaseLen(); i++) {
             unsigned GK = (unsigned) final_index_->getFinalGraph()[i].size();
             std::vector<unsigned> tmp;
@@ -808,6 +816,24 @@ namespace weavess {
                 in.read((char*)&(tmp), sizeof(Index::KDTNode));
                 final_index_->m_pKDTreeRoots[j] = tmp;
             }
+        } else if (type == INDEX_SPTAG_BKT) {
+            in.read((char*)&(final_index_->m_iTreeNumber), sizeof(unsigned));
+            final_index_->m_pTreeStart.resize(final_index_->m_iTreeNumber);
+            for(unsigned int j = 0; j < final_index_->m_iTreeNumber; j ++) {
+                int tmp;
+                in.read((char*)&(tmp), sizeof(int));
+                final_index_->m_pTreeStart[j] = tmp;
+            }
+            unsigned treeNodeSize;
+            in.read((char*)&(treeNodeSize), sizeof(unsigned));
+            final_index_->m_pBKTreeRoots.resize(treeNodeSize);
+            for(unsigned int j = 0; j < treeNodeSize; j ++) {
+                Index::BKTNode tmp;
+                in.read((char*)&(tmp), sizeof(Index::BKTNode));
+                final_index_->m_pBKTreeRoots[j] = tmp;
+            }
+            if(final_index_->m_pBKTreeRoots.size() > 0 && final_index_->m_pBKTreeRoots.back().centerid != -1)
+                final_index_->m_pBKTreeRoots.emplace_back(-1);
         }
 
         while (!in.eof()) {

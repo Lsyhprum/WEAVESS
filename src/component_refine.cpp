@@ -1366,8 +1366,8 @@ namespace weavess {
         auto *a = new ComponentCandidateSPTAG_BKT(index);
 
         // PRUNE
-        std::cout << "__PRUNE : NAIVE__" << std::endl;
-        auto *b = new ComponentPruneNaive(index);
+        std::cout << "__PRUNE : RNG__" << std::endl;
+        auto *b = new ComponentPruneHeuristic(index);
 
 #pragma omp parallel
         {
@@ -1465,8 +1465,8 @@ namespace weavess {
         auto *a = new ComponentCandidateSPTAG_KDT(index);
 
         // PRUNE
-        std::cout << "__PRUNE : RNG__" << std::endl;
-        auto *b = new ComponentPruneHeuristic(index);
+        std::cout << "__PRUNE : Naive__" << std::endl;
+        auto *b = new ComponentPruneNaive(index);
 
 #pragma omp parallel
         {
