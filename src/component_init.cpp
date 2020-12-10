@@ -1611,11 +1611,12 @@ namespace weavess {
         index->enterpoint_ = first;
         std::vector<unsigned> obj = {0};
         MakeVPTree(obj);
-#pragma omp parallel num_threads(index->n_threads_)
+//#pragma omp parallel num_threads(index->n_threads_)
         {
             auto *visited_list = new Index::VisitedList(index->getBaseLen());
-#pragma omp for schedule(dynamic, 128)
+//#pragma omp for schedule(dynamic, 128)
             for (size_t i = 1; i < index->getBaseLen(); ++i) {
+                std::cout << i << std::endl;
                 auto *qnode = new Index::HnswNode(i, 0, index->NN_, index->NN_);
                 index->nodes_[i] = qnode;
                 InsertNode(qnode, visited_list);

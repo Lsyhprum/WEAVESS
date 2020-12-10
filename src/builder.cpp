@@ -708,6 +708,12 @@ namespace weavess {
                 }
             }
 
+        } else if (type == INDEX_SPTAG_KDT) {
+            out.write((char *) &(final_index_->m_iTreeNumber), sizeof(unsigned));
+            out.write((char *) final_index_->m_pTreeStart.data(), sizeof(int) * final_index_->m_iTreeNumber);
+            unsigned treeNodeSize = final_index_->m_pKDTreeRoots.size();
+            out.write((char *) &treeNodeSize, sizeof(unsigned));
+            out.write((char *) final_index_->m_pKDTreeRoots.data(), sizeof(Index::KDTNode) * treeNodeSize);
         }
         for (unsigned i = 0; i < final_index_->getBaseLen(); i++) {
             unsigned GK = (unsigned) final_index_->getFinalGraph()[i].size();
@@ -786,7 +792,24 @@ namespace weavess {
                 }
                 final_index_->LeafLists.push_back(leaves);
             }
+        } else if (type == INDEX_SPTAG_KDT) {
+            in.read((char*)&(final_index_->m_iTreeNumber), sizeof(unsigned));
+            final_index_->m_pTreeStart.resize(final_index_->m_iTreeNumber);
+            for(unsigned int j = 0; j < final_index_->m_iTreeNumber; j ++) {
+                int tmp;
+                in.read((char*)&(tmp), sizeof(int));
+                final_index_->m_pTreeStart[j] = tmp;
+            }
+            unsigned treeNodeSize;
+            in.read((char*)&(treeNodeSize), sizeof(unsigned));
+            final_index_->m_pKDTreeRoots.resize(treeNodeSize);
+            for(unsigned int j = 0; j < treeNodeSize; j ++) {
+                Index::KDTNode tmp;
+                in.read((char*)&(tmp), sizeof(Index::KDTNode));
+                final_index_->m_pKDTreeRoots[j] = tmp;
+            }
         }
+
         while (!in.eof()) {
             unsigned GK;
             in.read((char *) &GK, sizeof(unsigned));
@@ -795,6 +818,7 @@ namespace weavess {
             in.read((char *) tmp.data(), GK * sizeof(unsigned));
             final_index_->getLoadGraph().push_back(tmp);
         }
+
         return this;
     }
 
