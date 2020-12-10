@@ -720,6 +720,55 @@ namespace weavess {
             unsigned treeNodeSize = final_index_->m_pBKTreeRoots.size();
             out.write((char *) &treeNodeSize, sizeof(unsigned));
             out.write((char *) final_index_->m_pBKTreeRoots.data(), sizeof(Index::BKTNode) * treeNodeSize);
+        } else if (type == INDEX_HCNNG) {
+            unsigned nTrees = final_index_->nTrees;
+            unsigned mLevel = final_index_->mLevel;
+            unsigned K = final_index_->K;
+
+            out.write((char *) &nTrees, sizeof(unsigned));
+            out.write((char *) &mLevel, sizeof(unsigned));
+            out.write((char *) &K, sizeof(unsigned));
+
+            std::vector<Index::Node*>::iterator it;
+            for(it = final_index_->tree_roots_.begin(); it != final_index_->tree_roots_.end(); it ++) {
+                //write tree nodes with depth first trace
+
+
+                size_t offset_node_num = out.tellp();
+
+                out.seekp(sizeof(int),std::ios::cur);
+
+                unsigned int node_size = sizeof(struct Index::Node);
+                out.write((char *)&(node_size), sizeof(int));
+
+                unsigned int node_num = DepthFirstWrite(out, *it);
+
+                out.seekg(offset_node_num,std::ios::beg);
+
+                out.write((char *)&(node_num), sizeof(int));
+
+                out.seekp(0,std::ios::end);
+                //std::cout<<"tree: "<<cnt++<<" written, node: "<<node_num<<" at offset " << offset_node_num <<std::endl;
+            }
+
+            if(final_index_->LeafLists.size()!=nTrees){ std::cout << "leaf_size!=tree_num" << std::endl; exit(-6); }
+
+            for(unsigned int i=0; i<nTrees; i++){
+                for(unsigned int j=0;j<final_index_->getBaseLen();j++){
+                    out.write((char *)&(final_index_->LeafLists[i][j]), sizeof(int));
+                }
+            }
+
+            assert(final_index_->Tn.size() == final_index_->getBaseLen());
+            for (unsigned i = 0; i < final_index_->getBaseLen(); i++) {
+                out.write((char *)&(final_index_->Tn[i].div_dim), sizeof(unsigned));
+                unsigned left_len = (unsigned)final_index_->Tn[i].left.size();
+                unsigned right_len = (unsigned)final_index_->Tn[i].right.size();
+                out.write((char *)&left_len, sizeof(unsigned));
+                out.write((char *)&right_len, sizeof(unsigned));
+                out.write((char *)final_index_->Tn[i].left.data(), left_len * sizeof(unsigned));
+                out.write((char *)final_index_->Tn[i].right.data(), right_len * sizeof(unsigned));
+            }
         }
 
 
@@ -834,6 +883,66 @@ namespace weavess {
             }
             if(final_index_->m_pBKTreeRoots.size() > 0 && final_index_->m_pBKTreeRoots.back().centerid != -1)
                 final_index_->m_pBKTreeRoots.emplace_back(-1);
+        } else if (type == INDEX_HCNNG) {
+            size_t K;
+
+            //read file head
+            in.read((char*)&(final_index_->nTrees),sizeof(unsigned));
+            in.read((char*)&(final_index_->mLevel), sizeof(unsigned));
+            in.read((char*)&(K),sizeof(unsigned));
+
+            final_index_->tree_roots_.clear();
+            for(unsigned int i=0;i<final_index_->nTrees;i++){// for each tree
+                int node_num, node_size;
+                in.read((char*)&(node_num),sizeof(int));
+                in.read((char*)&(node_size),sizeof(int));
+
+                std::vector<struct Index::Node *> tree_nodes;
+                for(int j=0;j<node_num;j++){
+                    struct Index::Node *tmp = new struct Index::Node();
+                    in.read((char*)&(tmp->DivDim),sizeof(tmp->DivDim));
+                    in.read((char*)&(tmp->DivVal),sizeof(tmp->DivVal));
+                    in.read((char*)&(tmp->StartIdx),sizeof(tmp->StartIdx));
+                    in.read((char*)&(tmp->EndIdx),sizeof(tmp->EndIdx));
+                    in.read((char*)&(tmp->Lchild),sizeof(tmp->Lchild));
+                    in.read((char*)&(tmp->Rchild),sizeof(tmp->Rchild));
+                    tmp->Lchild = nullptr;
+                    tmp->Rchild = nullptr;
+                    tmp->treeid = i;
+                    tree_nodes.push_back(tmp);
+                }
+                //std::cout<<"build "<<i<<std::endl;
+                struct Index::Node *root = DepthFirstBuildTree(tree_nodes);
+                if(root==nullptr){ exit(-11); }
+                final_index_->tree_roots_.push_back(root);
+            }
+
+            //read index range
+            final_index_->LeafLists.clear();
+            for(unsigned int i=0;i<final_index_->nTrees;i++){
+
+                std::vector<unsigned> leaves;
+                for(unsigned int j=0;j<final_index_->getBaseLen(); j++){
+                    unsigned leaf;
+                    in.read((char*)&(leaf),sizeof(int));
+                    leaves.push_back(leaf);
+                }
+                final_index_->LeafLists.push_back(leaves);
+            }
+
+            while (!in.eof()) {
+                unsigned left_len, right_len;
+                Index::Tnode tmp;
+                in.read((char *)&tmp.div_dim, sizeof(unsigned));
+                in.read((char *)&left_len, sizeof(unsigned));
+                in.read((char *)&right_len, sizeof(unsigned));
+                if (in.eof()) break;
+                tmp.left.resize(left_len);
+                tmp.right.resize(right_len);
+                in.read((char *)tmp.left.data(), left_len * sizeof(unsigned));
+                in.read((char *)tmp.right.data(), right_len * sizeof(unsigned));
+                final_index_->Tn.push_back(tmp);
+            }
         }
 
         while (!in.eof()) {
