@@ -873,7 +873,7 @@ namespace weavess {
             if (target.distance > explorationRadius){
                 break;
             }
-            std::vector<Index::SimpleNeighbor> neighbors = index->getFinalGraph()[target.id];
+            std::vector<unsigned> neighbors = index->getLoadGraph()[target.id];
             if (neighbors.empty()){
                 continue;
             }
@@ -881,21 +881,21 @@ namespace weavess {
             index->addHopCount();
             for (unsigned neighborptr = 0; neighborptr < neighbors.size(); ++neighborptr){
                 //sc.visitCount++;
-                Index::SimpleNeighbor neighbor = index->getFinalGraph()[target.id][neighborptr];
-                if (distanceChecked[neighbor.id]){
+                unsigned neighbor = index->getLoadGraph()[target.id][neighborptr];
+                if (distanceChecked[neighbor]){
                     continue;
                 }
-                distanceChecked.insert(neighbor.id);
+                distanceChecked.insert(neighbor);
 
                 float distance = index->getDist()->compare(index->getQueryData() + index->getQueryDim() * query,
-                                                           index->getBaseData() + index->getBaseDim() * neighbor.id,
+                                                           index->getBaseData() + index->getBaseDim() * neighbor,
                                                            index->getBaseDim());
                 index->addDistCount();
                 //sc.distanceComputationCount++;
                 if (distance <= explorationRadius){
-                    unchecked.push(Index::Neighbor(neighbor.id, distance, true));
+                    unchecked.push(Index::Neighbor(neighbor, distance, true));
                     if (distance <= radius){
-                        results.push(Index::Neighbor(neighbor.id, distance, true));
+                        results.push(Index::Neighbor(neighbor, distance, true));
                         if (results.size() >= L){
                             if (results.top().distance >= distance){
                                 if (results.size() > L){

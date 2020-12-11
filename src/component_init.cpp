@@ -1606,8 +1606,6 @@ namespace weavess {
         SetConfigs();
 
         index->nodes_.resize(index->getBaseLen());
-        // 防止自动扩容导致占用内存过大
-        //index->vp_tree.m_root->m_objects_list.reserve(index->getBaseLen());
         auto *first = new Index::HnswNode(0, 0, index->NN_, index->NN_);
         index->nodes_[0] = first;
         index->enterpoint_ = first;
