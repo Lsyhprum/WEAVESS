@@ -668,6 +668,26 @@ namespace weavess {
             out.write((char *) &n_ep, sizeof(unsigned));
             out.write((char *) final_index_->eps_.data(), n_ep * sizeof(unsigned));
         } else if (type == INDEX_HNSW) {
+            unsigned enterpoint_id = final_index_->enterpoint_->GetId();
+            unsigned max_level = final_index_->max_level_;
+            out.write((char *) &enterpoint_id, sizeof(unsigned));
+            out.write((char *) &max_level, sizeof(unsigned));
+            for (unsigned i = 0; i < final_index_->getBaseLen(); i++) {
+                unsigned node_id = final_index_->nodes_[i]->GetId();
+                out.write((char *) &node_id, sizeof(unsigned));
+                unsigned node_level = final_index_->nodes_[i]->GetLevel() + 1;  // 含该结点的层数量
+                out.write((char *) &node_level, sizeof(unsigned));
+                unsigned current_level_GK;
+                for (unsigned j = 0; j < node_level; j++) {
+                    current_level_GK = final_index_->nodes_[i]->GetFriends(j).size();
+                    out.write((char *) &current_level_GK, sizeof(unsigned));
+                    for (unsigned k = 0; k < current_level_GK; k++) {
+                        unsigned current_level_neighbor_id = final_index_->nodes_[i]->GetFriends(j)[k]->GetId();
+                        out.write((char *) &current_level_neighbor_id, sizeof(unsigned));
+                    }
+                }
+            }
+            return this;
 
         } else if (type == INDEX_EFANNA) {
             unsigned nTrees = final_index_->nTrees;
@@ -817,6 +837,34 @@ namespace weavess {
             in.read((char *) &n_ep, sizeof(unsigned));
             final_index_->eps_.resize(n_ep);
             in.read((char *) final_index_->eps_.data(), n_ep * sizeof(unsigned));
+        }else if (type == INDEX_HNSW) {
+            final_index_->nodes_.resize(final_index_->getBaseLen());
+            for (unsigned i = 0; i < final_index_->getBaseLen(); i++) {
+                final_index_->nodes_[i] = new weavess::HNSW::HnswNode(0, 0, 0, 0);
+            }
+            unsigned enterpoint_id;
+            in.read((char *) &enterpoint_id, sizeof(unsigned));
+            in.read((char *) &final_index_->max_level_, sizeof(unsigned));
+            
+            for (unsigned i = 0; i < final_index_->getBaseLen(); i++) {
+                unsigned node_id, node_level, current_level_GK;
+                in.read((char *) &node_id, sizeof(unsigned));
+                final_index_->nodes_[node_id]->SetId(node_id);
+                in.read((char *) &node_level, sizeof(unsigned));
+                final_index_->nodes_[node_id]->SetLevel(node_level);
+                for (unsigned j = 0; j < node_level; j++) {
+                    in.read((char *) &current_level_GK, sizeof(unsigned));
+                    std::vector<weavess::HNSW::HnswNode*> tmp;
+                    for (unsigned k = 0; k < current_level_GK; k++) {
+                        unsigned current_level_neighbor_id;
+                        in.read((char *) &current_level_neighbor_id, sizeof(unsigned));
+                        // final_index_->nodes_[current_level_neighbor_id]->SetId(current_level_neighbor_id);
+                        tmp.push_back(final_index_->nodes_[current_level_neighbor_id]);
+                    }
+                    final_index_->nodes_[node_id]->SetFriends(j, tmp);
+                }
+            }
+            final_index_->enterpoint_ = final_index_->nodes_[enterpoint_id];
         } else if (type == INDEX_EFANNA) {
             size_t K;
 

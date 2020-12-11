@@ -1304,7 +1304,7 @@ namespace weavess {
         Index::HnswNode *first = new Index::HnswNode(0, 0, index->NN_, index->NN_);
         index->nodes_[0] = first;
         index->enterpoint_ = first;
-#pragma omp parallel num_threads(index->n_threads_)
+#pragma omp parallel
         {
             auto *visited_list = new Index::VisitedList(index->getBaseLen());
 #pragma omp for schedule(dynamic, 128)
@@ -1433,7 +1433,7 @@ namespace weavess {
         index->nodes_[0] = first;
         index->max_level_ = level;
         index->enterpoint_ = first;
-#pragma omp parallel num_threads(index->n_threads_)
+#pragma omp parallel
         {
             auto *visited_list = new Index::VisitedList(index->getBaseLen());
 #pragma omp for schedule(dynamic, 128)
@@ -1614,7 +1614,7 @@ namespace weavess {
         std::vector<unsigned> obj = {0};
         MakeVPTree(obj);
 
-#pragma omp parallel num_threads(index->n_threads_)
+#pragma omp parallel
         {
             auto *visited_list = new Index::VisitedList(index->getBaseLen());
 #pragma omp for schedule(dynamic, 128)
@@ -1646,7 +1646,7 @@ namespace weavess {
     void ComponentInitANNG::SetConfigs() {
         index->NN_ = index->getParam().get<unsigned>("NN");
         index->ef_construction_ = index->getParam().get<unsigned>("ef_construction");
-        index->n_threads_ = index->getParam().get<unsigned>("n_threads_");
+        index->n_threads_ = index->getParam().get<unsigned>("n_threads");
     }
 
     void ComponentInitANNG::InsertNode(Index::HnswNode *qnode, Index::VisitedList *visited_list) {

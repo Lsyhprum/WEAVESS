@@ -570,6 +570,56 @@ void SPTAG_BKT_PARA(std::string dataset, weavess::Parameters &parameters) {
     parameters.set<unsigned>("numOfThreads", parameters.get<unsigned>("n_threads"));
 }
 
+void HNSW_PARA(std::string dataset, weavess::Parameters &parameters) {
+    unsigned max_m, max_m0, ef_construction;
+    if (dataset == "siftsmall") {
+        max_m = 5, max_m0 = 10, ef_construction = 100;    // siftsmall
+    }else if (dataset == "sift1M") {
+        max_m = 40, max_m0 = 50, ef_construction = 800;    // sift1M
+    }else if (dataset == "gist") {
+        max_m = 50, max_m0 = 60, ef_construction = 400;    // gist
+    }else if (dataset == "glove-100") {
+        max_m = 50, max_m0 = 60, ef_construction = 700;    // glove
+    }else if (dataset == "audio") {
+        max_m = 10, max_m0 = 50, ef_construction = 700;    // audio
+    }else if (dataset == "crawl") {
+        max_m = 40, max_m0 = 70, ef_construction = 400;    // crawl
+    }else if (dataset == "msong") {
+        max_m = 30, max_m0 = 80, ef_construction = 100;    // msong
+    }else if (dataset == "uqv") {
+        max_m = 10, max_m0 = 40, ef_construction = 200;    // uqv
+    }else if (dataset == "enron") {
+        max_m = 50, max_m0 = 80, ef_construction = 900;    // enron
+    }else if (dataset == "mnist") {
+        max_m = 5, max_m0 = 10, ef_construction = 25;    // mnist
+    }else if (dataset == "c_1") {
+        max_m = 80, max_m0 = 90, ef_construction = 1000;    // c_1
+    }else if (dataset == "c_10") {
+        max_m = 40, max_m0 = 60, ef_construction = 300;    // c_10
+    }else if (dataset == "c_100") {
+        max_m = 30, max_m0 = 40, ef_construction = 300;    // c_100
+    }else if (dataset == "d_8") {
+        max_m = 10, max_m0 = 30, ef_construction = 900;    // d_8
+    }else if (dataset == "d_128") {
+        max_m = 90, max_m0 = 100, ef_construction = 900;    // d_128
+    }else if (dataset == "n_10000") {
+        max_m = 20, max_m0 = 30, ef_construction = 900;    // n_10000
+    }else if (dataset == "n_1000000") {
+        max_m = 50, max_m0 = 100, ef_construction = 200;    // n_1000000
+    }else if (dataset == "s_1") {
+        max_m = 40, max_m0 = 60, ef_construction = 200;    // s_1
+    }else if (dataset == "s_10") {
+        max_m = 60, max_m0 = 80, ef_construction = 1000;    // s_10
+    }else {
+        std::cout << "dataset error!\n";
+        exit(-1);
+    }
+    parameters.set<unsigned>("max_m", max_m);
+    parameters.set<unsigned>("max_m0", max_m0);
+    parameters.set<unsigned>("ef_construction", ef_construction);
+    parameters.set<int>("mult", -1);
+}
+
 void set_data_path(std::string dataset, weavess::Parameters &parameters) {
     // dataset root path
     std::string dataset_root = parameters.get<std::string>("dataset_root");
@@ -709,6 +759,8 @@ void set_para(std::string alg, std::string dataset, weavess::Parameters &paramet
         SPTAG_KDT_PARA(dataset, parameters);
     }else if (alg == "sptag_bkt") {
         SPTAG_BKT_PARA(dataset, parameters);
+    }else if (alg == "hnsw") {
+        HNSW_PARA(dataset, parameters);
     }
     else {
         std::cout << "algorithm input error!\n";

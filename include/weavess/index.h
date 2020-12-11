@@ -323,7 +323,7 @@ namespace weavess {
     public:
         unsigned NN_ ;
         unsigned ef_construction_ = 150;    //l
-        unsigned n_threads_ = 1;
+        unsigned n_threads_ = 32;
     };
 
     class HNSW {
@@ -394,13 +394,17 @@ namespace weavess {
             }
 
             inline int GetId() const { return id_; }
-            inline int SetId(int id) {id_ = id; }
+            inline void SetId(int id) {id_ = id; }
             inline int GetLevel() const { return level_; }
+            inline void SetLevel(int level) {level_ = level; }
             inline size_t GetMaxM() const { return max_m_; }
             inline size_t GetMaxM0() const { return max_m0_; }
 
             inline std::vector<HnswNode*>& GetFriends(int level) { return friends_at_layer_[level]; }
             inline void SetFriends(int level, std::vector<HnswNode*>& new_friends) {
+                if (level >= friends_at_layer_.size())
+                friends_at_layer_.resize(level + 1);
+
                 friends_at_layer_[level].swap(new_friends);
             }
             inline std::mutex& GetAccessGuard() { return access_guard_; }

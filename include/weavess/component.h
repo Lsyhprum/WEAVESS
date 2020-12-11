@@ -623,15 +623,17 @@ namespace weavess {
 
             boost::dynamic_bitset<> flags;
 
-            auto *cut_graph_ = new Index::SimpleNeighbor[range];
+            auto *cut_graph_ = new Index::SimpleNeighbor[index->getBaseLen() * range];
 
             PruneInner(query, range, flags, pool, cut_graph_);
 
             for (unsigned j = 0; j < range; j++) {
-                if (cut_graph_[j].distance == -1) break;
+                if (cut_graph_[range * query + j].distance == -1) break;
 
-                result.push(Index::FurtherFirst(tmp[cut_graph_[j].id], cut_graph_[j].distance));
+                result.push(Index::FurtherFirst(tmp[cut_graph_[range * query + j].id], cut_graph_[range * query + j].distance));
             }
+
+            delete[] cut_graph_;
 
             std::vector<Index::SimpleNeighbor>().swap(pool);
             std::unordered_map<int, Index::HnswNode *>().swap(tmp);
