@@ -354,8 +354,7 @@ namespace weavess {
                 }
             }
 
-        }else
-        {
+        }else{
             float dist = 0; //m_get_distance(node->get_value(), query_value);
 
             // Search flag
@@ -369,8 +368,7 @@ namespace weavess {
                                                  index->getQueryData() + index->getQueryDim() * query_value,
                                                  index->getBaseDim());
                 index->addDistCount();
-            }else
-            {
+            }else{
                 //m_stat.distance_count++;
                 dist = index->getDist()->compare(index->getBaseData() + index->getBaseDim() * node->get_value(),
                                                  index->getQueryData() + index->getQueryDim() * query_value,

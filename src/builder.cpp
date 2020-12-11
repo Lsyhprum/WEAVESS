@@ -585,6 +585,29 @@ namespace weavess {
         }
     }
 
+    /**
+    * 最大内存需求（VmPeak）
+    */
+    void IndexBuilder::peak_memory_footprint() {
+
+        unsigned iPid = (unsigned)getpid();
+
+        std::cout<<"PID: "<<iPid<<std::endl;
+
+        std::string status_file = "/proc/" + std::to_string(iPid) + "/status";
+        std::ifstream info(status_file);
+        if (!info.is_open()) {
+            std::cout << "memory information open error!" << std::endl;
+        }
+        std::string tmp;
+        while(getline(info, tmp)) {
+            if (tmp.find("Name:") != std::string::npos || tmp.find("VmPeak:") != std::string::npos || tmp.find("VmHWM:") != std::string::npos)
+            std::cout << tmp << std::endl;
+        }
+        info.close();
+        
+    }
+
     int DepthFirstWrite(std::fstream& out, struct Index::Node *root){
         if(root==nullptr) return 0;
         int left_cnt = DepthFirstWrite(out, root->Lchild);
@@ -630,27 +653,73 @@ namespace weavess {
         return root_serial[0];
     }
 
-    /**
-    * 最大内存需求（VmPeak）
-    */
-    void IndexBuilder::peak_memory_footprint() {
+    Index::VPNodePtr deser(std::ifstream &in) {
+        Index::VPNodePtr new_node(new Index::VPNodeType);
 
-        unsigned iPid = (unsigned)getpid();
+        bool m_leaf_node;
+        in.read((char*)&m_leaf_node, sizeof(bool));
+        new_node->set_leaf_node(m_leaf_node);
 
-        std::cout<<"PID: "<<iPid<<std::endl;
+        if(m_leaf_node) {
+            unsigned objects_size;
+            in.read((char*)&objects_size, sizeof(unsigned));
+            new_node->m_objects_list.resize(objects_size);
+            in.read((char*)new_node->m_objects_list.data(), sizeof(unsigned) * objects_size);
+        } else {
+            size_t m_branches_count;
+            in.read((char*)&m_branches_count, sizeof(size_t));
+            new_node->set_branches_count(m_branches_count);
+            unsigned m_value;
+            in.read((char*)&m_value, sizeof(unsigned));
+            new_node->set_value(m_value);
 
-        std::string status_file = "/proc/" + std::to_string(iPid) + "/status";
-        std::ifstream info(status_file);
-        if (!info.is_open()) {
-            std::cout << "memory information open error!" << std::endl;
+            unsigned mu_size;
+            in.read((char*)&mu_size, sizeof(unsigned));
+            new_node->m_mu_list.resize(mu_size);
+            std::vector<float> test(mu_size);
+            in.read((char*)(new_node->m_mu_list.data()), sizeof(float) * mu_size);
+
+            unsigned child_size;
+            in.read((char*)&child_size, sizeof(unsigned));
+            new_node->m_child_list.reserve(child_size);
+            while(child_size --) {
+                Index::VPNodePtr node = deser(in);
+                new_node->m_child_list.push_back(node);
+            }
         }
-        std::string tmp;
-        while(getline(info, tmp)) {
-            if (tmp.find("Name:") != std::string::npos || tmp.find("VmPeak:") != std::string::npos || tmp.find("VmHWM:") != std::string::npos)
-            std::cout << tmp << std::endl;
+
+        return new_node;
+    }
+
+    int Inorder(std::fstream& out, Index::VPNodePtr root) {
+        bool m_leaf_node = root->get_leaf_node();
+        out.write((char *)&m_leaf_node, sizeof(bool));
+
+        if(m_leaf_node) {
+            unsigned objects_size = root->m_objects_list.size();
+            out.write((char *)&objects_size, sizeof(unsigned));
+            out.write((char *)root->m_objects_list.data(), objects_size * sizeof (unsigned));
+            return 1;
+        } else {
+            size_t m_branches_count = root->get_branches_count();
+            unsigned m_value = root->get_value();
+            out.write((char *)&m_branches_count, sizeof(size_t));
+            out.write((char *)&m_value, sizeof(unsigned));
+
+            unsigned mu_size = root->m_mu_list.size();
+            out.write((char *)&mu_size, sizeof(unsigned));
+            out.write((char *) root->m_mu_list.data(), mu_size * sizeof(float));
+
+            unsigned child_size = root->m_child_list.size();
+            out.write((char *)&child_size, sizeof(unsigned));
+
+            int cnt = 0;
+            for(int i = 0; i < child_size; i ++ ) {
+                cnt += Inorder(out, root->m_child_list[i]);
+            }
+
+            return cnt + 1;
         }
-        info.close();
-        
     }
 
     /**
@@ -783,6 +852,8 @@ namespace weavess {
                 out.write((char *)final_index_->Tn[i].left.data(), left_len * sizeof(unsigned));
                 out.write((char *)final_index_->Tn[i].right.data(), right_len * sizeof(unsigned));
             }
+        } else if (type == INDEX_PANNG || type == INDEX_ONNG) {
+            unsigned int node_num = Inorder(out, final_index_->vp_tree.m_root);
         }
 
 
@@ -976,6 +1047,10 @@ namespace weavess {
                 in.read((char *)tmp.right.data(), right_len * sizeof(unsigned));
                 final_index_->Tn.push_back(tmp);
             }
+        } else if (type == INDEX_ONNG || type == INDEX_PANNG) {
+            Index::VPNodePtr root = deser(in);
+            if(root==nullptr){ exit(-11); }
+            final_index_->vp_tree.m_root = root;
         }
 
         while (!in.eof()) {
