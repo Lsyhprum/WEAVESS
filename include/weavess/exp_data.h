@@ -413,6 +413,56 @@ void NSW_PARA(std::string dataset, weavess::Parameters &parameters) {
     parameters.set<unsigned>("ef_construction", ef_construction);
 }
 
+void HCNNG_PARA(std::string dataset, weavess::Parameters &parameters) {
+    unsigned num_cl;
+    if (dataset == "siftsmall") {
+        num_cl = 10;    // siftsmall
+    }else if (dataset == "sift1M") {
+        num_cl = 90;    // sift1M
+    }else if (dataset == "gist") {
+        num_cl = 30;    // gist
+    }else if (dataset == "glove-100") {
+        num_cl = 100;    // glove
+    }else if (dataset == "audio") {
+        num_cl = 60;    // audio
+    }else if (dataset == "crawl") {
+        num_cl = 70;    // crawl
+    }else if (dataset == "msong") {
+        num_cl = 100;    // msong
+    }else if (dataset == "uqv") {
+        num_cl = 80;    // uqv
+    }else if (dataset == "enron") {
+        num_cl = 100;    // enron
+    }else if (dataset == "mnist") {
+        num_cl = 10;    // mnist
+    }else if (dataset == "c_1") {
+        num_cl = 100;    // c_1
+    }else if (dataset == "c_10") {
+        num_cl = 70;    // c_10
+    }else if (dataset == "c_100") {
+        num_cl = 90;    // c_100
+    }else if (dataset == "d_8") {
+        num_cl = 80;    // d_8
+    }else if (dataset == "d_128") {
+        num_cl = 100;    // d_128
+    }else if (dataset == "n_10000") {
+        num_cl = 90;    // n_10000
+    }else if (dataset == "n_1000000") {
+        num_cl = 100;    // n_1000000
+    }else if (dataset == "s_1") {
+        num_cl = 60;    // s_1
+    }else if (dataset == "s_10") {
+        num_cl = 90;    // s_10
+    }else {
+        std::cout << "dataset error!\n";
+        exit(-1);
+    }
+    parameters.set<unsigned>("num_cl", num_cl);
+    parameters.set<unsigned>("K", 10);
+    parameters.set<unsigned>("nTrees", 10);
+    parameters.set<unsigned>("mLevel", 1);
+}
+
 void set_data_path(std::string dataset, weavess::Parameters &parameters) {
     // dataset root path
     std::string dataset_root = parameters.get<std::string>("dataset_root");
@@ -546,6 +596,8 @@ void set_para(std::string alg, std::string dataset, weavess::Parameters &paramet
         EFANNA_PARA(dataset, parameters);
     }else if (alg == "nsw") {
         NSW_PARA(dataset, parameters);
+    }else if (alg == "hcnng") {
+        HCNNG_PARA(dataset, parameters);
     }
     else {
         std::cout << "algorithm input error!\n";

@@ -3343,20 +3343,20 @@ namespace weavess {
             G[i].reserve(max_mst_degree * index->num_cl);
         }
 
-        printf("creating clusters...\n");
+        // printf("creating clusters...\n");
 #pragma omp parallel for
         for (int i = 0; i < index->num_cl; i++) {
             int *idx_points = new int[index->getBaseLen()];
             for (int j = 0; j < index->getBaseLen(); j++)
                 idx_points[j] = j;
             create_clusters(idx_points, 0, index->getBaseLen() - 1, G, index->minsize_cl, locks, max_mst_degree);
-            printf("end cluster %d\n", i);
+            // printf("end cluster %d\n", i);
             delete[] idx_points;
         }
 
-        printf("sorting...\n");
+        // printf("sorting...\n");
         sort_edges(G);
-        print_stats_graph(G);
+        // print_stats_graph(G);
 
         // G - > final_graph
         index->getFinalGraph().resize(index->getBaseLen());
@@ -3481,7 +3481,7 @@ namespace weavess {
     }
 
     void ComponentInitHCNNG::SetConfigs() {
-        index->minsize_cl = index->getParam().get<unsigned>("minsize_cl");
+        index->minsize_cl = (unsigned)std::sqrt(index->getBaseLen());
         index->num_cl = index->getParam().get<unsigned>("num_cl");
 
         // kd-tree
