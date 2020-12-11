@@ -2436,13 +2436,13 @@ namespace weavess {
 
         BuildGraph();
 
-        for(int i = 0; i < 10; i ++) {
-            std::cout << "len : " << index->getFinalGraph()[i].size() << std::endl;
-            for(int j = 0; j < index->getFinalGraph()[i].size(); j ++){
-                std::cout << index->getFinalGraph()[i][j].id << "|" << index->getFinalGraph()[i][j].distance << " ";
-            }
-            std::cout << std::endl;
-        }
+        // for(int i = 0; i < 10; i ++) {
+        //     std::cout << "len : " << index->getFinalGraph()[i].size() << std::endl;
+        //     for(int j = 0; j < index->getFinalGraph()[i].size(); j ++){
+        //         std::cout << index->getFinalGraph()[i][j].id << "|" << index->getFinalGraph()[i][j].distance << " ";
+        //     }
+        //     std::cout << std::endl;
+        // }
     }
 
     void ComponentInitSPTAG_KDT::SetConfigs() {
@@ -2480,12 +2480,12 @@ namespace weavess {
             std::random_shuffle(pindices.begin(), pindices.end());
 
             index->m_pTreeStart[i] = i * pindices.size();
-            std::cout << "Start to build KDTree " << i + 1 << std::endl;
+            // std::cout << "Start to build KDTree " << i + 1 << std::endl;
             int iTreeSize = index->m_pTreeStart[i];
 
             // 分治生成 KDT
             DivideTree(pindices, 0, pindices.size() - 1, index->m_pTreeStart[i], iTreeSize);
-            std::cout << i + 1 << " KDTree built, " << iTreeSize - index->m_pTreeStart[i] << " " << pindices.size();
+            // std::cout << i + 1 << " KDTree built, " << iTreeSize - index->m_pTreeStart[i] << " " << pindices.size();
         }
     }
 
@@ -2752,7 +2752,7 @@ namespace weavess {
                                                                       std::vector<std::pair<int, int>>());
 
         auto t1 = std::chrono::high_resolution_clock::now();
-        std::cout << "Parallel TpTree Partition begin\n";
+        // std::cout << "Parallel TpTree Partition begin\n";
 #pragma omp parallel for schedule(dynamic)
         for (int i = 0; i < index->m_iTPTNumber; i++) {
             // Sleep(i * 100);
@@ -2760,12 +2760,12 @@ namespace weavess {
             for (int j = 0; j < index->getBaseLen(); j++) TptreeDataIndices[i][j] = j;
             std::random_shuffle(TptreeDataIndices[i].begin(), TptreeDataIndices[i].end());
             PartitionByTptree(TptreeDataIndices[i], 0, index->getBaseLen() - 1, TptreeLeafNodes[i]);
-            std::cout << "Finish Getting Leaves for Tree " << i << std::endl;
+            // std::cout << "Finish Getting Leaves for Tree " << i << std::endl;
         }
-        std::cout << "Parallel TpTree Partition done\n";
+        // std::cout << "Parallel TpTree Partition done\n";
         auto t2 = std::chrono::high_resolution_clock::now();
-        std::cout << "Build TPTree time (s): " << std::chrono::duration_cast<std::chrono::seconds>(t2 - t1).count()
-                  << std::endl;
+        // std::cout << "Build TPTree time (s): " << std::chrono::duration_cast<std::chrono::seconds>(t2 - t1).count()
+                //   << std::endl;
 
         for (int i = 0; i < index->m_iTPTNumber; i++) {
 #pragma omp parallel for schedule(dynamic)
@@ -2773,8 +2773,8 @@ namespace weavess {
                 int start_index = TptreeLeafNodes[i][j].first;
                 int end_index = TptreeLeafNodes[i][j].second;
                 if ((j * 5) % TptreeLeafNodes[i].size() == 0)
-                    std::cout << "Processing Tree " << i << " "
-                              << static_cast<int>(j * 1.0 / TptreeLeafNodes[i].size() * 100) << std::endl;
+                    // std::cout << "Processing Tree " << i << " "
+                            //   << static_cast<int>(j * 1.0 / TptreeLeafNodes[i].size() * 100) << std::endl;
                 for (int x = start_index; x < end_index; x++) {
                     for (int y = x + 1; y <= end_index; y++) {
                         int p1 = TptreeDataIndices[i][x];
@@ -2795,8 +2795,8 @@ namespace weavess {
         TptreeLeafNodes.clear();
 
         auto t3 = std::chrono::high_resolution_clock::now();
-        std::cout << "Process TPTree time (s): " << std::chrono::duration_cast<std::chrono::seconds>(t3 - t2).count()
-                  << std::endl;
+        // std::cout << "Process TPTree time (s): " << std::chrono::duration_cast<std::chrono::seconds>(t3 - t2).count()
+                //   << std::endl;
     }
 
 
@@ -3065,7 +3065,7 @@ namespace weavess {
             index->m_pTreeStart.push_back((int) index->m_pBKTreeRoots.size());
             index->m_pBKTreeRoots.emplace_back((int) localindices.size());
 
-            std::cout << "Start to build BKTree " << i + 1 << std::endl;
+            // std::cout << "Start to build BKTree " << i + 1 << std::endl;
 
             ss.push(BKTStackItem(index->m_pTreeStart[i], 0, (int) localindices.size()));
             while (!ss.empty()) {
@@ -3276,8 +3276,8 @@ namespace weavess {
         std::vector<std::vector<std::pair<int, int>>> TptreeLeafNodes(index->m_iTPTNumber,
                                                                       std::vector<std::pair<int, int>>());
 
-        auto t1 = std::chrono::high_resolution_clock::now();
-        std::cout << "Parallel TpTree Partition begin\n";
+        // auto t1 = std::chrono::high_resolution_clock::now();
+        // std::cout << "Parallel TpTree Partition begin\n";
 #pragma omp parallel for schedule(dynamic)
         for (int i = 0; i < index->m_iTPTNumber; i++) {
             // Sleep(i * 100);
@@ -3285,12 +3285,12 @@ namespace weavess {
             for (int j = 0; j < index->getBaseLen(); j++) TptreeDataIndices[i][j] = j;
             std::random_shuffle(TptreeDataIndices[i].begin(), TptreeDataIndices[i].end());
             PartitionByTptree(TptreeDataIndices[i], 0, index->getBaseLen() - 1, TptreeLeafNodes[i]);
-            std::cout << "Finish Getting Leaves for Tree " << i << std::endl;
+            // std::cout << "Finish Getting Leaves for Tree " << i << std::endl;
         }
-        std::cout << "Parallel TpTree Partition done\n";
-        auto t2 = std::chrono::high_resolution_clock::now();
-        std::cout << "Build TPTree time (s): " << std::chrono::duration_cast<std::chrono::seconds>(t2 - t1).count()
-                  << std::endl;
+        // std::cout << "Parallel TpTree Partition done\n";
+        // auto t2 = std::chrono::high_resolution_clock::now();
+        // std::cout << "Build TPTree time (s): " << std::chrono::duration_cast<std::chrono::seconds>(t2 - t1).count()
+                //   << std::endl;
 
         for (int i = 0; i < index->m_iTPTNumber; i++) {
 #pragma omp parallel for schedule(dynamic)
@@ -3298,8 +3298,8 @@ namespace weavess {
                 int start_index = TptreeLeafNodes[i][j].first;
                 int end_index = TptreeLeafNodes[i][j].second;
                 if ((j * 5) % TptreeLeafNodes[i].size() == 0)
-                    std::cout << "Processing Tree " << i << " "
-                              << static_cast<int>(j * 1.0 / TptreeLeafNodes[i].size() * 100) << std::endl;
+                    // std::cout << "Processing Tree " << i << " "
+                            //   << static_cast<int>(j * 1.0 / TptreeLeafNodes[i].size() * 100) << std::endl;
                 for (int x = start_index; x < end_index; x++) {
                     for (int y = x + 1; y <= end_index; y++) {
                         int p1 = TptreeDataIndices[i][x];
@@ -3319,9 +3319,9 @@ namespace weavess {
         TptreeDataIndices.clear();
         TptreeLeafNodes.clear();
 
-        auto t3 = std::chrono::high_resolution_clock::now();
-        std::cout << "Process TPTree time (s): " << std::chrono::duration_cast<std::chrono::seconds>(t3 - t2).count()
-                  << std::endl;
+        // auto t3 = std::chrono::high_resolution_clock::now();
+        // std::cout << "Process TPTree time (s): " << std::chrono::duration_cast<std::chrono::seconds>(t3 - t2).count()
+                //   << std::endl;
     }
 
 

@@ -20,6 +20,7 @@
 
 // SPTAG
 #define ALIGN 32
+#define _rotl(value, bits) ((value << bits) | (value >> (sizeof(value)*8 - bits)))
 
 // HCNNG
 #define not_in_set(_elto, _set) (_set.find(_elto)==_set.end())
@@ -1088,7 +1089,7 @@ namespace weavess {
 
             inline int hash_func(int idx)
             {
-                // return ((int)(idx * 99991) + _rotl(idx, 2) + 101) & m_poolSize;
+                return ((int)(idx * 99991) + _rotl(idx, 2) + 101) & m_poolSize;
             }
 
         public:

@@ -312,43 +312,56 @@ void HCNNG(weavess::Parameters &parameters) {
     }
 }
 
-void SPTAG_KDT(std::string base_path, std::string query_path, std::string ground_path) {
-    weavess::Parameters parameters;
-    parameters.set<unsigned>("KDTNumber", 1);
-    parameters.set<unsigned>("TPTNumber", 32);
-    parameters.set<unsigned>("TPTLeafSize", 2000);
-    parameters.set<unsigned>("NeighborhoodSize", 32);
-    parameters.set<unsigned>("GraphNeighborhoodScale", 2);
-    parameters.set<unsigned>("CEF", 1000);
-    parameters.set<unsigned>("numOfThreads", 10);
+void SPTAG_KDT(weavess::Parameters &parameters) {
 
-    auto *builder = new weavess::IndexBuilder(8);
-    builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
-            -> init(weavess::INIT_SPTAG_KDT)
-            -> refine(weavess::REFINE_SPTAG_KDT, false)
-            -> search(weavess::SEARCH_ENTRY_NONE, weavess::ROUTER_SPTAG_KDT, weavess::TYPE::L_SEARCH_SET_RECALL);
-    std::cout << "Time cost: " << builder->GetBuildTime().count() << std::endl;
+    const unsigned num_threads = parameters.get<unsigned>("n_threads");
+    std::string base_path = parameters.get<std::string>("base_path");
+    std::string query_path = parameters.get<std::string>("query_path");
+    std::string ground_path = parameters.get<std::string>("ground_path");
+    std::string graph_file = parameters.get<std::string>("graph_file");
+    auto *builder = new weavess::IndexBuilder(num_threads);
+
+    if (parameters.get<std::string>("exc_type") == "build") {   // build
+        builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
+                -> init(weavess::INIT_SPTAG_KDT);
+        std::cout << "Init cost: " << builder->GetBuildTime().count() << std::endl;
+        builder -> refine(weavess::REFINE_SPTAG_KDT, false)
+                -> save_graph(weavess::TYPE::INDEX_SPTAG_KDT, &graph_file[0]);
+        std::cout << "Build cost: " << builder->GetBuildTime().count() << std::endl;
+    }else if (parameters.get<std::string>("exc_type") == "search") {    // search
+        builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
+                -> load_graph(weavess::TYPE::INDEX_SPTAG_KDT, &graph_file[0])
+                -> search(weavess::TYPE::SEARCH_ENTRY_NONE, weavess::TYPE::ROUTER_SPTAG_KDT, weavess::TYPE::L_SEARCH_SET_RECALL);
+        builder -> peak_memory_footprint();
+    }else {
+        std::cout << "exc_type input error!" << std::endl;
+    }
 }
 
-void SPTAG_BKT(std::string base_path, std::string query_path, std::string ground_path) {
-    weavess::Parameters parameters;
+void SPTAG_BKT(weavess::Parameters &parameters) {
 
-    parameters.set<unsigned>("BKTNumber", 1);
-    parameters.set<unsigned>("BKTKMeansK", 4);
-    parameters.set<unsigned>("TPTNumber", 4);
-    parameters.set<unsigned>("TPTLeafSize", 1000);
-    parameters.set<unsigned>("NeighborhoodSize", 32);
-    parameters.set<unsigned>("GraphNeighborhoodScale", 2);
-    parameters.set<unsigned>("CEF", 500);
-    parameters.set<unsigned>("numOfThreads", 10);
+    const unsigned num_threads = parameters.get<unsigned>("n_threads");
+    std::string base_path = parameters.get<std::string>("base_path");
+    std::string query_path = parameters.get<std::string>("query_path");
+    std::string ground_path = parameters.get<std::string>("ground_path");
+    std::string graph_file = parameters.get<std::string>("graph_file");
+    auto *builder = new weavess::IndexBuilder(num_threads);
 
-    auto *builder = new weavess::IndexBuilder(8);
-    builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
-            -> init(weavess::INIT_SPTAG_BKT)
-            -> refine(weavess::REFINE_SPTAG_BKT, false)
-            -> search(weavess::SEARCH_ENTRY_NONE, weavess::ROUTER_SPTAG_BKT, weavess::TYPE::L_SEARCH_SET_RECALL);
-
-    std::cout << "Time cost: " << builder->GetBuildTime().count() << std::endl;
+    if (parameters.get<std::string>("exc_type") == "build") {   // build
+        builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
+                -> init(weavess::INIT_SPTAG_BKT);
+        std::cout << "Init cost: " << builder->GetBuildTime().count() << std::endl;
+        builder -> refine(weavess::REFINE_SPTAG_BKT, false)
+                -> save_graph(weavess::TYPE::INDEX_SPTAG_BKT, &graph_file[0]);
+        std::cout << "Build cost: " << builder->GetBuildTime().count() << std::endl;
+    }else if (parameters.get<std::string>("exc_type") == "search") {    // search
+        builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
+                -> load_graph(weavess::TYPE::INDEX_SPTAG_BKT, &graph_file[0])
+                -> search(weavess::TYPE::SEARCH_ENTRY_NONE, weavess::TYPE::ROUTER_SPTAG_BKT, weavess::TYPE::L_SEARCH_SET_RECALL);
+        builder -> peak_memory_footprint();
+    }else {
+        std::cout << "exc_type input error!" << std::endl;
+    }
 }
 
 
@@ -395,8 +408,19 @@ int main(int argc, char** argv) {
         NSW(parameters);
     }else if (alg == "hcnng") {
         HCNNG(parameters);
-    }
-    else {
+    }else if (alg == "ieh") {
+
+    }else if (alg == "hnsw") {
+
+    }else if (alg == "panng") {
+
+    }else if (alg == "onng") {
+
+    }else if (alg == "sptag_kdt") {
+        SPTAG_KDT(parameters);
+    }else if (alg == "sptag_bkt") {
+        SPTAG_BKT(parameters);
+    }else {
         std::cout << "alg input error!\n";
         exit(-1);
     }

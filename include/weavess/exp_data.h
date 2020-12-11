@@ -463,6 +463,113 @@ void HCNNG_PARA(std::string dataset, weavess::Parameters &parameters) {
     parameters.set<unsigned>("mLevel", 1);
 }
 
+void SPTAG_KDT_PARA(std::string dataset, weavess::Parameters &parameters) {
+    unsigned KDT_Number, TPT_Number, TPT_leaf_size, scale, CEF;
+    if (dataset == "siftsmall") {
+        KDT_Number = 1, TPT_Number = 16, TPT_leaf_size = 500, scale = 8, CEF = 500;    // siftsmall
+    }else if (dataset == "sift1M") {
+        KDT_Number = 1, TPT_Number = 16, TPT_leaf_size = 500, scale = 8, CEF = 500;    // sift1M
+    }else if (dataset == "gist") {
+        KDT_Number = 2, TPT_Number = 32, TPT_leaf_size = 1000, scale = 32, CEF = 1000;    // gist
+    }else if (dataset == "glove-100") {
+        KDT_Number = 4, TPT_Number = 32, TPT_leaf_size = 1000, scale = 2, CEF = 1500;    // glove
+    }else if (dataset == "audio") {
+        KDT_Number = 2, TPT_Number = 32, TPT_leaf_size = 500, scale = 32, CEF = 1000;    // audio
+    }else if (dataset == "crawl") {
+        KDT_Number = 1, TPT_Number = 16, TPT_leaf_size = 1000, scale = 2, CEF = 1500;    // crawl
+    }else if (dataset == "msong") {
+        KDT_Number = 4, TPT_Number = 64, TPT_leaf_size = 1500, scale = 2, CEF = 500;    // msong
+    }else if (dataset == "uqv") {
+        KDT_Number = 1, TPT_Number = 16, TPT_leaf_size = 500, scale = 8, CEF = 1000;    // uqv
+    }else if (dataset == "enron") {
+        KDT_Number = 4, TPT_Number = 16, TPT_leaf_size = 500, scale = 8, CEF = 1500;    // enron
+    }else if (dataset == "mnist") {
+        KDT_Number = 1, TPT_Number = 16, TPT_leaf_size = 500, scale = 8, CEF = 500;    // mnist
+    }else if (dataset == "c_1") {
+        KDT_Number = 1, TPT_Number = 16, TPT_leaf_size = 1000, scale = 2, CEF = 1000;    // c_1
+    }else if (dataset == "c_10") {
+        KDT_Number = 2, TPT_Number = 16, TPT_leaf_size = 1000, scale = 8, CEF = 1500;    // c_10
+    }else if (dataset == "c_100") {
+        KDT_Number = 1, TPT_Number = 16, TPT_leaf_size = 1500, scale = 8, CEF = 1500;    // c_100
+    }else if (dataset == "d_8") {
+        KDT_Number = 4, TPT_Number = 32, TPT_leaf_size = 500, scale = 2, CEF = 1500;    // d_8
+    }else if (dataset == "d_128") {
+        KDT_Number = 4, TPT_Number = 16, TPT_leaf_size = 1500, scale = 2, CEF = 1500;    // d_128
+    }else if (dataset == "n_10000") {
+        KDT_Number = 2, TPT_Number = 16, TPT_leaf_size = 1000, scale = 8, CEF = 1500;    // n_10000
+    }else if (dataset == "n_1000000") {
+        KDT_Number = 2, TPT_Number = 16, TPT_leaf_size = 1000, scale = 8, CEF = 1500;    // n_1000000
+    }else if (dataset == "s_1") {
+        KDT_Number = 1, TPT_Number = 16, TPT_leaf_size = 1500, scale = 8, CEF = 1000;    // s_1
+    }else if (dataset == "s_10") {
+        KDT_Number = 1, TPT_Number = 32, TPT_leaf_size = 1500, scale = 32, CEF = 1500;    // s_10
+    }else {
+        std::cout << "dataset error!\n";
+        exit(-1);
+    }
+    parameters.set<unsigned>("KDTNumber", KDT_Number);
+    parameters.set<unsigned>("TPTNumber", TPT_Number);
+    parameters.set<unsigned>("TPTLeafSize", TPT_leaf_size);
+    parameters.set<unsigned>("NeighborhoodSize", 32);
+    parameters.set<unsigned>("GraphNeighborhoodScale", scale);
+    parameters.set<unsigned>("CEF", CEF);
+    parameters.set<unsigned>("numOfThreads", parameters.get<unsigned>("n_threads"));
+}
+
+void SPTAG_BKT_PARA(std::string dataset, weavess::Parameters &parameters) {
+    unsigned BKT_Number, BKT_kmeans_k, TPT_Number, TPT_leaf_size, scale, CEF;
+    if (dataset == "siftsmall") {
+        BKT_Number = 1, BKT_kmeans_k = 16, TPT_Number = 16, TPT_leaf_size = 500, scale = 2, CEF = 500;    // siftsmall
+    }else if (dataset == "sift1M") {
+        BKT_Number = 1, BKT_kmeans_k = 16, TPT_Number = 16, TPT_leaf_size = 1000, scale = 2, CEF = 1000;    // sift1M
+    }else if (dataset == "gist") {
+        BKT_Number = 2, BKT_kmeans_k = 16, TPT_Number = 32, TPT_leaf_size = 1000, scale = 8, CEF = 1000;    // gist
+    }else if (dataset == "glove-100") {
+        BKT_Number = 4, BKT_kmeans_k = 16, TPT_Number = 16, TPT_leaf_size = 500, scale = 8, CEF = 1500;    // glove
+    }else if (dataset == "audio") {
+        BKT_Number = 4, BKT_kmeans_k = 16, TPT_Number = 16, TPT_leaf_size = 1500, scale = 32, CEF = 1000;    // audio
+    }else if (dataset == "crawl") {
+        BKT_Number = 4, BKT_kmeans_k = 32, TPT_Number = 32, TPT_leaf_size = 1000, scale = 32, CEF = 500;    // crawl
+    }else if (dataset == "msong") {
+        BKT_Number = 4, BKT_kmeans_k = 64, TPT_Number = 16, TPT_leaf_size = 500, scale = 2, CEF = 500;    // msong
+    }else if (dataset == "uqv") {
+        BKT_Number = 4, BKT_kmeans_k = 64, TPT_Number = 16, TPT_leaf_size = 1000, scale = 2, CEF = 500;    // uqv
+    }else if (dataset == "enron") {
+        // BKT_Number = 4, BKT_kmeans_k = 64, TPT_Number = 16, TPT_leaf_size = 1000, scale = 2, CEF = 500;;    // enron
+    }else if (dataset == "mnist") {
+        BKT_Number = 1, BKT_kmeans_k = 16, TPT_Number = 16, TPT_leaf_size = 500, scale = 2, CEF = 500;    // mnist
+    }else if (dataset == "c_1") {
+        BKT_Number = 1, BKT_kmeans_k = 16, TPT_Number = 16, TPT_leaf_size = 1000, scale = 2, CEF = 1000;    // c_1
+    }else if (dataset == "c_10") {
+        BKT_Number = 2, BKT_kmeans_k = 32, TPT_Number = 16, TPT_leaf_size = 1500, scale = 2, CEF = 500;    // c_10
+    }else if (dataset == "c_100") {
+        BKT_Number = 2, BKT_kmeans_k = 32, TPT_Number = 16, TPT_leaf_size = 1500, scale = 2, CEF = 500;    // c_100
+    }else if (dataset == "d_8") {
+        BKT_Number = 1, BKT_kmeans_k = 32, TPT_Number = 16, TPT_leaf_size = 1000, scale = 2, CEF = 1000;    // d_8
+    }else if (dataset == "d_128") {
+        BKT_Number = 4, BKT_kmeans_k = 16, TPT_Number = 32, TPT_leaf_size = 500, scale = 2, CEF = 500;    // d_128
+    }else if (dataset == "n_10000") {
+        BKT_Number = 2, BKT_kmeans_k = 32, TPT_Number = 16, TPT_leaf_size = 1500, scale = 2, CEF = 500;    // n_10000
+    }else if (dataset == "n_1000000") {
+        BKT_Number = 2, BKT_kmeans_k = 32, TPT_Number = 16, TPT_leaf_size = 1500, scale = 2, CEF = 500;    // n_1000000
+    }else if (dataset == "s_1") {
+        BKT_Number = 1, BKT_kmeans_k = 16, TPT_Number = 16, TPT_leaf_size = 1000, scale = 2, CEF = 500;    // s_1
+    }else if (dataset == "s_10") {
+        BKT_Number = 1, BKT_kmeans_k = 32, TPT_Number = 64, TPT_leaf_size = 2000, scale = 8, CEF = 1500;    // s_10
+    }else {
+        std::cout << "dataset error!\n";
+        exit(-1);
+    }
+    parameters.set<unsigned>("BKTNumber", BKT_Number);
+    parameters.set<unsigned>("BKTKMeansK", BKT_kmeans_k);
+    parameters.set<unsigned>("TPTNumber", TPT_Number);
+    parameters.set<unsigned>("TPTLeafSize", TPT_leaf_size);
+    parameters.set<unsigned>("NeighborhoodSize", 32);
+    parameters.set<unsigned>("GraphNeighborhoodScale", scale);
+    parameters.set<unsigned>("CEF", CEF);
+    parameters.set<unsigned>("numOfThreads", parameters.get<unsigned>("n_threads"));
+}
+
 void set_data_path(std::string dataset, weavess::Parameters &parameters) {
     // dataset root path
     std::string dataset_root = parameters.get<std::string>("dataset_root");
@@ -598,6 +705,10 @@ void set_para(std::string alg, std::string dataset, weavess::Parameters &paramet
         NSW_PARA(dataset, parameters);
     }else if (alg == "hcnng") {
         HCNNG_PARA(dataset, parameters);
+    }else if (alg == "sptag_kdt") {
+        SPTAG_KDT_PARA(dataset, parameters);
+    }else if (alg == "sptag_bkt") {
+        SPTAG_BKT_PARA(dataset, parameters);
     }
     else {
         std::cout << "algorithm input error!\n";
