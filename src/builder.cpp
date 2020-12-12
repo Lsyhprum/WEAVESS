@@ -189,7 +189,7 @@ namespace weavess {
 
         final_index_->getParam().set<unsigned>("K_search", K);
 
-        std::vector<Index::Neighbor> pool;
+        // std::vector<Index::Neighbor> pool;
         std::vector<std::vector<unsigned>> res;
 
         // ENTRY
@@ -278,9 +278,10 @@ namespace weavess {
 
                 res.clear();
                 res.resize(final_index_->getBaseLen());
-
+#pragma omp parallel for
                 for (unsigned i = 0; i < final_index_->getQueryLen(); i++) {
-                    pool.clear();
+                    // pool.clear();
+                    std::vector<Index::Neighbor> pool;
 
                     a->SearchEntryInner(i, pool);
 
@@ -361,7 +362,8 @@ namespace weavess {
                 res.resize(final_index_->getBaseLen());
 
                 for (unsigned i = 0; i < final_index_->getQueryLen(); i++) {
-                    pool.clear();
+                    // pool.clear();
+                    std::vector<Index::Neighbor> pool;
 
                     a->SearchEntryInner(i, pool);
 
@@ -430,7 +432,8 @@ namespace weavess {
             res.resize(final_index_->getBaseLen());
 
             for (unsigned i = 0; i < final_index_->getQueryLen(); i++) {
-                pool.clear();
+                // pool.clear();
+                std::vector<Index::Neighbor> pool;
 
                 a->SearchEntryInner(i, pool);
 
