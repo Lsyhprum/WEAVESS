@@ -4,6 +4,7 @@
 
 #include "weavess/builder.h"
 #include "weavess/component.h"
+#include <set>
 //#include "weavess/matplotlibcpp.h"
 
 //namespace plt = matplotlibcpp;
@@ -258,11 +259,13 @@ namespace weavess {
         }
 
         if (L_type == L_SEARCH_SET_RECALL) {
+            std::set<unsigned> visited;
             unsigned sg = 1000; // 计算L步长的参数
             float acc_set = 0.99;   // 指定的最小acc
             bool flag = false;
             int L_sl = 1;   // L步长，可能取负值
             unsigned L = K;
+            visited.insert(L);
             unsigned L_min = 0x7fffffff; // acc超过acc_set的最小L值
             while (true) {
                 // unsigned L_pre = L;
@@ -302,6 +305,7 @@ namespace weavess {
                 //结果评估
                 int cnt = 0;
                 for (unsigned i = 0; i < final_index_->getGroundLen(); i++) {
+                    if (res[i].size() == 0) continue;
                     for (unsigned j = 0; j < K; j++) {
                         unsigned k = 0;
                         for (; k < K; k++) {
@@ -339,6 +343,11 @@ namespace weavess {
                     flag = false;
                 }
                 L += L_sl;
+                if (visited.count(L)) {
+                    break;
+                }else {
+                    visited.insert(L);
+                }
             }
             std::cout << "L_min: " << L_min << std::endl;
         }else if (L_type == L_SEARCH_ASCEND) {
@@ -394,6 +403,7 @@ namespace weavess {
                 //结果评估
                 int cnt = 0;
                 for (unsigned i = 0; i < final_index_->getGroundLen(); i++) {
+                    if (res[i].size() == 0) continue;
                     for (unsigned j = 0; j < K; j++) {
                         unsigned k = 0;
                         for (; k < K; k++) {
@@ -453,6 +463,7 @@ namespace weavess {
             //结果评估
             int cnt = 0;
             for (unsigned i = 0; i < final_index_->getGroundLen(); i++) {
+                if (res[i].size() == 0) continue;
                 for (unsigned j = 0; j < K; j++) {
                     unsigned k = 0;
                     for (; k < K; k++) {
@@ -904,6 +915,10 @@ namespace weavess {
      */
     IndexBuilder *IndexBuilder::load_graph(TYPE type, char *graph_file) {
         std::ifstream in(graph_file, std::ios::binary);
+        if (!in.is_open()) {
+            std::cerr << "load graph error" << std::endl;
+            exit(-1);
+        }
         if (type == INDEX_NSG || type == INDEX_VAMANA) {
             in.read((char *) &final_index_->ep_, sizeof(unsigned));
         } else if (type == INDEX_SSG) {
