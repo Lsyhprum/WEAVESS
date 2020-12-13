@@ -190,23 +190,25 @@ void EFANNA(weavess::Parameters &parameters) {
     }
 }
 
-void IEH(std::string base_path, std::string query_path, std::string ground_path) {
-    weavess::Parameters parameters;
-    parameters.set<std::string>("train", "F:\\ANNS\\DATASET\\sift1M\\sift_base.fvecs");
-    parameters.set<std::string>("test", "F:\\ANNS\\DATASET\\sift1M\\sift_query.fvecs");
-    parameters.set<std::string>("func", "F:\\ANNS\\DATASET\\sift1M\\LSHfuncSift.txt");
-    parameters.set<std::string>("basecode", "F:\\ANNS\\DATASET\\sift1M\\LSHtableSift.txt");
-    parameters.set<std::string>("knntable", "F:\\ANNS\\DATASET\\sift1M\\sift_bf.index");
+void IEH(weavess::Parameters &parameters) {
 
-    parameters.set<unsigned>("expand", 8);
-    parameters.set<unsigned>("iterlimit", 8);
-
-    auto *builder = new weavess::IndexBuilder(8);
-    builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters) // useless
-            -> init(weavess::INIT_IEH)
-            -> search(weavess::SEARCH_ENTRY_HASH, weavess::ROUTER_IEH, weavess::TYPE::L_SEARCH_SET_RECALL);
+    const unsigned num_threads = parameters.get<unsigned>("n_threads");
+    std::string base_path = parameters.get<std::string>("base_path");
+    std::string query_path = parameters.get<std::string>("query_path");
+    std::string ground_path = parameters.get<std::string>("ground_path");
+    std::string graph_file = parameters.get<std::string>("graph_file");
+    auto *builder = new weavess::IndexBuilder(num_threads);
 
     std::cout << "Time cost: " << builder->GetBuildTime().count() << std::endl;
+    if (parameters.get<std::string>("exc_type") == "build") {   // build
+        std::cout << "index should be built in WEAVESS/algo/" << std::endl;
+    }else if (parameters.get<std::string>("exc_type") == "search") {    // search
+        builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
+                -> init(weavess::INIT_IEH)
+                -> search(weavess::SEARCH_ENTRY_HASH, weavess::ROUTER_IEH, weavess::TYPE::L_SEARCH_SET_RECALL);
+    }else {
+        std::cout << "exc_type input error!" << std::endl;
+    }
 }
 
 void NSW(weavess::Parameters &parameters) {
@@ -257,20 +259,28 @@ void HNSW(weavess::Parameters &parameters) {
     }
 }
 
-void PANNG(std::string base_path, std::string query_path, std::string ground_path) {
-    weavess::Parameters parameters;
-    parameters.set<unsigned>("NN", 10);          // K
-    parameters.set<unsigned>("ef_construction", 50);        //L
-    parameters.set<unsigned>("n_threads_", 1);
-    //parameters.set<unsigned>("batchSizeForCreation", 200);
+void PANNG(weavess::Parameters &parameters) {
+    const unsigned num_threads = parameters.get<unsigned>("n_threads");
+    std::string base_path = parameters.get<std::string>("base_path");
+    std::string query_path = parameters.get<std::string>("query_path");
+    std::string ground_path = parameters.get<std::string>("ground_path");
+    std::string graph_file = parameters.get<std::string>("graph_file");
+    auto *builder = new weavess::IndexBuilder(num_threads);
 
-    auto *builder = new weavess::IndexBuilder(8);
-    builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
-            -> init(weavess::INIT_ANNG)
-            -> refine(weavess::REFINE_PANNG, false)
-            -> search(weavess::SEARCH_ENTRY_VPT, weavess::ROUTER_NGT, weavess::TYPE::L_SEARCH_SET_RECALL);
-
-    std::cout << "Time cost: " << builder->GetBuildTime().count() << std::endl;
+    if (parameters.get<std::string>("exc_type") == "build") {   // build
+        builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
+                -> init(weavess::INIT_ANNG)
+                -> refine(weavess::REFINE_PANNG, false)
+                -> save_graph(weavess::TYPE::INDEX_PANNG, &graph_file[0]);
+        std::cout << "Build cost: " << builder->GetBuildTime().count() << std::endl;
+    }else if (parameters.get<std::string>("exc_type") == "search") {    // search
+        builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
+                -> load_graph(weavess::TYPE::INDEX_PANNG, &graph_file[0])
+                -> search(weavess::TYPE::SEARCH_ENTRY_VPT, weavess::TYPE::ROUTER_NGT, weavess::TYPE::L_SEARCH_SET_RECALL);
+        builder -> peak_memory_footprint();
+    }else {
+        std::cout << "exc_type input error!" << std::endl;
+    }
 }
 
 void ONNG(std::string base_path, std::string query_path, std::string ground_path) {
@@ -381,8 +391,10 @@ int main(int argc, char** argv) {
     }
     weavess::Parameters parameters;
     std::string dataset_root = R"(/Users/wmz/Documents/Postgraduate/Code/dataset/)";
+    std::string index_path = R"(/)";
     parameters.set<std::string>("dataset_root", dataset_root);
-    parameters.set<unsigned>("n_threads", 8);
+    parameters.set<std::string>("index_path", index_path);
+    parameters.set<unsigned>("n_threads", 4);
     std::string alg(argv[1]);
     std::string dataset(argv[2]);
     std::string exc_type(argv[3]);
@@ -417,11 +429,11 @@ int main(int argc, char** argv) {
     }else if (alg == "hcnng") {
         HCNNG(parameters);
     }else if (alg == "ieh") {
-
+        IEH(parameters);
     }else if (alg == "hnsw") {
         HNSW(parameters);
     }else if (alg == "panng") {
-
+        PANNG(parameters);
     }else if (alg == "onng") {
 
     }else if (alg == "sptag_kdt") {

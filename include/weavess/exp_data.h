@@ -620,6 +620,72 @@ void HNSW_PARA(std::string dataset, weavess::Parameters &parameters) {
     parameters.set<int>("mult", -1);
 }
 
+void IEH_PARA(std::string dataset, weavess::Parameters &parameters) {
+    std::string index_path = parameters.get<std::string>("index_path");
+    std::string LSHtable_path(index_path);
+    std::string LSHfunc_path(index_path);
+
+    LSHtable_path.append("LSHtable_" + dataset + ".txt");
+    LSHfunc_path.append("LSHfunc_" + dataset + ".txt");
+
+    parameters.set<std::string>("train", parameters.get<std::string>("base_path"));
+    parameters.set<std::string>("test", parameters.get<std::string>("query_path"));
+    parameters.set<std::string>("func", LSHfunc_path);
+    parameters.set<std::string>("basecode", LSHtable_path);
+    parameters.set<std::string>("knntable", parameters.get<std::string>("graph_file"));
+
+    // parameters.set<unsigned>("expand", 10);
+    parameters.set<unsigned>("iterlimit", 3);
+}
+
+void PANNG_PARA(std::string dataset, weavess::Parameters &parameters) {
+    unsigned K, L;
+    if (dataset == "siftsmall") {
+        K = 10, L = 50;    // siftsmall
+    }else if (dataset == "sift1M") {
+        K = 40, L = 50;    // sift1M
+    }else if (dataset == "gist") {
+        K = 40, L = 40;    // gist
+    }else if (dataset == "glove-100") {
+        K = 40, L = 40;    // glove
+    }else if (dataset == "audio") {
+        K = 40, L = 40;    // audio
+    }else if (dataset == "crawl") {
+        K = 40, L = 70;    // crawl
+    }else if (dataset == "msong") {
+        K = 40, L = 70;    // msong
+    }else if (dataset == "uqv") {
+        K = 40, L = 60;    // uqv
+    }else if (dataset == "enron") {
+        K = 40, L = 40;    // enron
+    }else if (dataset == "mnist") {
+        K = 40, L = 40;    // mnist
+    }else if (dataset == "c_1") {
+        K = 40, L = 80;    // c_1
+    }else if (dataset == "c_10") {
+        K = 50, L = 80;    // c_10
+    }else if (dataset == "c_100") {
+        K = 60, L = 80;    // c_100
+    }else if (dataset == "d_8") {
+        K = 80, L = 110;    // d_8
+    }else if (dataset == "d_128") {
+        K = 50, L = 90;    // d_128
+    }else if (dataset == "n_10000") {
+        K = 40, L = 60;    // n_10000
+    }else if (dataset == "n_1000000") {
+        K = 40, L = 50;    // n_1000000
+    }else if (dataset == "s_1") {
+        K = 50, L = 80;    // s_1
+    }else if (dataset == "s_10") {
+        K = 60, L = 80;    // s_10
+    }else {
+        std::cout << "dataset error!\n";
+        exit(-1);
+    }
+    parameters.set<unsigned>("NN", K);          // K
+    parameters.set<unsigned>("ef_construction", L);        //L
+}
+
 void set_data_path(std::string dataset, weavess::Parameters &parameters) {
     // dataset root path
     std::string dataset_root = parameters.get<std::string>("dataset_root");
@@ -733,7 +799,7 @@ void set_data_path(std::string dataset, weavess::Parameters &parameters) {
 void set_para(std::string alg, std::string dataset, weavess::Parameters &parameters) {
     
     set_data_path(dataset, parameters);
-    if (parameters.get<std::string>("exc_type") == "search") {
+    if (parameters.get<std::string>("exc_type") == "search" && alg != "ieh") {
         return;
     }
 
@@ -761,6 +827,10 @@ void set_para(std::string alg, std::string dataset, weavess::Parameters &paramet
         SPTAG_BKT_PARA(dataset, parameters);
     }else if (alg == "hnsw") {
         HNSW_PARA(dataset, parameters);
+    }else if (alg == "ieh") {
+        IEH_PARA(dataset, parameters);
+    }else if (alg == "panng") {
+        PANNG_PARA(dataset, parameters);
     }
     else {
         std::cout << "algorithm input error!\n";

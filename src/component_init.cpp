@@ -1620,6 +1620,7 @@ namespace weavess {
                 auto *qnode = new Index::HnswNode(i, 0, index->NN_, index->NN_);
                 index->nodes_[i] = qnode;
                 InsertNode(qnode, visited_list);
+#pragma omp critical
                 Insert(i);
             }
             delete visited_list;
@@ -1695,6 +1696,7 @@ namespace weavess {
                 break;
 
             Index::HnswNode *candidate_node = candidate.GetNode();
+            std::unique_lock<std::mutex> lock(candidate_node->GetAccessGuard());
             const std::vector<Index::HnswNode *> &neighbors = candidate_node->GetFriends(level);
             candidates.pop();
             for (const auto &neighbor : neighbors) {
@@ -1734,7 +1736,7 @@ namespace weavess {
     void ComponentInitANNG::MakeVPTree(const std::vector<unsigned>& objects)
     {
         index->vp_tree.m_root.reset();
-
+// #pragma omp critical
 #pragma omp parallel
         {
 #pragma omp single
