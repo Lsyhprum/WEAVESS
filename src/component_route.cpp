@@ -342,7 +342,7 @@ namespace weavess {
         }
 
         //iteration
-        auto expand = index->getParam().get<unsigned>("expand");
+        // auto expand = index->getParam().get<unsigned>("expand");
         auto iterlimit = index->getParam().get<unsigned>("iterlimit");
 
         int niter = 0;
@@ -350,10 +350,10 @@ namespace weavess {
             auto it = cands.rbegin();
             std::vector<int> ids;
             index->addHopCount();
-            for (int j = 0; it != cands.rend() && j < expand; it++, j++) {
+            for (int j = 0; it != cands.rend() && j < L; it++, j++) {
                 int neighbor = it->row_id;
                 auto nnit = index->knntable[neighbor].rbegin();
-                for (int k = 0; nnit != index->knntable[neighbor].rend() && k < expand; nnit++, k++) {
+                for (int k = 0; nnit != index->knntable[neighbor].rend(); nnit++, k++) {
                     int nn = nnit->row_id;
                     ids.push_back(nn);
                 }
