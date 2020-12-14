@@ -243,39 +243,42 @@ namespace weavess {
     }
 
     void ComponentRefineNNDescent::generate_control_set(std::vector<unsigned> &c,
-                                        std::vector<std::vector<unsigned> > &v,
-                                        unsigned N){
+                                                        std::vector<std::vector<unsigned> > &v,
+                                                        unsigned N) {
 #pragma omp parallel for
-    for(unsigned i=0; i<c.size(); i++){
-        std::vector<NNDescent::Neighbor> tmp;
-        for(unsigned j=0; j<N; j++){
-        float dist = index->getDist()->compare(index->getBaseData() + c[i] * index->getBaseDim(), index->getBaseData() + j * index->getBaseDim(), index->getBaseDim());
-        tmp.push_back(NNDescent::Neighbor(j, dist, true));
-        }
-        std::partial_sort(tmp.begin(), tmp.begin() + CONTROL_NUM, tmp.end());
-        for(unsigned j=0; j<CONTROL_NUM; j++){
-        v[i].push_back(tmp[j].id);
-        }
-    }
-    }
-
-    void ComponentRefineNNDescent::eval_recall(std::vector<unsigned>& ctrl_points, std::vector<std::vector<unsigned> > &acc_eval_set){
-    float mean_acc=0;
-    for(unsigned i=0; i<ctrl_points.size(); i++){
-        float acc = 0;
-        auto &g = index->graph_[ctrl_points[i]].pool;
-        auto &v = acc_eval_set[i];
-        for(unsigned j=0; j<g.size(); j++){
-        for(unsigned k=0; k<v.size(); k++){
-            if(g[j].id == v[k]){
-            acc++;
-            break;
+        for (unsigned i = 0; i < c.size(); i++) {
+            std::vector<NNDescent::Neighbor> tmp;
+            for (unsigned j = 0; j < N; j++) {
+                float dist = index->getDist()->compare(index->getBaseData() + c[i] * index->getBaseDim(),
+                                                       index->getBaseData() + j * index->getBaseDim(),
+                                                       index->getBaseDim());
+                tmp.push_back(NNDescent::Neighbor(j, dist, true));
+            }
+            std::partial_sort(tmp.begin(), tmp.begin() + CONTROL_NUM, tmp.end());
+            for (unsigned j = 0; j < CONTROL_NUM; j++) {
+                v[i].push_back(tmp[j].id);
             }
         }
-        }
-        mean_acc += acc / v.size();
     }
-    std::cout<<"Graph Quality : "<<mean_acc / ctrl_points.size() <<std::endl;
+
+    void ComponentRefineNNDescent::eval_recall(std::vector<unsigned> &ctrl_points,
+                                               std::vector<std::vector<unsigned> > &acc_eval_set) {
+        float mean_acc = 0;
+        for (unsigned i = 0; i < ctrl_points.size(); i++) {
+            float acc = 0;
+            auto &g = index->graph_[ctrl_points[i]].pool;
+            auto &v = acc_eval_set[i];
+            for (unsigned j = 0; j < g.size(); j++) {
+                for (unsigned k = 0; k < v.size(); k++) {
+                    if (g[j].id == v[k]) {
+                        acc++;
+                        break;
+                    }
+                }
+            }
+            mean_acc += acc / v.size();
+        }
+        std::cout << "Graph Quality : " << mean_acc / ctrl_points.size() << std::endl;
     }
 
     /**
@@ -341,8 +344,8 @@ namespace weavess {
 
         // ENTRY
         std::cout << "__ENTRY : Centroid__" << std::endl;
-        auto *a = new ComponentRefineEntryCentroid(index);
-        a->EntryInner();
+        //auto *a = new ComponentReEntryCentroid(index);
+        //a->EntryInner();
         std::cout << "__ENTRY : FINISH" << std::endl;
 
         auto *cut_graph_ = new Index::SimpleNeighbor[index->getBaseLen() * (size_t) index->R_refine];
@@ -375,7 +378,7 @@ namespace weavess {
     void ComponentRefineNSG::SetConfigs() {
         index->R_refine = index->getParam().get<unsigned>("R_refine");
         index->L_refine = index->getParam().get<unsigned>("L_refine");
-        index->C_refine = index->getParam().get<unsigned>("C_refine");
+        index->C = index->getParam().get<unsigned>("C");
 
         index->width = index->R_refine;
     }
@@ -385,7 +388,7 @@ namespace weavess {
 
         // CANDIDATE
         std::cout << "__CANDIDATE : GREEDY(NSG)__" << std::endl;
-        auto *a = new ComponentCandidateNSG(index);
+        auto *a = new ComponentCandidateGreedy(index);
 
         // PRUNE
         std::cout << "__PRUNE : NSG__" << std::endl;
@@ -401,7 +404,12 @@ namespace weavess {
                 pool.clear();
                 flags.reset();
 
-                a->CandidateInner(n, index->ep_, flags, pool);
+                if(index->getSeeds().size() != 1) {
+                    std::cerr << "you need pre entry before refine" << std::endl;
+                    if(index->getSeeds().size() < 1) exit(-1);
+                }
+
+                a->CandidateInner(n, index->getSeeds()[0], index->getCandidatesEdgesNum(), flags, pool);
                 //std::cout << n << " candidate : " << pool.size() << std::endl;
                 b->PruneInner(n, index->R_refine, flags, pool, cut_graph_);
                 //std::cout << n << " prune : " << pool.size() << std::endl;
@@ -564,7 +572,7 @@ namespace weavess {
                 pool.clear();
                 flags.reset();
 
-                a->CandidateInner(n, n, flags, pool);
+                a->CandidateInner(n, n, index->getCandidatesEdgesNum(), flags, pool);
                 //std::cout << "candidate : " << pool.size() << std::endl;
 
                 b->PruneInner(n, index->R_refine, flags, pool, cut_graph_);
@@ -719,8 +727,6 @@ namespace weavess {
             boost::dynamic_bitset<> flags{index->getBaseLen(), 0};
 #pragma omp for schedule(dynamic, 100)
             for (unsigned n = 0; n < index->getBaseLen(); ++n) {
-                //std::cout << n << std::endl;
-
                 flags.reset();
 
                 b->PruneInner(n, index->L_dpg, flags, index->getFinalGraph()[n], cut_graph_);
@@ -740,8 +746,8 @@ namespace weavess {
         SetConfigs();
 
         // ENTRY
-        auto *a = new ComponentRefineEntryCentroid(index);
-        a->EntryInner();
+        //auto *a = new ComponentRefineEntryCentroid(index);
+        //a->EntryInner();
 
         auto *cut_graph_ = new Index::SimpleNeighbor[index->getBaseLen() * (size_t) index->R_refine];
         Link(cut_graph_);
@@ -763,14 +769,6 @@ namespace weavess {
             }
             std::sort(index->getFinalGraph()[i].begin(), index->getFinalGraph()[i].end());
         }
-
-//        for(int i = 0; i < 100; i ++) {
-//            std::cout << index->getFinalGraph()[i].size() << " : ";
-//            for(int j = 0; j < index->getFinalGraph()[i].size(); j ++) {
-//                std::cout << index->getFinalGraph()[i][j].id << "|" << index->getFinalGraph()[i][j].distance << " ";
-//            }
-//            std::cout << std::endl;
-//        }
     }
 
     void ComponentRefineVAMANA::SetConfigs() {
@@ -784,7 +782,7 @@ namespace weavess {
 
         // CANDIDATE
         std::cout << "__CANDIDATE : NSG__" << std::endl;
-        ComponentCandidate *a = new ComponentCandidateNSG(index);
+        ComponentCandidate *a = new ComponentCandidateGreedy(index);
 
         // PRUNE
         std::cout << "__PRUNE : VAMANA__" << std::endl;
@@ -800,7 +798,17 @@ namespace weavess {
             for (unsigned n = 0; n < index->getBaseLen(); ++n) {
                 pool.clear();
                 flags.reset();
-                a->CandidateInner(n, index->ep_, flags, pool);
+
+                if(index->getSeeds().size() != 1) {
+                    if(index->getSeeds().size() < 1) {
+                        std::cerr << "you need pre entry before refine" << std::endl;
+                        exit(-1);
+                    } else {
+                        std::cerr << "wrong pre entry type" << std::endl;
+                    }
+                }
+
+                a->CandidateInner(n, index->getSeeds()[0], index->getCandidatesEdgesNum(), flags, pool);
 
                 b->PruneInner(n, index->R_refine, flags, pool, cut_graph_);
             }
@@ -977,6 +985,7 @@ namespace weavess {
             index->graph_[i].pool.reserve(index->L);
         }
     }
+
     void ComponentRefineEFANNA::NNDescent() {
         if (index->debug == true) {
             std::mt19937 rng(rand());
@@ -1105,39 +1114,42 @@ namespace weavess {
     }
 
     void ComponentRefineEFANNA::generate_control_set(std::vector<unsigned> &c,
-                                        std::vector<std::vector<unsigned> > &v,
-                                        unsigned N){
+                                                     std::vector<std::vector<unsigned> > &v,
+                                                     unsigned N) {
 #pragma omp parallel for
-    for(unsigned i=0; i<c.size(); i++){
-        std::vector<NNDescent::Neighbor> tmp;
-        for(unsigned j=0; j<N; j++){
-        float dist = index->getDist()->compare(index->getBaseData() + c[i] * index->getBaseDim(), index->getBaseData() + j * index->getBaseDim(), index->getBaseDim());
-        tmp.push_back(NNDescent::Neighbor(j, dist, true));
-        }
-        std::partial_sort(tmp.begin(), tmp.begin() + CONTROL_NUM, tmp.end());
-        for(unsigned j=0; j<CONTROL_NUM; j++){
-        v[i].push_back(tmp[j].id);
-        }
-    }
-    }
-
-    void ComponentRefineEFANNA::eval_recall(std::vector<unsigned>& ctrl_points, std::vector<std::vector<unsigned> > &acc_eval_set){
-    float mean_acc=0;
-    for(unsigned i=0; i<ctrl_points.size(); i++){
-        float acc = 0;
-        auto &g = index->graph_[ctrl_points[i]].pool;
-        auto &v = acc_eval_set[i];
-        for(unsigned j=0; j<g.size(); j++){
-        for(unsigned k=0; k<v.size(); k++){
-            if(g[j].id == v[k]){
-            acc++;
-            break;
+        for (unsigned i = 0; i < c.size(); i++) {
+            std::vector<NNDescent::Neighbor> tmp;
+            for (unsigned j = 0; j < N; j++) {
+                float dist = index->getDist()->compare(index->getBaseData() + c[i] * index->getBaseDim(),
+                                                       index->getBaseData() + j * index->getBaseDim(),
+                                                       index->getBaseDim());
+                tmp.push_back(NNDescent::Neighbor(j, dist, true));
+            }
+            std::partial_sort(tmp.begin(), tmp.begin() + CONTROL_NUM, tmp.end());
+            for (unsigned j = 0; j < CONTROL_NUM; j++) {
+                v[i].push_back(tmp[j].id);
             }
         }
-        }
-        mean_acc += acc / v.size();
     }
-    std::cout<<"Graph Quality : "<<mean_acc / ctrl_points.size() <<std::endl;
+
+    void ComponentRefineEFANNA::eval_recall(std::vector<unsigned> &ctrl_points,
+                                            std::vector<std::vector<unsigned> > &acc_eval_set) {
+        float mean_acc = 0;
+        for (unsigned i = 0; i < ctrl_points.size(); i++) {
+            float acc = 0;
+            auto &g = index->graph_[ctrl_points[i]].pool;
+            auto &v = acc_eval_set[i];
+            for (unsigned j = 0; j < g.size(); j++) {
+                for (unsigned k = 0; k < v.size(); k++) {
+                    if (g[j].id == v[k]) {
+                        acc++;
+                        break;
+                    }
+                }
+            }
+            mean_acc += acc / v.size();
+        }
+        std::cout << "Graph Quality : " << mean_acc / ctrl_points.size() << std::endl;
     }
 
     /**
@@ -1181,7 +1193,10 @@ namespace weavess {
                         && srcNode[sni].distance < (*dstNode).second.second
                         && pathNode[pni].distance < (*dstNode).second.second
                             ) {
-                        candidates.push_back(std::pair<int, std::pair<uint32_t, uint32_t> >((*dstNode).second.first, std::pair<uint32_t, uint32_t>(srcNode[sni].id, dstNodeID)));
+                        candidates.push_back(std::pair<int, std::pair<uint32_t, uint32_t> >((*dstNode).second.first,
+                                                                                            std::pair<uint32_t, uint32_t>(
+                                                                                                    srcNode[sni].id,
+                                                                                                    dstNodeID)));
                         removeCandidateCount++;
                     }
                 }
@@ -1207,13 +1222,14 @@ namespace weavess {
         int removeCount = 0;
         removeCandidateCount = 0;
         for (size_t rank = 0; ids.size() != 0; rank++) {
-            for (auto it = ids.begin(); it != ids.end(); ) {
+            for (auto it = ids.begin(); it != ids.end();) {
                 size_t id = *it;
                 size_t idx = id;
                 std::vector<Index::SimpleNeighbor> srcNode = tmpGraph[idx];
                 if (rank >= srcNode.size()) {
                     if (!removeCandidates[idx].empty()) {
-                        std::cerr << "Something wrong! ID=" << id << " # of remaining candidates=" << removeCandidates[idx].size() << std::endl;
+                        std::cerr << "Something wrong! ID=" << id << " # of remaining candidates="
+                                  << removeCandidates[idx].size() << std::endl;
                         abort();
                     }
                     std::vector<Index::SimpleNeighbor> empty;
@@ -1224,7 +1240,8 @@ namespace weavess {
                 if (removeCandidates[idx].size() > 0) {
                     removeCandidateCount++;
                     bool pathExist = false;
-                    while (!removeCandidates[idx].empty() && (removeCandidates[idx].back().second == srcNode[rank].id)) {
+                    while (!removeCandidates[idx].empty() &&
+                           (removeCandidates[idx].back().second == srcNode[rank].id)) {
                         size_t path = removeCandidates[idx].back().first;
                         size_t dst = removeCandidates[idx].back().second;
                         removeCandidates[idx].pop_back();
@@ -1234,7 +1251,8 @@ namespace weavess {
                         }
                         if ((hasEdge(id, path)) && (hasEdge(path, dst))) {
                             pathExist = true;
-                            while (!removeCandidates[idx].empty() && (removeCandidates[idx].back().second == srcNode[rank].id)) {
+                            while (!removeCandidates[idx].empty() &&
+                                   (removeCandidates[idx].back().second == srcNode[rank].id)) {
                                 removeCandidates[idx].pop_back();
                                 if (removeCandidates[idx].empty()) {
                                     std::vector<std::pair<uint32_t, uint32_t>> empty;
@@ -1258,7 +1276,7 @@ namespace weavess {
 
         //std::cout << 3 << std::endl;
 
-        for(int i = 0; i < index->getBaseLen(); i ++) {
+        for (int i = 0; i < index->getBaseLen(); i++) {
             sort(index->getFinalGraph()[i].begin(), index->getFinalGraph()[i].end());
         }
 
@@ -1274,8 +1292,7 @@ namespace weavess {
         return a.id < b.id;
     }
 
-    bool ComponentRefinePANNG::hasEdge(size_t srcNodeID, size_t dstNodeID)
-    {
+    bool ComponentRefinePANNG::hasEdge(size_t srcNodeID, size_t dstNodeID) {
         std::vector<Index::SimpleNeighbor> srcNode = index->getFinalGraph()[srcNodeID];
         auto ni = std::lower_bound(srcNode.begin(), srcNode.end(), Index::SimpleNeighbor(dstNodeID, 0.0), edgeComp);
         return (ni != srcNode.end()) && ((*ni).id == dstNodeID);
@@ -1317,14 +1334,6 @@ namespace weavess {
             }
         }
 
-//        for(int i = 0; i < 10; i ++) {
-//            std::cout << i << " " << index->getFinalGraph()[i].size() << std::endl;
-//            for(int j = 0; j < index->getFinalGraph()[i].size(); j ++) {
-//                std::cout << index->getFinalGraph()[i][j].id << " " << index->getFinalGraph()[i][j].distance << " ";
-//            }
-//            std::cout << std::endl;
-//        }
-
         index->m_iNeighborhoodSize /= index->m_iNeighborhoodScale;  //K
         auto *cut_graph2_ = new Index::SimpleNeighbor[index->getBaseLen() * index->m_iNeighborhoodSize];
 
@@ -1348,14 +1357,6 @@ namespace weavess {
                 index->getFinalGraph()[i].resize(pool_size);
             }
         }
-
-        // for(int i = 0; i < 10; i ++) {
-        //     std::cout << i << " " << index->getFinalGraph()[i].size() << std::endl;
-        //     for(int j = 0; j < index->getFinalGraph()[i].size(); j ++) {
-        //         std::cout << index->getFinalGraph()[i][j].id << "|" << index->getFinalGraph()[i][j].distance << " ";
-        //     }
-        //     std::cout << std::endl;
-        // }
     }
 
     void ComponentRefineSPTAG_BKT::Link(Index::SimpleNeighbor *cut_graph_) {
@@ -1380,7 +1381,7 @@ namespace weavess {
                 pool.clear();
                 flags.reset();
 
-                a->CandidateInner(n, index->ep_, flags, pool);
+                a->CandidateInner(n, n, index->getCandidatesEdgesNum(), flags, pool);
                 //std::cout << n << " candidate : " << pool.size() << std::endl;
                 b->PruneInner(n, index->R_refine, flags, pool, cut_graph_);
                 //std::cout << n << " prune : " << pool.size() << " " << index->R_refine << std::endl;
@@ -1478,7 +1479,7 @@ namespace weavess {
                 pool.clear();
                 flags.reset();
 
-                a->CandidateInner(n, n, flags, pool);
+                a->CandidateInner(n, n, index->getCandidatesEdgesNum(), flags, pool);
 //                for(int i = 0; i < pool.size(); i ++)
 //                    std::cout << pool[i].id << "|" << pool[i].distance << " ";
                 //std::cout << "candidate finish" << std::endl;
@@ -1509,12 +1510,12 @@ namespace weavess {
         }
 
         //if (shortcutReduction) {
-            //NGT::Timer timer;
-            //timer.start();
-            //NGT::GraphReconstructor::adjustPathsEffectively(graphIndex);
-            //timer.stop();
-            //std::cerr << "Optimizer::execute: Path adjustment time=" << timer.time << " (sec) " << std::endl;
-            //graphIndex.saveGraph(outIndexPath);
+        //NGT::Timer timer;
+        //timer.start();
+        //NGT::GraphReconstructor::adjustPathsEffectively(graphIndex);
+        //timer.stop();
+        //std::cerr << "Optimizer::execute: Path adjustment time=" << timer.time << " (sec) " << std::endl;
+        //graphIndex.saveGraph(outIndexPath);
         //}
 
         //optimizeSearchParameters(outIndexPath);
@@ -1528,8 +1529,8 @@ namespace weavess {
     void ComponentRefineONNG::extractGraph(std::vector<std::vector<Index::SimpleNeighbor>> &outGraph) {
         outGraph.resize(index->getBaseLen());
 
-        for(int i = 0; i < index->getBaseLen(); i ++) {
-            for(int j = 0; j < index->getFinalGraph()[i].size(); j ++) {
+        for (int i = 0; i < index->getBaseLen(); i++) {
+            for (int j = 0; j < index->getFinalGraph()[i].size(); j++) {
                 outGraph[i].push_back(index->getFinalGraph()[i][j]);
             }
         }
@@ -1549,7 +1550,8 @@ namespace weavess {
             } else {
                 std::vector<Index::SimpleNeighbor> n = graph[id];
                 if (n.size() < index->numOfOutgoingEdges) {
-                    std::cerr << "GraphReconstructor: Warning. The edges are too few. " << n.size() << ":" << index->numOfOutgoingEdges << " for " << id << std::endl;
+                    std::cerr << "GraphReconstructor: Warning. The edges are too few. " << n.size() << ":"
+                              << index->numOfOutgoingEdges << " for " << id << std::endl;
                     continue;
                 }
                 n.resize(index->numOfOutgoingEdges);
@@ -1600,4 +1602,164 @@ namespace weavess {
             //n.swap(tmp);
         }
     }
+
+
+    void ComponentRefineTest::RefineInner() {
+        SetConfigs();
+
+        // 结果集阈值
+        unsigned range = index->getResultEdgesNum();
+
+        // candidate、prune
+        auto *cut_graph_ = new Index::SimpleNeighbor[index->getBaseLen() * range];
+        Link(cut_graph_);
+
+        // cut_graph_ -> final_graph
+        index->getFinalGraph().resize(index->getBaseLen());
+        for (size_t i = 0; i < index->getBaseLen(); i++) {
+            Index::SimpleNeighbor *pool = cut_graph_ + i * (size_t) range;
+            unsigned pool_size = 0;
+            for (unsigned j = 0; j < range; j++) {
+                if (pool[j].distance == -1) break;
+                pool_size = j;
+            }
+            pool_size++;
+            index->getFinalGraph()[i].resize(pool_size);
+            for (unsigned j = 0; j < pool_size; j++) {
+                index->getFinalGraph()[i][j].id = pool[j].id;
+                index->getFinalGraph()[i][j].distance = pool[j].distance;
+            }
+        }
+
+        // conn
+        std::cout << "__CONN : DFS__" << std::endl;
+        auto *c = new ComponentConnSSGDFS(index);
+        c->ConnInner();
+    }
+
+    void ComponentRefineTest::SetConfigs() {
+        index->setCandidatesEdgesNum(index->getParam().get<unsigned>("L"));
+        index->setResultEdgesNum(index->getParam().get<unsigned>("K"));
+
+        index->C = index->getParam().get<unsigned>("C"); // nsg prune
+        index->alpha = index->getParam().get<unsigned>("alpha"); // dpg prune
+    }
+
+    void ComponentRefineTest::Link(Index::SimpleNeighbor *cut_graph_) {
+        std::vector<std::mutex> locks(index->getBaseLen());
+
+        // CANDIDATE
+        std::cout << "__CANDIDATE : Propagation2__" << std::endl;
+        auto *a = new ComponentCandidatePropagation2(index);
+        //std::cout << "__CANDIDATE : Propagation1__" << std::endl;
+        //auto *a = new ComponentCandidatePropagation1(index);
+        //std::cout << "__CANDIDATE : Greedy__" << std::endl;
+        //auto *a = new ComponentCandidateGreedy(index);
+
+        // PRUNE
+        std::cout << "__PRUNE : NSG__" << std::endl;
+        auto *b = new ComponentPruneNSG(index);
+//        std::cout << "__PRUNE : DPG__" << std::endl;
+//        auto *b = new ComponentPruneDPG(index);
+//        std::cout << "__PRUNE : VAMANA__" << std::endl;
+//        auto *b = new ComponentPruneVAMANA(index);
+//        std::cout << "__PRUNE : SSG__" << std::endl;
+//        auto *b = new ComponentPruneSSG(index);
+//        std::cout << "__PRUNE : NAIVE__" << std::endl;
+//        auto *b = new ComponentPruneNaive(index);
+
+#pragma omp parallel
+        {
+            std::vector<Index::SimpleNeighbor> pool;
+            boost::dynamic_bitset<> flags{index->getBaseLen(), 0};
+
+#pragma omp for schedule(dynamic, 100)
+            for (unsigned n = 0; n < index->getBaseLen(); ++n) {
+                pool.clear();
+                flags.reset();
+
+                a->CandidateInner(n, n, index->getCandidatesEdgesNum(), flags, pool);
+                //std::cout << n << " candidate : " << pool.size() << std::endl;
+                b->PruneInner(n, index->getResultEdgesNum(), flags, pool, cut_graph_);
+                //std::cout << n << " prune : " << pool.size() << std::endl;
+            }
+
+            std::vector<Index::SimpleNeighbor>().swap(pool);
+
+#pragma omp for schedule(dynamic, 100)
+            for (unsigned n = 0; n < index->getBaseLen(); ++n) {
+                InterInsert(n, index->getResultEdgesNum(), locks, cut_graph_);
+            }
+        }
+    }
+
+    void ComponentRefineTest::InterInsert(unsigned n, unsigned range, std::vector<std::mutex> &locks,
+                                          Index::SimpleNeighbor *cut_graph_) {
+        Index::SimpleNeighbor *src_pool = cut_graph_ + (size_t) n * (size_t) range;
+        for (size_t i = 0; i < range; i++) {
+            if (src_pool[i].distance == -1) break;
+
+            Index::SimpleNeighbor sn(n, src_pool[i].distance);
+            size_t des = src_pool[i].id;
+            Index::SimpleNeighbor *des_pool = cut_graph_ + des * (size_t) range;
+
+            std::vector<Index::SimpleNeighbor> temp_pool;
+            int dup = 0;
+            {
+                Index::LockGuard guard(locks[des]);
+                for (size_t j = 0; j < range; j++) {
+                    if (des_pool[j].distance == -1) break;
+                    if (n == des_pool[j].id) {
+                        dup = 1;
+                        break;
+                    }
+                    temp_pool.push_back(des_pool[j]);
+                }
+            }
+            if (dup) continue;
+
+            temp_pool.push_back(sn);
+            if (temp_pool.size() > range) {
+                std::vector<Index::SimpleNeighbor> result;
+                unsigned start = 0;
+                std::sort(temp_pool.begin(), temp_pool.end());
+                result.push_back(temp_pool[start]);
+                while (result.size() < range && (++start) < temp_pool.size()) {
+                    auto &p = temp_pool[start];
+                    bool occlude = false;
+                    for (unsigned t = 0; t < result.size(); t++) {
+                        if (p.id == result[t].id) {
+                            occlude = true;
+                            break;
+                        }
+                        float djk = index->getDist()->compare(
+                                index->getBaseData() + index->getBaseDim() * (size_t) result[t].id,
+                                index->getBaseData() + index->getBaseDim() * (size_t) p.id,
+                                (unsigned) index->getBaseDim());
+                        if (djk < p.distance /* dik */) {
+                            occlude = true;
+                            break;
+                        }
+                    }
+                    if (!occlude) result.push_back(p);
+                }
+                {
+                    Index::LockGuard guard(locks[des]);
+                    for (unsigned t = 0; t < result.size(); t++) {
+                        des_pool[t] = result[t];
+                    }
+                }
+            } else {
+                Index::LockGuard guard(locks[des]);
+                for (unsigned t = 0; t < range; t++) {
+                    if (des_pool[t].distance == -1) {
+                        des_pool[t] = sn;
+                        if (t + 1 < range) des_pool[t + 1].distance = -1;
+                        break;
+                    }
+                }
+            }
+        }
+    }
+
 }

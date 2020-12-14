@@ -2808,14 +2808,6 @@ namespace weavess {
         BuildTrees();
 
         BuildGraph();
-
-//        for(int i = 0; i < 50; i ++) {
-//            std::cout << "len : " << index->getFinalGraph()[i].size() << std::endl;
-//            for(int j = 0; j < index->getFinalGraph()[i].size(); j ++){
-//                std::cout << index->getFinalGraph()[i][j].id << "|" << index->getFinalGraph()[i][j].distance << " ";
-//            }
-//            std::cout << std::endl;
-//        }
     }
 
     void ComponentInitSPTAG_BKT::SetConfigs() {
@@ -2824,6 +2816,10 @@ namespace weavess {
         index->m_iTreeNumber = index->getParam().get<unsigned>("BKTNumber");
 
         index->m_iBKTKmeansK = index->getParam().get<unsigned>("BKTKMeansK");
+
+        index->m_iTPTNumber = index->getParam().get<unsigned>("TPTNumber");
+
+        index->m_iTPTLeafSize = index->getParam().get<unsigned>("TPTLeafSize");
 
         index->m_iNeighborhoodSize = index->getParam().get<unsigned>("NeighborhoodSize");
 
@@ -2843,7 +2839,8 @@ namespace weavess {
         int subsize = (last - first - 1) / args._T + 1;
         const float MaxDist = (std::numeric_limits<float>::max)();
 
-//#pragma omp parallel for num_threads(args._T) shared(index->getBaseData(), indices) reduction(+:currDist)
+//        unsigned test = index->getBaseLen();
+//#pragma omp parallel for num_threads(args._T) shared(test, indices) reduction(+:currDist)
         for (int tid = 0; tid < args._T; tid++) {
             int istart = first + tid * subsize;
             int iend = std::min(first + (tid + 1) * subsize, last);

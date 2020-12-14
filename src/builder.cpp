@@ -37,6 +37,31 @@ namespace weavess {
         return this;
     }
 
+    IndexBuilder *IndexBuilder::serialization(TYPE type, char *graph_file) {
+        std::cout << "=====================" << std::endl;
+        ComponentSerialization *a = nullptr;
+        if(type == INDEX_KGRAPH || type == INDEX_TEST) {
+            std::cout << "__SERIALZATION : NONE__" << std::endl;
+            a = new ComponentSerializationNone(final_index_);
+        }
+        a->SerializeInner(graph_file);
+
+        std::cout << "__SERIALZATION FINISH__" << std::endl;
+    }
+
+    IndexBuilder *IndexBuilder::deserialization(TYPE type, char *graph_file) {
+        std::cout << "=====================" << std::endl;
+        ComponentSerialization *a = nullptr;
+        if(type == INDEX_KGRAPH || type == INDEX_TEST) {
+            std::cout << "__DESERIALZATION : NONE__" << std::endl;
+            a = new ComponentSerializationNone(final_index_);
+        }
+        a->DeserializeInner(graph_file);
+
+        std::cout << "__DESERIALZATION FINISH__" << std::endl;
+        std::cout << "=====================" << std::endl;
+    }
+
     /**
     * 构建初始图
     * @param type 初始化类型
@@ -52,8 +77,8 @@ namespace weavess {
             a = new ComponentInitRand(final_index_);
         } else if (type == INIT_KDT) {
             std::cout << "__INIT : KDT__" << std::endl;
-            a = new ComponentInitKDT(final_index_);
-            //a = new ComponentInitKDTree(final_index_);
+            //a = new ComponentInitKDT(final_index_);
+            a = new ComponentInitKDTree(final_index_); //new
         } else if (type == INIT_IEH) {
             std::cout << "__INIT : IEH__" << std::endl;
             a = new ComponentInitIEH(final_index_);
@@ -95,7 +120,7 @@ namespace weavess {
         a->InitInner();
 
         if (debug) {
-            //print_graph();
+            print_graph();
             std::unordered_map<unsigned, unsigned> in_degree;
             std::unordered_map<unsigned, unsigned> out_degree;
             degree_info(in_degree, out_degree);
@@ -105,6 +130,7 @@ namespace weavess {
         e = std::chrono::high_resolution_clock::now();
 
         std::cout << "__INIT FINISH__" << std::endl;
+        std::cout << "=====================" << std::endl;
 
         return this;
     }
@@ -151,7 +177,11 @@ namespace weavess {
         } else if (type == REFINE_ONNG) {
             std::cout << "__REFINE : ONNG__" << std::endl;
             a = new ComponentRefineONNG(final_index_);
-        } else {
+        } else if (type == REFINE_TEST) {
+            std::cout << "__REFINE : TEST__" << std::endl;
+            a = new ComponentRefineTest(final_index_);
+        }
+        else {
             std::cerr << "__REFINE : WRONG TYPE__" << std::endl;
         }
 
@@ -163,7 +193,7 @@ namespace weavess {
         std::cout << "===================" << std::endl;
         e = std::chrono::high_resolution_clock::now();
         if (debug) {
-            //print_graph();
+            print_graph();
             // degree
             std::unordered_map<unsigned, unsigned> in_degree;
             std::unordered_map<unsigned, unsigned> out_degree;
@@ -172,6 +202,40 @@ namespace weavess {
             // 连通分量
             conn_info();
         }
+
+        return this;
+    }
+
+    IndexBuilder *IndexBuilder::pre_entry(TYPE type) {
+        ComponentPreEntry *a = nullptr;
+
+        if(type == PRE_ENTRY_CENTROID) {
+            std::cout << "__PRE : CENTROID__" << std::endl;
+            a = new ComponentPreEntryCentroid(final_index_);
+        } else if (type == PRE_ENTRY_SUB_CENTROID) {
+            std::cout << "__PRE : SUB CENTROID__" << std::endl;
+            a = new ComponentPreEntrySubCentroid(final_index_);
+        } else if (type == PRE_ENTRY_KDT) {
+            std::cout << "__PRE : KDT__" << std::endl;
+            a = new ComponentPreEntryKDTree(final_index_);
+        } else if (type == PRE_ENTRY_VPT) {
+            std::cout << "__PRE : VPT__" << std::endl;
+            a = new ComponentPreEntryVPTree(final_index_);
+        } else if (type == PRE_ENTRY_BKT) {
+            std::cout << "__PRE : BKT__" << std::endl;
+            a = new ComponentPreEntryBKTree(final_index_);
+        } else if (type == PRE_ENTRY_RANDOM) {
+            std::cout << "__PRE : RANDOM__" << std::endl;
+            a = new ComponentPreEntryRandom(final_index_);
+        } else if (type == PRE_ENTRY_GUIDED) {
+            std::cout << "__PRE : GUIDED__" << std::endl;
+            a = new ComponentPreEntryGuided(final_index_);
+        }
+        else {
+            std::cerr << "__PRE ENTRY : WRONG TYPE__" << std::endl;
+        }
+
+        a->PreEntryInner();
 
         return this;
     }
@@ -194,15 +258,15 @@ namespace weavess {
 
         // ENTRY
         ComponentSearchEntry *a = nullptr;
-        if (entry_type == SEARCH_ENTRY_RAND) {
+        if (entry_type == SEARCH_ENTRY_RANDOM) {
             std::cout << "__SEARCH ENTRY : RAND__" << std::endl;
-            a = new ComponentSearchEntryRand(final_index_);
+            a = new ComponentSearchEntryRandom(final_index_);
         } else if (entry_type == SEARCH_ENTRY_CENTROID) {
             std::cout << "__SEARCH ENTRY : CENTROID__" << std::endl;
             a = new ComponentSearchEntryCentroid(final_index_);
-        } else if (entry_type == SEARCH_ENTRY_SUB_CENTROID) {
-            std::cout << "__SEARCH ENTRY : SUB_CENTROID__" << std::endl;
-            a = new ComponentSearchEntrySubCentroid(final_index_);
+        } else if (entry_type == SEARCH_ENTRY_SSG) {
+            std::cout << "__SEARCH ENTRY : SSG__" << std::endl;
+            a = new ComponentSearchEntrySSG(final_index_);
         } else if (entry_type == SEARCH_ENTRY_KDT) {
             std::cout << "__SEARCH ENTRY : KDT__" << std::endl;
             a = new ComponentSearchEntryKDT(final_index_);
@@ -218,7 +282,14 @@ namespace weavess {
         } else if (entry_type == SEARCH_ENTRY_VPT) {
             std::cout << "__SEARCH ENTRY : VPT__" << std::endl;
             a = new ComponentSearchEntryVPT(final_index_);
-        } else {
+        } else if (entry_type == SEARCH_ENTRY_SUB_CENTROID) {
+            std::cout << "__SEARCH ENTRY : SUB CENTROID__" << std::endl;
+            a = new ComponentSearchEntrySubCentroid(final_index_);
+        } else if (entry_type == SEARCH_ENTRY_BKT) {
+            std::cout << "__SEARCH ENTRY : BKT__" << std::endl;
+            a = new ComponentSearchEntryBKT(final_index_);
+        }
+        else {
             std::cerr << "__SEARCH ENTRY : WRONG TYPE__" << std::endl;
             exit(-1);
         }
@@ -361,23 +432,18 @@ namespace weavess {
                 res.resize(final_index_->getBaseLen());
 
                 for (unsigned i = 0; i < final_index_->getQueryLen(); i++) {
+                    //std::cout << i << std::endl;
                     pool.clear();
 
                     a->SearchEntryInner(i, pool);
 
-                    //                for(unsigned j = 0; j < pool.size(); j ++) {
-                    //                    std::cout << pool[j].id << "|" << pool[j].distance << " ";
-                    //                }
-                    //                std::cout << std::endl;
-                    //
-                    //                std::cout << pool.size() << std::endl;
+//                    for(int i = 0; i < pool.size(); i ++) {
+//                        std::cout << pool[i].id << "|" << pool[i].distance << " ";
+//                    }
+//                    std::cout << std::endl;
+//                    std::cout << "entry finish" << std::endl;
 
                     b->RouteInner(i, pool, res[i]);
-
-                    //                for(unsigned j = 0; j < res[i].size(); j ++) {
-                    //                    std::cout << res[i][j] << " ";
-                    //                }
-                    //                std::cout << std::endl;
                 }
 
                 auto e1 = std::chrono::high_resolution_clock::now();
@@ -475,7 +541,6 @@ namespace weavess {
      * 打印索引
      */
     void IndexBuilder::print_graph() {
-        std::cout << "=====================" << std::endl;
         for (int i = 0; i < 10; i++) {
             std::cout << i << " : " << final_index_->getFinalGraph()[i].size() << std::endl;
             for (int j = 0; j < final_index_->getFinalGraph()[i].size(); j++) {
@@ -520,10 +585,30 @@ namespace weavess {
 
         avg_out_degree /= final_index_->getBaseLen();
         avg_in_degree /= final_index_->getBaseLen();
-        printf("Degree Statistics: Max out degree = %d, Min out degree= %d, Avg out degree = %lf\n", max_out_degree,
+
+        printf("Out degree Statistics: Max out degree = %d, Min out degree= %d, Avg out degree = %lf\n", max_out_degree,
                min_out_degree, avg_out_degree);
-        printf("Degree Statistics: Max in degree = %d, Min in degree= %d, Avg in degree = %lf\n", max_in_degree,
+        printf("In degree Statistics: Max in degree = %d, Min in degree= %d, Avg in degree = %lf\n", max_in_degree,
                min_in_degree, avg_in_degree);
+
+        unsigned in_interval = (max_in_degree - min_in_degree) / 4;
+        std::vector<unsigned> in_histogram(4);
+        for(auto iter : in_degree) {
+            for(int i = 0; i < 4; i ++) {
+                if(iter.first >= i * in_interval && iter.first < (i + 1) * in_interval) {
+                    in_histogram[i] += iter.second;
+                    break;
+                } else {
+                    continue;;
+                }
+            }
+        }
+
+        std::cout << "In degree histogram: " << " ";
+        for(int i = 0; i < 4; i ++) {
+            std::cout << "[" << in_interval * i << "-" << in_interval * (i + 1) << "] : " << in_histogram[i] << " ";
+        }
+        std::cout << std::endl;
     }
 
     /**
@@ -731,11 +816,12 @@ namespace weavess {
     IndexBuilder *IndexBuilder::save_graph(TYPE type, char *graph_file) {
         std::fstream out(graph_file, std::ios::binary | std::ios::out);
         if (type == INDEX_NSG || type == INDEX_VAMANA) {
-            out.write((char *) &final_index_->ep_, sizeof(unsigned));
+            final_index_->getSeeds().resize(1);
+            out.write((char *) &final_index_->getSeeds()[0], sizeof(unsigned));
         } else if (type == INDEX_SSG) {
-            unsigned n_ep = final_index_->eps_.size();
+            unsigned n_ep = final_index_->getSeeds().size();
             out.write((char *) &n_ep, sizeof(unsigned));
-            out.write((char *) final_index_->eps_.data(), n_ep * sizeof(unsigned));
+            out.write((char *) final_index_->getSeeds().data(), n_ep * sizeof(unsigned));
         } else if (type == INDEX_HNSW) {
 
         } else if (type == INDEX_EFANNA) {
@@ -882,12 +968,12 @@ namespace weavess {
     IndexBuilder *IndexBuilder::load_graph(TYPE type, char *graph_file) {
         std::ifstream in(graph_file, std::ios::binary);
         if (type == INDEX_NSG || type == INDEX_VAMANA) {
-            in.read((char *) &final_index_->ep_, sizeof(unsigned));
+            in.read((char *) &final_index_->getSeeds()[0], sizeof(unsigned));
         } else if (type == INDEX_SSG) {
             unsigned n_ep = 0;
             in.read((char *) &n_ep, sizeof(unsigned));
-            final_index_->eps_.resize(n_ep);
-            in.read((char *) final_index_->eps_.data(), n_ep * sizeof(unsigned));
+            final_index_->getSeeds().resize(n_ep);
+            in.read((char *) final_index_->getSeeds().data(), n_ep * sizeof(unsigned));
         } else if (type == INDEX_EFANNA) {
             size_t K;
 

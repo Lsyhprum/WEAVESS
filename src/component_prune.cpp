@@ -5,10 +5,26 @@
 #include "weavess/component.h"
 
 namespace weavess {
+
+    /**
+     * Naive
+     *
+     * 根据 **有序** 候选集暴力裁边，需要指定结果集阈值 result_edges_num （K）
+     *
+     * @param query 查询点
+     * @param range 结果集阈值
+     * @param flags 访问列表
+     * @param pool  候选集
+     * @param cut_graph_ 结果集
+     */
     void ComponentPruneNaive::PruneInner(unsigned query, unsigned range, boost::dynamic_bitset<> flags,
                                          std::vector<Index::SimpleNeighbor> &pool, Index::SimpleNeighbor *cut_graph_) {
         Index::SimpleNeighbor *des_pool = cut_graph_ + (size_t) query * (size_t) range;
         for (size_t t = 0; t < (pool.size() > range ? range : pool.size()); t++) {
+            if (pool[t].id == query) {
+                std::cerr << "candidates exist query itself" << std::endl;
+                continue;
+            }
             des_pool[t].id = pool[t].id;
             des_pool[t].distance = pool[t].distance;
         }
@@ -17,9 +33,20 @@ namespace weavess {
         }
     }
 
+    /**
+     * NSG
+     *
+     * 需要指定结果集阈值 result_edges_num （K） 、最大出度阈值（C）
+     *
+     * @param query 查询点
+     * @param range 结果集阈值
+     * @param flags 访问列表
+     * @param pool 候选集
+     * @param cut_graph_ 结果集
+     */
     void ComponentPruneNSG::PruneInner(unsigned query, unsigned range, boost::dynamic_bitset<> flags,
                                        std::vector<Index::SimpleNeighbor> &pool, Index::SimpleNeighbor *cut_graph_) {
-        unsigned maxc = index->C_refine;
+        unsigned maxc = index->C;
 
         unsigned start = 0;
 
@@ -34,8 +61,12 @@ namespace weavess {
         }
 
         std::sort(pool.begin(), pool.end());
+
         std::vector<Index::SimpleNeighbor> result;
-        if (pool[start].id == query) start++;
+        if (pool[start].id == query) {
+            start++;
+            std::cerr << "candidates exist query itself" << std::endl;
+        }
         result.push_back(pool[start]);
 
         while (result.size() < range && (++start) < pool.size() && start < maxc) {
@@ -68,72 +99,31 @@ namespace weavess {
         }
     }
 
-    void ComponentPruneSSG::PruneInner(unsigned query, unsigned range, boost::dynamic_bitset<> flags,
-                                        std::vector<Index::SimpleNeighbor> &pool, Index::SimpleNeighbor *cut_graph_) {
-        unsigned start = 0;
-
-        for (unsigned nn = 0; nn < index->getFinalGraph()[query].size(); nn++) {
-            unsigned id = index->getFinalGraph()[query][nn].id;
-            if (flags[id]) continue;
-            float dist = index->getDist()->compare(index->getBaseData() + index->getBaseDim() * (size_t)query,
-                                                   index->getBaseData() + index->getBaseDim() * (size_t)id,
-                                                   (unsigned)index->getBaseDim());
-            pool.push_back(Index::SimpleNeighbor(id, dist));
-        }
-
-        std::sort(pool.begin(), pool.end());
-        std::vector<Index::SimpleNeighbor> result;
-        if (pool[start].id == query) start++;
-        result.push_back(pool[start]);
-
-        double kPi = std::acos(-1);
-        float threshold = std::cos((float)index->A / 180 * kPi);
-
-        while (result.size() < range && (++start) < pool.size()) {
-            auto &p = pool[start];
-            bool occlude = false;
-            for (unsigned t = 0; t < result.size(); t++) {
-                if (p.id == result[t].id) {
-                    occlude = true;
-                    break;
-                }
-                float djk = index->getDist()->compare(index->getBaseData() + index->getBaseDim() * (size_t)result[t].id,
-                                                      index->getBaseData() + index->getBaseDim() * (size_t)p.id,
-                                                      (unsigned)index->getBaseDim());
-                float cos_ij = (p.distance + result[t].distance - djk) / 2 /
-                               sqrt(p.distance * result[t].distance);
-
-                if (cos_ij > threshold) {
-                    occlude = true;
-                    break;
-                }
-            }
-            if (!occlude) result.push_back(p);
-        }
-
-        Index::SimpleNeighbor *des_pool = cut_graph_ + (size_t)query * (size_t)range;
-        for (size_t t = 0; t < result.size(); t++) {
-            des_pool[t].id = result[t].id;
-            des_pool[t].distance = result[t].distance;
-        }
-        if (result.size() < range) {
-            des_pool[result.size()].distance = -1;
-        }
-    }
-
+    /**
+     * DPG
+     *
+     * 无需指定结果集阈值，默认为 candiate_edges_num （L）的 1/2
+     *
+     * @param query 查询点
+     * @param range 结果集阈值
+     * @param flags 访问列表
+     * @param pool 候选集
+     * @param cut_graph_ 结果集
+     */
     void ComponentPruneDPG::PruneInner(unsigned query, unsigned int range, boost::dynamic_bitset<> flags,
                                        std::vector<Index::SimpleNeighbor> &pool, Index::SimpleNeighbor *cut_graph_) {
 
-        int len = pool.size();
+        unsigned len = pool.size();
         if(len > 2 * range)
             len = 2 * range;
 
         std::vector<int> hit(len, 0);
 
-//        std::sort(pool.begin(), pool.end());
-//        unsigned start = 0;
-//        if (pool[start].id == q) start++;
-//        result.push_back(pool[start]);
+        unsigned start = 0;
+        if (pool[start].id == query) {
+            start++;
+            std::cerr << "candidates exist query itself" << std::endl;
+        }
 
         for(int i = 0; i < len - 1; i ++){
             unsigned aid = pool[i].id;
@@ -185,21 +175,40 @@ namespace weavess {
         std::vector<int>().swap(hit);
     }
 
-    void ComponentPruneHeuristic::PruneInner(unsigned query, unsigned int range, boost::dynamic_bitset<> flags,
-                                             std::vector<Index::SimpleNeighbor> &pool, Index::SimpleNeighbor *cut_graph_) {
+    /**
+     * VAMANA
+     *
+     * 需要指定结果集阈值 result_edges_num （K） 、裁边阈值（alpha）
+     *
+     * @param query 查询点
+     * @param range 结果集阈值
+     * @param flags 访问列表
+     * @param pool 候选集
+     * @param cut_graph_ 结果集
+     */
+    void ComponentPruneVAMANA::PruneInner(unsigned query, unsigned int range, boost::dynamic_bitset<> flags,
+                                          std::vector<Index::SimpleNeighbor> &pool, Index::SimpleNeighbor *cut_graph_) {
+
+        unsigned start = 0;
+        if (pool[start].id == query) {
+            start++;
+            std::cerr << "candidates exist query itself" << std::endl;
+        }
 
         std::vector<Index::SimpleNeighbor> picked;
         if(pool.size() > range){
-//            std::sort(pool.begin(), pool.end());
+            std::sort(pool.begin(), pool.end());
+
             Index::MinHeap<float, Index::SimpleNeighbor> skipped;
 
-            for(int i = 0; i < pool.size(); i++){
+            for(int i = 0; i < pool.size(); i ++){
                 bool skip = false;
                 float cur_dist = pool[i].distance;
                 for(size_t j = 0; j < picked.size(); j ++){
                     float dist = index->getDist()->compare(index->getBaseData() + index->getBaseDim() * (size_t)picked[j].id,
-                                                           index->getBaseData() + index->getBaseDim() * (size_t)pool[i].id, (unsigned)index->getBaseDim());
-                    if(dist < cur_dist) {
+                                                           index->getBaseData() + index->getBaseDim() * (size_t)pool[i].id,
+                                                           index->getBaseDim());
+                    if(index->alpha * dist < cur_dist) {
                         skip = true;
                         break;
                     }
@@ -220,20 +229,16 @@ namespace weavess {
                 picked.push_back(skipped.top().data);
                 skipped.pop();
             }
-            //std::cout << "range picked : " << picked.size() << std::endl;
         }else{
             for(int i = 0; i < pool.size(); i++) {
                 picked.push_back(pool[i]);
             }
         }
         Index::SimpleNeighbor *des_pool = cut_graph_ + (size_t)query * (size_t)range;
-        //std::cout << "pick : " << picked.size() << std::endl;
         for (size_t t = 0; t < picked.size(); t++) {
             des_pool[t].id = picked[t].id;
             des_pool[t].distance = picked[t].distance;
-            //std::cout << picked[t].id << "|" << picked[t].distance << " ";
         }
-        //std::cout << std::endl;
 
         if (picked.size() < range) {
             des_pool[picked.size()].distance = -1;
@@ -242,21 +247,100 @@ namespace weavess {
         std::vector<Index::SimpleNeighbor>().swap(picked);
     }
 
-    void ComponentPruneVAMANA::PruneInner(unsigned query, unsigned int range, boost::dynamic_bitset<> flags,
-                                          std::vector<Index::SimpleNeighbor> &pool, Index::SimpleNeighbor *cut_graph_) {
+    /**
+     * SSG
+     *
+     * 需要指定结果集阈值 result_edges_num （K） 、角度阈值（A）
+     *
+     * @param query 查询点
+     * @param range 结果集阈值
+     * @param flags 访问列表
+     * @param pool 候选集
+     * @param cut_graph_ 结果集
+     */
+    void ComponentPruneSSG::PruneInner(unsigned query, unsigned range, boost::dynamic_bitset<> flags,
+                                        std::vector<Index::SimpleNeighbor> &pool, Index::SimpleNeighbor *cut_graph_) {
+        unsigned start = 0;
+
+        for (unsigned nn = 0; nn < index->getFinalGraph()[query].size(); nn++) {
+            unsigned id = index->getFinalGraph()[query][nn].id;
+            if (flags[id]) continue;
+            float dist = index->getDist()->compare(index->getBaseData() + index->getBaseDim() * (size_t)query,
+                                                   index->getBaseData() + index->getBaseDim() * (size_t)id,
+                                                   (unsigned)index->getBaseDim());
+            pool.push_back(Index::SimpleNeighbor(id, dist));
+        }
+
+        std::sort(pool.begin(), pool.end());
+        std::vector<Index::SimpleNeighbor> result;
+        if (pool[start].id == query) {
+            start++;
+            std::cerr << "candidates exist query itself" << std::endl;
+        }
+        result.push_back(pool[start]);
+
+        double kPi = std::acos(-1);
+        float threshold = std::cos((float)index->A / 180 * kPi);
+
+        while (result.size() < range && (++start) < pool.size()) {
+            auto &p = pool[start];
+            bool occlude = false;
+            for (unsigned t = 0; t < result.size(); t++) {
+                if (p.id == result[t].id) {
+                    occlude = true;
+                    break;
+                }
+                float djk = index->getDist()->compare(index->getBaseData() + index->getBaseDim() * (size_t)result[t].id,
+                                                      index->getBaseData() + index->getBaseDim() * (size_t)p.id,
+                                                      (unsigned)index->getBaseDim());
+                float cos_ij = (p.distance + result[t].distance - djk) / 2 /
+                               sqrt(p.distance * result[t].distance);
+
+                if (cos_ij > threshold) {
+                    occlude = true;
+                    break;
+                }
+            }
+            if (!occlude) result.push_back(p);
+        }
+
+        Index::SimpleNeighbor *des_pool = cut_graph_ + (size_t)query * (size_t)range;
+        for (size_t t = 0; t < result.size(); t++) {
+            des_pool[t].id = result[t].id;
+            des_pool[t].distance = result[t].distance;
+        }
+        if (result.size() < range) {
+            des_pool[result.size()].distance = -1;
+        }
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+    void ComponentPruneHeuristic::PruneInner(unsigned query, unsigned int range, boost::dynamic_bitset<> flags,
+                                             std::vector<Index::SimpleNeighbor> &pool, Index::SimpleNeighbor *cut_graph_) {
+
         std::vector<Index::SimpleNeighbor> picked;
         if(pool.size() > range){
-            std::sort(pool.begin(), pool.end());
-
+//            std::sort(pool.begin(), pool.end());
             Index::MinHeap<float, Index::SimpleNeighbor> skipped;
 
-            for(int i = 0; i < pool.size(); i ++){
+            for(int i = 0; i < pool.size(); i++){
                 bool skip = false;
                 float cur_dist = pool[i].distance;
                 for(size_t j = 0; j < picked.size(); j ++){
                     float dist = index->getDist()->compare(index->getBaseData() + index->getBaseDim() * (size_t)picked[j].id,
                                                            index->getBaseData() + index->getBaseDim() * (size_t)pool[i].id, (unsigned)index->getBaseDim());
-                    if(index->alpha * dist < cur_dist) {
+                    if(dist < cur_dist) {
                         skip = true;
                         break;
                     }

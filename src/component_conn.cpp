@@ -8,11 +8,13 @@ namespace weavess {
 
     // DFS
     void ComponentConnNSGDFS::ConnInner() {
+        assert(index->getSeeds().size() == 1);
+
         tree_grow();
     }
 
     void ComponentConnNSGDFS::tree_grow() {
-        unsigned root = index->ep_;
+        unsigned root = index->getSeeds()[0];
         boost::dynamic_bitset<> flags{index->getBaseLen(), 0};
         unsigned unlinked_cnt = 0;
         while (unlinked_cnt < index->getBaseLen()) {
@@ -99,7 +101,7 @@ namespace weavess {
 
     void ComponentConnNSGDFS::get_neighbors(const float *query, std::vector<Index::Neighbor> &retset,
                                             std::vector<Index::Neighbor> &fullset) {
-        unsigned L = index->getParam().get<unsigned>("L_refine");
+        unsigned L = index->getCandidatesEdgesNum();
 
         retset.resize(L + 1);
         std::vector<unsigned> init_ids(L);
@@ -107,8 +109,8 @@ namespace weavess {
 
         boost::dynamic_bitset<> flags{index->getBaseLen(), 0};
         L = 0;
-        for (unsigned i = 0; i < init_ids.size() && i < index->getFinalGraph()[index->ep_].size(); i++) {
-            init_ids[i] = index->getFinalGraph()[index->ep_][i].id;
+        for (unsigned i = 0; i < init_ids.size() && i < index->getFinalGraph()[index->getSeeds()[0]].size(); i++) {
+            init_ids[i] = index->getFinalGraph()[index->getSeeds()[0]][i].id;
             flags[init_ids[i]] = true;
             L++;
         }
@@ -167,20 +169,11 @@ namespace weavess {
 
     // DFS EXPAND
     void ComponentConnSSGDFS::ConnInner() {
-        unsigned n_try = index->getParam().get<unsigned>("n_try");
-        unsigned range = index->getParam().get<unsigned>("R_refine");
+        unsigned range = index->getResultEdgesNum();
 
-        std::vector<unsigned> ids(index->getBaseLen());
-        for (unsigned i = 0; i < index->getBaseLen(); i++) {
-            ids[i] = i;
-        }
-        std::random_shuffle(ids.begin(), ids.end());
-        for (unsigned i = 0; i < n_try; i++) {
-            index->eps_.push_back(ids[i]);
-        }
 #pragma omp parallel for
-        for(unsigned i=0; i<n_try; i++){
-            unsigned rootid = index->eps_[i];
+        for(unsigned i=0; i<index->getSeeds().size(); i++){
+            unsigned rootid = index->getSeeds()[i];
             boost::dynamic_bitset<> flags{index->getBaseLen(), 0};
             std::queue<unsigned> myqueue;
             myqueue.push(rootid);

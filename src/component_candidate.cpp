@@ -6,32 +6,39 @@
 
 namespace weavess {
 
-    // NO LIMIT GREEDY
-    void
-    ComponentCandidateNSG::CandidateInner(const unsigned query, const unsigned enter, boost::dynamic_bitset<> flags,
-                                          std::vector<Index::SimpleNeighbor> &result) {
-        auto L = index->getParam().get<unsigned>("L_refine");
+    /**
+     * Greedy search
+     *
+     * @param query 待查询点
+     * @param enter 入口点
+     * @param range 候选集阈值
+     * @param flags 访问标志
+     * @param pool 候选集
+     */
+    void ComponentCandidateGreedy::CandidateInner(const unsigned query, const unsigned enter, unsigned range, boost::dynamic_bitset<> flags,
+                                                  std::vector<Index::SimpleNeighbor> &pool) {
 
-        std::vector<unsigned> init_ids(L);
+        flags[query] = true;
+
+        std::vector<unsigned> init_ids(range);
         std::vector<Index::Neighbor> retset;
-        retset.resize(L + 1);
+        retset.resize(range + 1);
 
-        L = 0;
-        // 选取质点近邻作为初始候选点
+        range = 0;
         for (unsigned i = 0; i < init_ids.size() && i < index->getFinalGraph()[enter].size(); i++) {
             init_ids[i] = index->getFinalGraph()[enter][i].id;
             flags[init_ids[i]] = true;
-            L++;
+            range++;
         }
         // 候选点不足填入随机点
-        while (L < init_ids.size()) {
+        while (range < init_ids.size()) {
             unsigned id = rand() % index->getBaseLen();
             if (flags[id]) continue;
-            init_ids[L] = id;
-            L++;
+            init_ids[range] = id;
+            range++;
             flags[id] = true;
         }
-        L = 0;
+        range = 0;
         // unsinged -> SimpleNeighbor
         for (unsigned i = 0; i < init_ids.size(); i++) {
             unsigned id = init_ids[i];
@@ -41,16 +48,16 @@ namespace weavess {
                                                    (unsigned) index->getBaseDim());
 
             retset[i] = Index::Neighbor(id, dist, true);
-            result.emplace_back(Index::SimpleNeighbor(id, dist));
+            pool.emplace_back(Index::SimpleNeighbor(id, dist));
 
-            L++;
+            range++;
         }
-        std::sort(retset.begin(), retset.begin() + L);
+        std::sort(retset.begin(), retset.begin() + range);
         index->i++;
 
         int k = 0;
-        while (k < (int) L) {
-            int nk = L;
+        while (k < (int) range) {
+            int nk = range;
             if (retset[k].flag) {
                 retset[k].flag = false;
                 unsigned n = retset[k].id;
@@ -66,13 +73,13 @@ namespace weavess {
                                                            (unsigned) index->getBaseDim());
 
                     Index::Neighbor nn(id, dist, true);
-                    result.push_back(Index::SimpleNeighbor(id, dist));
+                    pool.push_back(Index::SimpleNeighbor(id, dist));
 
-                    if (dist >= retset[L - 1].distance) continue;
+                    if (dist >= retset[range - 1].distance) continue;
 
-                    int r = Index::InsertIntoPool(retset.data(), L, nn);
+                    int r = Index::InsertIntoPool(retset.data(), range, nn);
 
-                    if (L + 1 < retset.size()) ++L;
+                    if (range + 1 < retset.size()) ++range;
                     if (r < nk) nk = r;
                 }
             }
@@ -86,13 +93,45 @@ namespace weavess {
         std::vector<unsigned>().swap(init_ids);
     }
 
+    /**
+     * PROPAGATION 1
+     *
+     * @param query 待查询点
+     * @param enter 入口点
+     * @param range 候选集阈值
+     * @param flags 访问标志
+     * @param pool  候选集
+     */
+    void ComponentCandidatePropagation1::CandidateInner(const unsigned int query, const unsigned int enter,
+                                                        unsigned int range, boost::dynamic_bitset<> flags,
+                                                        std::vector<Index::SimpleNeighbor> &pool) {
+        flags[query] = true;
 
+        for (unsigned i = 0; i < index->getFinalGraph()[enter].size(); i++) {
+            unsigned nid = index->getFinalGraph()[enter][i].id;
+            if (flags[nid]) continue;
+            flags[nid] = true;
+            float dist = index->getDist()->compare(index->getBaseData() + index->getBaseDim() * query,
+                                                   index->getBaseData() + index->getBaseDim() * nid,
+                                                   index->getBaseDim());
+            pool.emplace_back(nid, dist);
+            if (pool.size() >= range) break;
+        }
+    }
 
-    // PROPAGATION 2
-    void ComponentCandidatePropagation2::CandidateInner(const unsigned query, const unsigned enter,
+    /**
+     * PROPAGATION 2
+     *
+     * @param query 待查询点
+     * @param enter 入口点
+     * @param range 候选集阈值
+     * @param flags 访问标志
+     * @param pool  候选集
+     */
+    void ComponentCandidatePropagation2::CandidateInner(const unsigned query, const unsigned enter, unsigned range,
                                                         boost::dynamic_bitset<> flags,
                                                         std::vector<Index::SimpleNeighbor> &pool) {
-        flags[enter] = true;
+        flags[query] = true;
 
         for (unsigned i = 0; i < index->getFinalGraph()[enter].size(); i++) {
             unsigned nid = index->getFinalGraph()[enter][i].id;
@@ -104,11 +143,26 @@ namespace weavess {
                                                        index->getBaseData() + index->getBaseDim() * nnid,
                                                        index->getBaseDim());
                 pool.emplace_back(nnid, dist);
-                if (pool.size() >= index->L_refine) break;
+                if (pool.size() >= range) break;
             }
-            if (pool.size() >= index->L_refine) break;
+            if (pool.size() >= range) break;
         }
     }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -144,7 +198,7 @@ namespace weavess {
         }
     }
 
-    void ComponentCandidateSPTAG_BKT::CandidateInner(unsigned int query, unsigned int enter,
+    void ComponentCandidateSPTAG_BKT::CandidateInner(unsigned int query, unsigned int enter, unsigned range,
                                                      boost::dynamic_bitset<> flags,
                                                      std::vector<Index::SimpleNeighbor> &result) {
         unsigned maxCheck = index->m_iMaxCheckForRefineGraph > index->m_iMaxCheck ? index->m_iMaxCheckForRefineGraph : index->m_iMaxCheck;
@@ -284,7 +338,7 @@ namespace weavess {
         KDTSearch(query, bestChild, m_NGQueue, m_SPTQueue, nodeCheckStatus, m_iNumberOfCheckedLeaves, m_iNumberOfTreeCheckedLeaves);
     }
 
-    void ComponentCandidateSPTAG_KDT::CandidateInner(unsigned int query, unsigned int enter,
+    void ComponentCandidateSPTAG_KDT::CandidateInner(unsigned int query, unsigned int enter, unsigned range,
                                                      boost::dynamic_bitset<> flags,
                                                      std::vector<Index::SimpleNeighbor> &result) {
         unsigned m_iNumberOfCheckedLeaves = 0;

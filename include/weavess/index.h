@@ -188,9 +188,8 @@ namespace weavess {
     public:
         unsigned R_refine;
         unsigned L_refine;
-        unsigned C_refine;
+        unsigned C;
 
-        unsigned ep_;
         unsigned width;
     };
 
@@ -200,7 +199,6 @@ namespace weavess {
         unsigned n_try;
         //unsigned width;
 
-        std::vector<unsigned> eps_;
         unsigned test_min = INT_MAX;
         unsigned test_max = 0;
         long long test_sum = 0;
@@ -1659,6 +1657,7 @@ namespace weavess {
         // sorted
         typedef std::vector<std::vector<SimpleNeighbor> > FinalGraph;
         typedef std::vector<std::vector<unsigned> > LoadGraph;
+        typedef std::vector<unsigned> Seeds;
 
         FinalGraph &getFinalGraph() {
             return final_graph_;
@@ -1666,6 +1665,10 @@ namespace weavess {
 
         LoadGraph &getLoadGraph() {
             return load_graph_;
+        }
+
+        Seeds &getSeeds() {
+            return seeds;
         }
 
         TYPE getCandidateType() const {
@@ -1738,16 +1741,18 @@ namespace weavess {
         unsigned base_dim_, query_dim_, ground_dim_;
 
         Parameters param_;
+
         unsigned init_edges_num; // S
         unsigned candidates_edges_num; // L
         unsigned result_edges_num; // K
 
         Distance *dist_;
 
+        std::vector<unsigned> seeds;
+
         // 迭代式
         FinalGraph final_graph_;
         LoadGraph load_graph_;
-
 
         TYPE entry_type;
         TYPE candidate_type;

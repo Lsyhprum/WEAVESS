@@ -51,7 +51,7 @@ void PANNG(std::string base_path, std::string query_path, std::string ground_pat
     weavess::Parameters parameters;
     parameters.set<unsigned>("NN", 10);          // K
     parameters.set<unsigned>("ef_construction", 50);        //L
-    parameters.set<unsigned>("n_threads_", 1);
+    parameters.set<unsigned>("n_threads_", 8);
     //parameters.set<unsigned>("batchSizeForCreation", 200);
 
     auto *builder = new weavess::IndexBuilder(8);
@@ -170,6 +170,55 @@ void HCNNG(std::string base_path, std::string query_path, std::string ground_pat
     //std::cout << "Time cost: " << builder->GetBuildTime().count() << std::endl;
 }
 
+void IEH(std::string base_path, std::string query_path, std::string ground_path) {
+    weavess::Parameters parameters;
+    parameters.set<std::string>("train", "G:\\ANNS\\dataset\\sift1M\\sift_base.fvecs");
+    parameters.set<std::string>("test", "G:\\ANNS\\dataset\\sift1M\\sift_query.fvecs");
+    parameters.set<std::string>("func", "G:\\ANNS\\dataset\\sift1M\\LSHfuncSift.txt");
+    parameters.set<std::string>("basecode", "G:\\ANNS\\dataset\\sift1M\\LSHtableSift.txt");
+    parameters.set<std::string>("knntable", "G:\\ANNS\\dataset\\sift1M\\sift_bf.index");
+
+    parameters.set<unsigned>("expand", 8);
+    parameters.set<unsigned>("iterlimit", 8);
+
+    auto *builder = new weavess::IndexBuilder(8);
+    builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters) // useless
+            -> init(weavess::INIT_IEH)
+            -> search(weavess::SEARCH_ENTRY_HASH, weavess::ROUTER_IEH, weavess::TYPE::L_SEARCH_ASCEND);
+
+    std::cout << "Time cost: " << builder->GetBuildTime().count() << std::endl;
+}
+
+// component eva
+void Test(std::string base_path, std::string query_path, std::string ground_path) {
+    std::string graph = "test.graph";
+
+    weavess::Parameters param1;
+    param1.set<unsigned>("S", 100);    // init
+
+    param1.set<unsigned>("C", 300);  // nsg
+    param1.set<unsigned>("alpha", 2);     // vamana
+    param1.set<unsigned>("A", 60);    // ssg
+    param1.set<unsigned>("L", 200);
+    param1.set<unsigned>("K", 100);
+    param1.set<unsigned>("nTrees", 8);    // entry kdt
+    param1.set<unsigned>("mLevel", 4);    // entry kdt
+    param1.set<unsigned>("num", 200);     // entry kdt
+    param1.set<unsigned>("BKTNumber", 1);  // bkt
+    param1.set<unsigned>("BKTKMeansK", 8);  // bkt
+    param1.set<unsigned>("numOfThreads", 1); // bkt
+
+    auto *builder = new weavess::IndexBuilder(8);
+    builder -> load(&base_path[0], &query_path[0], &ground_path[0], param1)
+            -> init(weavess::INIT_RANDOM, true)
+            -> pre_entry(weavess::PRE_ENTRY_RANDOM)
+            -> pre_entry(weavess::PRE_ENTRY_GUIDED)
+            -> refine(weavess::REFINE_TEST, true)
+            -> save_graph(weavess::INDEX_TEST, &graph[0])
+            -> load_graph(weavess::INDEX_TEST, &graph[0])
+            -> search(weavess::SEARCH_ENTRY_RANDOM, weavess::ROUTER_GUIDE, weavess::TYPE::L_SEARCH_ASCEND);
+}
+
 int main(int argc, char** argv) {
 //    std::string base_path = R"(G:\ANNS\dataset\n100000\random_base_n100000_d32_c10_s5.fvecs)";
 //    std::string query_path = R"(G:\ANNS\dataset\n100000\random_query_n1000_d32_c10_s5.fvecs)";
@@ -179,12 +228,8 @@ int main(int argc, char** argv) {
     std::string query_path = R"(G:\ANNS\dataset\siftsmall\siftsmall_query.fvecs)";
     std::string ground_path = R"(G:\ANNS\dataset\siftsmall\siftsmall_groundtruth.ivecs)";
 
-//    std::string base_path = R"(G:\ANNS\dataset\sift1M\sift_base.fvecs)";
-//    std::string query_path = R"(G:\ANNS\dataset\sift1M\sift_query.fvecs)";
-//    std::string ground_path = R"(G:\ANNS\dataset\sift1M\sift_groundtruth.ivecs)";
-
     //ONNG(base_path, query_path, ground_path);
-    PANNG(base_path, query_path, ground_path);
+    Test(base_path, query_path, ground_path);
 
     //HCNNG(base_path, query_path, ground_path);
 

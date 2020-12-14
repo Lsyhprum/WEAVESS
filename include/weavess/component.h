@@ -27,6 +27,79 @@ namespace weavess {
         virtual void LoadInner(char *data_file, char *query_file, char *ground_file, Parameters &parameters);
     };
 
+    // serialization graph
+    class ComponentSerialization : public Component {
+    public:
+        explicit ComponentSerialization(Index *index) : Component(index) {}
+
+        virtual void Serialize(std::fstream &out) = 0;
+
+        virtual void Deserialize(std::ifstream &in) = 0;
+
+        void SerializeInner(const char *filename) {
+            std::fstream out(filename, std::ios::binary | std::ios::out);
+
+            Serialize(out);
+
+            for (unsigned i = 0; i < index->getBaseLen(); i++) {
+                auto GK = (unsigned) index->getFinalGraph()[i].size();
+                std::vector<unsigned> tmp;
+                for (unsigned j = 0; j < GK; j++) {
+                    tmp.push_back(index->getFinalGraph()[i][j].id);
+                }
+                out.write((char *) &GK, sizeof(unsigned));
+                out.write((char *) tmp.data(), GK * sizeof(unsigned));
+            }
+            out.close();
+
+            // 回收 final_graph 内存
+            std::vector<std::vector<Index::SimpleNeighbor>>().swap(index->getFinalGraph());
+        }
+
+        void DeserializeInner(const char *filename) {
+            std::ifstream in(filename, std::ios::binary);
+
+            Deserialize(in);
+
+            std::cout << index->getLoadGraph().size() << std::endl;
+            index->getLoadGraph().resize(index->getBaseLen());
+            std::cout << index->getLoadGraph().size() << std::endl;
+
+            unsigned i = 0;
+            while (!in.eof()) {
+                unsigned GK;
+                in.read((char *) &GK, sizeof(unsigned));
+                if (in.eof()) break;
+                std::vector<unsigned> tmp(GK);
+                std::cout << "wtf" << std::endl;
+                in.read((char *) tmp.data(), GK * sizeof(unsigned));
+                std::cout << "wtf" << std::endl;
+                index->getLoadGraph()[i] = tmp;
+                std::cout << "wtf" << std::endl;
+            }
+
+            in.close();
+        }
+    };
+
+    class ComponentSerializationNone : public ComponentSerialization {
+    public:
+        explicit ComponentSerializationNone(Index *index) : ComponentSerialization(index) {}
+
+        void Serialize(std::fstream &out);
+
+        void Deserialize(std::ifstream &in);
+    };
+
+    class ComponentSerializationTest : public ComponentSerialization {
+    public:
+        explicit ComponentSerializationTest(Index *index) : ComponentSerialization(index) {}
+
+        void Serialize(std::fstream &out);
+
+        void Deserialize(std::ifstream &in);
+    };
+
 
     // initial graph
     class ComponentInit : public Component {
@@ -67,7 +140,8 @@ namespace weavess {
     private:
         void SetConfigs();
 
-        void meanSplit(std::mt19937 &rng, unsigned *indices, unsigned count, unsigned &index, unsigned &cutdim, float &cutval);
+        void meanSplit(std::mt19937 &rng, unsigned *indices, unsigned count, unsigned &index, unsigned &cutdim,
+                       float &cutval);
 
         void
         planeSplit(unsigned *indices, unsigned count, unsigned cutdim, float cutval, unsigned &lim1, unsigned &lim2);
@@ -199,41 +273,42 @@ namespace weavess {
         void Link(Index::HnswNode *source, Index::HnswNode *target, int level);
 
         void SearchAtLayer(Index::HnswNode *qnode, Index::HnswNode *enterpoint, int level,
-                                                      Index::VisitedList *visited_list,
-                                                      std::priority_queue<Index::FurtherFirst> &result);
+                           Index::VisitedList *visited_list,
+                           std::priority_queue<Index::FurtherFirst> &result);
 
         // VP-tree
-        void Insert(const unsigned& new_value);
+        void Insert(const unsigned &new_value);
 
-        void Insert(const unsigned& new_value, Index::VPNodePtr& root);
+        void Insert(const unsigned &new_value, Index::VPNodePtr &root);
 
-        void MakeVPTree(const std::vector<unsigned>& objects);
+        void MakeVPTree(const std::vector<unsigned> &objects);
 
-        void SplitLeafNode(const Index::VPNodePtr& parent_node, const size_t child_id, const unsigned& new_value);
+        void SplitLeafNode(const Index::VPNodePtr &parent_node, const size_t child_id, const unsigned &new_value);
 
-        void InsertSplitLeafRoot(Index::VPNodePtr& root, const unsigned& new_value);
+        void InsertSplitLeafRoot(Index::VPNodePtr &root, const unsigned &new_value);
 
-        void CollectObjects(const Index::VPNodePtr& node, std::vector<unsigned>& S);
+        void CollectObjects(const Index::VPNodePtr &node, std::vector<unsigned> &S);
 
-        void RedistributeAmongLeafNodes(const Index::VPNodePtr& parent_node, const unsigned& new_value);
+        void RedistributeAmongLeafNodes(const Index::VPNodePtr &parent_node, const unsigned &new_value);
 
-        const float MedianSumm(const std::vector<unsigned>& SS1, const std::vector<unsigned>& SS2, const unsigned& v) const;
+        const float
+        MedianSumm(const std::vector<unsigned> &SS1, const std::vector<unsigned> &SS2, const unsigned &v) const;
 
-        float Median(const unsigned& value, const std::vector<unsigned>::const_iterator it_begin,
+        float Median(const unsigned &value, const std::vector<unsigned>::const_iterator it_begin,
                      const std::vector<unsigned>::const_iterator it_end);
 
-        void RedistributeAmongNonLeafNodes(const Index::VPNodePtr& parent_node, const size_t k_id,
-                                           const size_t k1_id, const unsigned& new_value);
+        void RedistributeAmongNonLeafNodes(const Index::VPNodePtr &parent_node, const size_t k_id,
+                                           const size_t k1_id, const unsigned &new_value);
 
-        void Remove(const unsigned& query_value, const Index::VPNodePtr& node);
+        void Remove(const unsigned &query_value, const Index::VPNodePtr &node);
 
-        void InsertSplitRoot(Index::VPNodePtr& root, const unsigned& new_value);
+        void InsertSplitRoot(Index::VPNodePtr &root, const unsigned &new_value);
 
-        void SplitNonLeafNode(const Index::VPNodePtr& parent_node, const size_t child_id, const unsigned& new_value);
+        void SplitNonLeafNode(const Index::VPNodePtr &parent_node, const size_t child_id, const unsigned &new_value);
 
-        Index::VPNodePtr MakeVPTree(const std::vector<unsigned>& objects, const Index::VPNodePtr& parent);
+        Index::VPNodePtr MakeVPTree(const std::vector<unsigned> &objects, const Index::VPNodePtr &parent);
 
-        const unsigned& SelectVP(const std::vector<unsigned>& objects);
+        const unsigned &SelectVP(const std::vector<unsigned> &objects);
     };
 
     class ComponentInitSPTAG_KDT : public ComponentInit {
@@ -269,7 +344,7 @@ namespace weavess {
         int SelectDivisionDimension(const std::vector<float> &varianceValues);
 
         int Subdivide(const Index::KDTNode &node, std::vector<int> &indices, const int first,
-                           const int last);
+                      const int last);
     };
 
     class ComponentInitSPTAG_BKT : public ComponentInit {
@@ -331,19 +406,20 @@ namespace weavess {
 
         void build_tree();
 
-        int rand_int(const int & min, const int & max);
+        int rand_int(const int &min, const int &max);
 
-        std::vector<std::vector< Index::Edge > >  create_exact_mst(int *idx_points, int left, int right, int max_mst_degree);
+        std::vector<std::vector<Index::Edge> >
+        create_exact_mst(int *idx_points, int left, int right, int max_mst_degree);
 
-        void create_clusters(int *idx_points, int left, int right, std::vector<std::vector< Index::Edge > > &graph,
+        void create_clusters(int *idx_points, int left, int right, std::vector<std::vector<Index::Edge> > &graph,
                              int minsize_cl, std::vector<omp_lock_t> &locks, int max_mst_degree);
 
-        void sort_edges(std::vector<std::vector< Index::Edge > > &G);
+        void sort_edges(std::vector<std::vector<Index::Edge> > &G);
 
-        void print_stats_graph(std::vector<std::vector< Index::Edge > > &G);
+        void print_stats_graph(std::vector<std::vector<Index::Edge> > &G);
 
         void meanSplit(std::mt19937 &rng, unsigned *indices, unsigned count, unsigned &index1,
-                                           unsigned &cutdim, float &cutval);
+                       unsigned &cutdim, float &cutval);
 
         void
         planeSplit(unsigned *indices, unsigned count, unsigned cutdim, float cutval, unsigned &lim1, unsigned &lim2);
@@ -380,7 +456,7 @@ namespace weavess {
         void join();
 
         void update();
-        
+
         void generate_control_set(std::vector<unsigned> &c, std::vector<std::vector<unsigned> > &v, unsigned N);
 
         void eval_recall(std::vector<unsigned> &ctrl_points, std::vector<std::vector<unsigned> > &acc_eval_set);
@@ -527,24 +603,18 @@ namespace weavess {
 
     };
 
-
-    // entry
-    class ComponentRefineEntry : public Component {
+    class ComponentRefineTest : public ComponentRefine {
     public:
-        explicit ComponentRefineEntry(Index *index) : Component(index) {}
+        explicit ComponentRefineTest(Index *index) : ComponentRefine(index) {}
 
-        virtual void EntryInner() = 0;
-    };
-
-    class ComponentRefineEntryCentroid : public ComponentRefineEntry {
-    public:
-        explicit ComponentRefineEntryCentroid(Index *index) : ComponentRefineEntry(index) {}
-
-        void EntryInner() override;
+        void RefineInner() override;
 
     private:
-        void
-        get_neighbors(const float *query, std::vector<Index::Neighbor> &retSet, std::vector<Index::Neighbor> &fullset);
+        void Link(Index::SimpleNeighbor *cut_graph_);
+
+        void SetConfigs();
+
+        void InterInsert(unsigned n, unsigned range, std::vector<std::mutex> &locks, Index::SimpleNeighbor *cut_graph_);
     };
 
 
@@ -553,23 +623,31 @@ namespace weavess {
     public:
         explicit ComponentCandidate(Index *index) : Component(index) {}
 
-        virtual void CandidateInner(unsigned query, unsigned enter, boost::dynamic_bitset<> flags,
+        virtual void CandidateInner(unsigned query, unsigned enter, unsigned range, boost::dynamic_bitset<> flags,
                                     std::vector<Index::SimpleNeighbor> &pool) = 0;
     };
 
-    class ComponentCandidateNSG : public ComponentCandidate {
+    class ComponentCandidateGreedy : public ComponentCandidate {
     public:
-        explicit ComponentCandidateNSG(Index *index) : ComponentCandidate(index) {}
+        explicit ComponentCandidateGreedy(Index *index) : ComponentCandidate(index) {}
 
-        void CandidateInner(unsigned query, unsigned enter, boost::dynamic_bitset<> flags,
-                            std::vector<Index::SimpleNeighbor> &result) override;
+        void CandidateInner(unsigned query, unsigned enter, unsigned range, boost::dynamic_bitset<> flags,
+                            std::vector<Index::SimpleNeighbor> &pool) override;
+    };
+
+    class ComponentCandidatePropagation1 : public ComponentCandidate {
+    public:
+        explicit ComponentCandidatePropagation1(Index *index) : ComponentCandidate(index) {}
+
+        void CandidateInner(const unsigned query, const unsigned enter, unsigned range, boost::dynamic_bitset<> flags,
+                            std::vector<Index::SimpleNeighbor> &pool) override;
     };
 
     class ComponentCandidatePropagation2 : public ComponentCandidate {
     public:
         explicit ComponentCandidatePropagation2(Index *index) : ComponentCandidate(index) {}
 
-        void CandidateInner(const unsigned query, const unsigned enter, boost::dynamic_bitset<> flags,
+        void CandidateInner(const unsigned query, const unsigned enter, unsigned range, boost::dynamic_bitset<> flags,
                             std::vector<Index::SimpleNeighbor> &pool) override;
     };
 
@@ -577,7 +655,7 @@ namespace weavess {
     public:
         explicit ComponentCandidateSPTAG_KDT(Index *index) : ComponentCandidate(index) {}
 
-        void CandidateInner(unsigned query, unsigned enter, boost::dynamic_bitset<> flags,
+        void CandidateInner(unsigned query, unsigned enter, unsigned range, boost::dynamic_bitset<> flags,
                             std::vector<Index::SimpleNeighbor> &result) override;
 
     private:
@@ -590,7 +668,7 @@ namespace weavess {
     public:
         explicit ComponentCandidateSPTAG_BKT(Index *index) : ComponentCandidate(index) {}
 
-        void CandidateInner(unsigned query, unsigned enter, boost::dynamic_bitset<> flags,
+        void CandidateInner(unsigned query, unsigned enter, unsigned range, boost::dynamic_bitset<> flags,
                             std::vector<Index::SimpleNeighbor> &result) override;
 
     private:
@@ -623,7 +701,7 @@ namespace weavess {
 
             boost::dynamic_bitset<> flags;
 
-            auto *cut_graph_ = new Index::SimpleNeighbor[range];
+            auto *cut_graph_ = new Index::SimpleNeighbor[range * index->getBaseLen()];
 
             PruneInner(query, range, flags, pool, cut_graph_);
 
@@ -735,6 +813,142 @@ namespace weavess {
     };
 
 
+    // pre entry
+    class ComponentPreEntry : public Component {
+    public:
+        explicit ComponentPreEntry(Index *index) : Component(index) {}
+
+        virtual void PreEntryInner() = 0;
+    };
+
+    class ComponentPreEntryCentroid : public ComponentPreEntry {
+    public:
+        explicit ComponentPreEntryCentroid(Index *index) : ComponentPreEntry(index) {}
+
+        void PreEntryInner() override;
+
+    private:
+        void
+        get_neighbors(const float *query, const unsigned entry, std::vector<Index::Neighbor> &retSet,
+                      std::vector<Index::Neighbor> &fullset);
+    };
+
+    class ComponentPreEntryRandom : public ComponentPreEntry {
+    public:
+        explicit ComponentPreEntryRandom(Index *index) : ComponentPreEntry(index) {}
+
+        void PreEntryInner() override;
+    };
+
+    class ComponentPreEntrySubCentroid : public ComponentPreEntry {
+    public:
+        explicit ComponentPreEntrySubCentroid(Index *index) : ComponentPreEntry(index) {}
+
+        void PreEntryInner() override;
+
+    private:
+        void DFS(boost::dynamic_bitset<> &flag, unsigned root, unsigned &cnt);
+
+        void get_neighbors(const float *query, const unsigned entry, std::vector<Index::Neighbor> &retset,
+                           std::vector<Index::Neighbor> &fullset);
+
+        void findRoot(boost::dynamic_bitset<> &flag, unsigned &root);
+    };
+
+    class ComponentPreEntryKDTree : public ComponentPreEntry {
+    public:
+        explicit ComponentPreEntryKDTree(Index *index) : ComponentPreEntry(index) {}
+
+        void PreEntryInner() override;
+
+    private:
+        void meanSplit(std::mt19937 &rng, unsigned *indices, unsigned count, unsigned &index1, unsigned &cutdim, float &cutval);
+
+        void planeSplit(unsigned *indices, unsigned count, unsigned cutdim, float cutval, unsigned &lim1, unsigned &lim2);
+
+        int selectDivision(std::mt19937 &rng, float *v);
+
+        void DFSbuild(Index::EFANNA::Node *node, std::mt19937 &rng, unsigned *indices, unsigned count, unsigned offset);
+
+        void getMergeLevelNodeList(Index::EFANNA::Node *node, size_t treeid, unsigned deepth);
+
+        void SetConfigs();
+    };
+
+    class ComponentPreEntryVPTree : public ComponentPreEntry {
+    public:
+        explicit ComponentPreEntryVPTree(Index *index) : ComponentPreEntry(index) {}
+
+        void PreEntryInner() override;
+
+    private:
+        void Insert(const unsigned &new_value);
+
+        void Insert(const unsigned &new_value, Index::VPNodePtr &root);
+
+        void MakeVPTree(const std::vector<unsigned> &objects);
+
+        void SplitLeafNode(const Index::VPNodePtr &parent_node, const size_t child_id, const unsigned &new_value);
+
+        void InsertSplitLeafRoot(Index::VPNodePtr &root, const unsigned &new_value);
+
+        void CollectObjects(const Index::VPNodePtr &node, std::vector<unsigned> &S);
+
+        void RedistributeAmongLeafNodes(const Index::VPNodePtr &parent_node, const unsigned &new_value);
+
+        const float
+        MedianSumm(const std::vector<unsigned> &SS1, const std::vector<unsigned> &SS2, const unsigned &v) const;
+
+        float Median(const unsigned &value, const std::vector<unsigned>::const_iterator it_begin,
+                     const std::vector<unsigned>::const_iterator it_end);
+
+        void RedistributeAmongNonLeafNodes(const Index::VPNodePtr &parent_node, const size_t k_id,
+                                           const size_t k1_id, const unsigned &new_value);
+
+        void Remove(const unsigned &query_value, const Index::VPNodePtr &node);
+
+        void InsertSplitRoot(Index::VPNodePtr &root, const unsigned &new_value);
+
+        void SplitNonLeafNode(const Index::VPNodePtr &parent_node, const size_t child_id, const unsigned &new_value);
+
+        Index::VPNodePtr MakeVPTree(const std::vector<unsigned> &objects, const Index::VPNodePtr &parent);
+
+        const unsigned &SelectVP(const std::vector<unsigned> &objects);
+    };
+
+    class ComponentPreEntryBKTree : public ComponentPreEntry {
+    public:
+        explicit ComponentPreEntryBKTree(Index *index) : ComponentPreEntry(index) {}
+
+        void PreEntryInner() override;
+
+    private:
+        void SetConfigs();
+
+        int KmeansClustering(std::vector<int> &indices, const int first, const int last, Index::KmeansArgs<float> &args,
+                             int samples);
+
+        float KmeansAssign(std::vector<int> &indices, const int first,
+                           const int last, Index::KmeansArgs<float> &args,
+                           const bool updateCenters, float lambda);
+
+        void InitCenters(std::vector<int> &indices, const int first,
+                         const int last, Index::KmeansArgs<float> &args, int samples,
+                         int tryIters);
+
+        float RefineCenters(Index::KmeansArgs<float> &args);
+
+        int rand(int high, int low);
+    };
+
+    class ComponentPreEntryGuided : public ComponentPreEntry {
+    public:
+        explicit ComponentPreEntryGuided(Index *index) : ComponentPreEntry(index) {}
+
+        void PreEntryInner() override;
+    };
+
+
     // search entry
     class ComponentSearchEntry : public Component {
     public:
@@ -743,9 +957,9 @@ namespace weavess {
         virtual void SearchEntryInner(unsigned query, std::vector<Index::Neighbor> &pool) = 0;
     };
 
-    class ComponentSearchEntryRand : public ComponentSearchEntry {
+    class ComponentSearchEntryRandom : public ComponentSearchEntry {
     public:
-        explicit ComponentSearchEntryRand(Index *index) : ComponentSearchEntry(index) {}
+        explicit ComponentSearchEntryRandom(Index *index) : ComponentSearchEntry(index) {}
 
         void SearchEntryInner(unsigned query, std::vector<Index::Neighbor> &pool) override;
     };
@@ -760,6 +974,13 @@ namespace weavess {
     class ComponentSearchEntrySubCentroid : public ComponentSearchEntry {
     public:
         explicit ComponentSearchEntrySubCentroid(Index *index) : ComponentSearchEntry(index) {}
+
+        void SearchEntryInner(unsigned query, std::vector<Index::Neighbor> &pool) override;
+    };
+
+    class ComponentSearchEntrySSG : public ComponentSearchEntry {
+    public:
+        explicit ComponentSearchEntrySSG(Index *index) : ComponentSearchEntry(index) {}
 
         void SearchEntryInner(unsigned query, std::vector<Index::Neighbor> &pool) override;
     };
@@ -805,8 +1026,21 @@ namespace weavess {
         void SearchEntryInner(unsigned query, std::vector<Index::Neighbor> &pool) override;
 
     private:
-        void Search(const unsigned& query_value, const size_t count, std::multimap<float, unsigned> &pool,
-                                             const Index::VPNodePtr& node, float& q);
+        void Search(const unsigned &query_value, const size_t count, std::multimap<float, unsigned> &pool,
+                    const Index::VPNodePtr &node, float &q);
+    };
+
+    class ComponentSearchEntryBKT : public ComponentSearchEntry {
+    public:
+        explicit ComponentSearchEntryBKT(Index *index) : ComponentSearchEntry(index) {}
+
+        void SearchEntryInner(unsigned query, std::vector<Index::Neighbor> &pool) override;
+
+    private:
+        void BKTSearch(unsigned int query, Index::Heap &m_NGQueue,
+                                                Index::Heap &m_SPTQueue, Index::OptHashPosVector &nodeCheckStatus,
+                                                unsigned int &m_iNumberOfCheckedLeaves,
+                                                int p_limits);
     };
 
 
@@ -844,8 +1078,8 @@ namespace weavess {
         void RouteInner(unsigned query, std::vector<Index::Neighbor> &pool, std::vector<unsigned> &res) override;
 
     private:
-        void SearchById_(unsigned query, Index::HnswNode* cur_node, float cur_dist, size_t k,
-                         size_t ef_search, std::vector<std::pair<Index::HnswNode*, float>> &result);
+        void SearchById_(unsigned query, Index::HnswNode *cur_node, float cur_dist, size_t k,
+                         size_t ef_search, std::vector<std::pair<Index::HnswNode *, float>> &result);
     };
 
     class ComponentSearchRouteIEH : public ComponentSearchRoute {
@@ -886,10 +1120,10 @@ namespace weavess {
 
     private:
         void BKTSearch(unsigned int query, Index::Heap &m_NGQueue,
-                  Index::Heap &m_SPTQueue, Index::OptHashPosVector &nodeCheckStatus,
-                  unsigned int &m_iNumberOfCheckedLeaves,
-                  unsigned int &m_iNumberOfTreeCheckedLeaves,
-                  int p_limits);
+                       Index::Heap &m_SPTQueue, Index::OptHashPosVector &nodeCheckStatus,
+                       unsigned int &m_iNumberOfCheckedLeaves,
+                       unsigned int &m_iNumberOfTreeCheckedLeaves,
+                       int p_limits);
     };
 
     class ComponentSearchRouteGuided : public ComponentSearchRoute {

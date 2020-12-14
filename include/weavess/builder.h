@@ -21,6 +21,10 @@ namespace weavess {
 
         IndexBuilder *load(char *data_file, char *query_file, char *ground_file, Parameters &parameters);
 
+        IndexBuilder *serialization(TYPE type, char *graph_file);
+
+        IndexBuilder *deserialization(TYPE type, char *graph_file);
+
         IndexBuilder *init(TYPE type, bool debug = false);
 
         IndexBuilder *save_graph(TYPE type, char *graph_file);
@@ -28,6 +32,14 @@ namespace weavess {
         IndexBuilder *load_graph(TYPE type, char *graph_file);
 
         IndexBuilder *refine(TYPE type, bool debug);
+
+        IndexBuilder *refine(TYPE type, bool debug, Parameters &parameters) {
+            final_index_->setParam(parameters);
+            std::cout << final_index_->getParam().toString() << std::endl;
+            refine(type, debug);
+        }
+
+        IndexBuilder *pre_entry(TYPE type) ;
 
         IndexBuilder *search(TYPE entry_type, TYPE route_type, TYPE L_type);
 

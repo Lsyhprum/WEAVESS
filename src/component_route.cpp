@@ -821,6 +821,7 @@ namespace weavess {
         result.resize(result.size() > K ? K : result.size());
     }
 
+
     /**
      * NGT 搜索
      * @param query 查询点

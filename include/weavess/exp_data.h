@@ -153,7 +153,7 @@ void NSG_PARA(std::string dataset, weavess::Parameters &parameters) {
 
     parameters.set<unsigned>("L_refine", L_refine);
     parameters.set<unsigned>("R_refine", R_refine);
-    parameters.set<unsigned>("C_refine", C);
+    parameters.set<unsigned>("C", C);
 }
 
 void SSG_PARA(std::string dataset, weavess::Parameters &parameters) {
