@@ -95,13 +95,13 @@ namespace weavess {
 
         a->InitInner();
 
-        if (debug) {
-            //print_graph();
-            std::unordered_map<unsigned, unsigned> in_degree;
-            std::unordered_map<unsigned, unsigned> out_degree;
-            degree_info(in_degree, out_degree);
-            conn_info();
-        }
+        // if (debug) {
+        //     //print_graph();
+        //     std::unordered_map<unsigned, unsigned> in_degree;
+        //     std::unordered_map<unsigned, unsigned> out_degree;
+        //     degree_info(in_degree, out_degree);
+        //     conn_info();
+        // }
 
         e = std::chrono::high_resolution_clock::now();
 
@@ -163,16 +163,16 @@ namespace weavess {
         std::cout << "__REFINE : FINISH__" << std::endl;
         std::cout << "===================" << std::endl;
         e = std::chrono::high_resolution_clock::now();
-        if (debug) {
-            //print_graph();
-            // degree
-            std::unordered_map<unsigned, unsigned> in_degree;
-            std::unordered_map<unsigned, unsigned> out_degree;
-            degree_info(in_degree, out_degree);
+        // if (debug) {
+        //     //print_graph();
+        //     // degree
+        //     std::unordered_map<unsigned, unsigned> in_degree;
+        //     std::unordered_map<unsigned, unsigned> out_degree;
+        //     degree_info(in_degree, out_degree);
 
-            // 连通分量
-            conn_info();
-        }
+        //     // 连通分量
+        //     conn_info();
+        // }
 
         return this;
     }
@@ -501,50 +501,101 @@ namespace weavess {
     }
 
     /**
+     * 输出索引信息
+     * @param type 索引类型
+     * @return 当前建造者指针
+     */
+    IndexBuilder *IndexBuilder::print_index_info(TYPE type) {
+        // 输出出度信息
+        std::unordered_map<unsigned, unsigned> in_degree;
+        std::unordered_map<unsigned, unsigned> out_degree;
+        degree_info(in_degree, out_degree, type);
+        conn_info(type);
+        graph_quality(type);
+        return this;
+
+    }
+
+    /**
      * 索引出度、入度分析
      * @param in_degree 入度统计
      * @param out_degree 出度统计
      */
     void IndexBuilder::degree_info(std::unordered_map<unsigned, unsigned> &in_degree,
-                                   std::unordered_map<unsigned, unsigned> &out_degree) {
+                                   std::unordered_map<unsigned, unsigned> &out_degree, TYPE type) {
         unsigned max_out_degree = 0, min_out_degree = 1e6;
         double avg_out_degree = 0.0;
 
         unsigned max_in_degree = 0, min_in_degree = 1e6;
         double avg_in_degree = 0.0;
 
-        for (size_t i = 0; i < final_index_->getBaseLen(); i++) {
-            auto size = final_index_->getFinalGraph()[i].size();
-            out_degree[size]++;
-            max_out_degree = max_out_degree < size ? size : max_out_degree;
-            min_out_degree = min_out_degree > size ? size : min_out_degree;
-            avg_out_degree += size;
+        if (type == INDEX_HNSW || type == INDEX_NSW) {
+            for (size_t i = 0; i < final_index_->getBaseLen(); i++) {
+                auto size = (unsigned) final_index_->nodes_[i]->GetFriends(0).size();
+                out_degree[size]++;
+                max_out_degree = max_out_degree < size ? size : max_out_degree;
+                min_out_degree = min_out_degree > size ? size : min_out_degree;
+                avg_out_degree += size;
+            }
+        }else if (type == INDEX_HCNNG) {
+            for (size_t i = 0; i < final_index_->getBaseLen(); i++) {
+                auto size = final_index_->Tn[i].left.size() + final_index_->Tn[i].right.size();
+                out_degree[size]++;
+                max_out_degree = max_out_degree < size ? size : max_out_degree;
+                min_out_degree = min_out_degree > size ? size : min_out_degree;
+                avg_out_degree += size;
+            }
+        }else {
+            for (size_t i = 0; i < final_index_->getBaseLen(); i++) {
+                unsigned size;
+                if (final_index_->getParam().get<std::string>("exc_type") == "build") {
+                    size = final_index_->getFinalGraph()[i].size();
+                }else {
+                    size = final_index_->getLoadGraph()[i].size();
+                }
+                out_degree[size]++;
+                max_out_degree = max_out_degree < size ? size : max_out_degree;
+                min_out_degree = min_out_degree > size ? size : min_out_degree;
+                avg_out_degree += size;
 
-            for (unsigned j = 0; j < final_index_->getFinalGraph()[i].size(); j++) {
-                in_degree[final_index_->getFinalGraph()[i][j].id]++;
-                max_in_degree = max_in_degree < in_degree[final_index_->getFinalGraph()[i][j].id]
-                                ? in_degree[final_index_->getFinalGraph()[i][j].id] : max_in_degree;
-                min_in_degree = min_in_degree > in_degree[final_index_->getFinalGraph()[i][j].id]
-                                ? in_degree[final_index_->getFinalGraph()[i][j].id] : min_in_degree;
+                // for (unsigned j = 0; j < final_index_->getFinalGraph()[i].size(); j++) {
+                //     in_degree[final_index_->getFinalGraph()[i][j].id]++;
+                //     max_in_degree = max_in_degree < in_degree[final_index_->getFinalGraph()[i][j].id]
+                //                     ? in_degree[final_index_->getFinalGraph()[i][j].id] : max_in_degree;
+                //     min_in_degree = min_in_degree > in_degree[final_index_->getFinalGraph()[i][j].id]
+                //                     ? in_degree[final_index_->getFinalGraph()[i][j].id] : min_in_degree;
+                // }
             }
         }
-        for (auto it : in_degree) {
-            avg_in_degree += it.second;
-        }
+
+        // for (auto it : in_degree) {
+        //     avg_in_degree += it.second;
+        // }
 
         avg_out_degree /= final_index_->getBaseLen();
-        avg_in_degree /= final_index_->getBaseLen();
+        // avg_in_degree /= final_index_->getBaseLen();
         printf("Degree Statistics: Max out degree = %d, Min out degree= %d, Avg out degree = %lf\n", max_out_degree,
                min_out_degree, avg_out_degree);
-        printf("Degree Statistics: Max in degree = %d, Min in degree= %d, Avg in degree = %lf\n", max_in_degree,
-               min_in_degree, avg_in_degree);
+        // printf("Degree Statistics: Max in degree = %d, Min in degree= %d, Avg in degree = %lf\n", max_in_degree,
+        //        min_in_degree, avg_in_degree);
     }
 
     /**
      * 连通性分析
      */
-    void IndexBuilder::conn_info() {
-        unsigned root = 0;
+    void IndexBuilder::conn_info(TYPE type) {
+        std::vector<unsigned> root{0};
+        if (type == INDEX_NSG || type == INDEX_VAMANA) {
+            root[0] = final_index_->ep_;
+        }else if (type == INDEX_SSG) {
+            root.resize(final_index_->eps_.size());
+            for (unsigned i = 0; i < final_index_->eps_.size(); i++) {
+                root[i] = final_index_->eps_[i];
+            }
+        }else if (type == INDEX_HNSW) {
+            root[0] = final_index_->enterpoint_->GetId();
+        }
+        
         boost::dynamic_bitset<> flags{final_index_->getBaseLen(), 0};
 
         unsigned conn = 0;
@@ -552,15 +603,17 @@ namespace weavess {
 
         while (unlinked_cnt < final_index_->getBaseLen()) {
             conn++;
-            DFS(flags, root, unlinked_cnt);
-            // std::cout << unlinked_cnt << '\n';
+            for (unsigned i = 0; i < root.size(); i++) {
+                DFS(flags, root[i], unlinked_cnt, type);
+            }
             if (unlinked_cnt >= final_index_->getBaseLen()) break;
+            root.clear();
             findRoot(flags, root);
         }
         printf("Conn Statistics: conn = %d\n", conn);
     }
 
-    void IndexBuilder::findRoot(boost::dynamic_bitset<> &flag, unsigned &root) {
+    void IndexBuilder::findRoot(boost::dynamic_bitset<> &flag, std::vector<unsigned> &root) {
         unsigned id = final_index_->getBaseLen();
         for (unsigned i = 0; i < final_index_->getBaseLen(); i++) {
             if (!flag[i]) {
@@ -568,23 +621,95 @@ namespace weavess {
                 break;
             }
         }
-        root = id;
+        root.push_back(id);
     }
 
-    void IndexBuilder::DFS(boost::dynamic_bitset<> &flag, unsigned root, unsigned &cnt) {
+    void IndexBuilder::DFS(boost::dynamic_bitset<> &flag, unsigned root, unsigned &cnt, TYPE type) {
+        if (type == INDEX_HNSW) {   // BFS
+            weavess::HNSW::HnswNode *tmp = final_index_->nodes_[root];
+            std::queue<weavess::HNSW::HnswNode *> q;
+            q.push(tmp);
+            if (!flag[tmp->GetId()]) cnt++;
+            flag[tmp->GetId()] = true;
+            
+            while (!q.empty()) {
+                tmp = q.front();
+                q.pop();
+                for (int l = tmp->GetLevel() - 1; l >= 0; l--) {
+                    for (size_t i = 0; i < tmp->GetFriends(l).size(); i ++) {
+                        if (!flag[(unsigned)tmp->GetFriends(l)[i]->GetId()]) {
+                            flag[(unsigned)tmp->GetFriends(l)[i]->GetId()] = true;
+                            cnt++;
+                            q.push(tmp->GetFriends(l)[i]);
+                        }
+                    }
+                }
+            }
+            return;
+        }else if (type == INDEX_NSW) {
+            weavess::HNSW::HnswNode *tmp = final_index_->nodes_[root];
+            std::queue<weavess::HNSW::HnswNode *> q;
+            q.push(tmp);
+            if (!flag[tmp->GetId()]) cnt++;
+            flag[tmp->GetId()] = true;
+            
+            while (!q.empty()) {
+                tmp = q.front();
+                q.pop();
+                for (size_t i = 0; i < tmp->GetFriends(0).size(); i ++) {
+                    if (!flag[(unsigned)tmp->GetFriends(0)[i]->GetId()]) {
+                        flag[(unsigned)tmp->GetFriends(0)[i]->GetId()] = true;
+                        cnt++;
+                        q.push(tmp->GetFriends(0)[i]);
+                    }
+                }
+            }
+            return;
+        }
+        
         unsigned tmp = root;
         std::stack<unsigned> s;
         s.push(root);
         if (!flag[root]) cnt++;
         flag[root] = true;
+        
         while (!s.empty()) {
             unsigned next = final_index_->getBaseLen() + 1;
-            for (unsigned i = 0; i < final_index_->getFinalGraph()[tmp].size(); i++) {
-                if (!flag[final_index_->getFinalGraph()[tmp][i].id]) {
-                    next = final_index_->getFinalGraph()[tmp][i].id;
-                    break;
+            if (type == INDEX_HCNNG) {
+                bool lf_flag = false;
+                for (unsigned i = 0; i < final_index_->Tn[tmp].left.size(); i++) {
+                    if (!flag[final_index_->Tn[tmp].left[i]]) {
+                        next = final_index_->Tn[tmp].left[i];
+                        lf_flag = true;
+                        break;
+                    }
+                }
+                if (!lf_flag) {
+                    for (unsigned i = 0; i < final_index_->Tn[tmp].right.size(); i++) {
+                        if (!flag[final_index_->Tn[tmp].right[i]]) {
+                            next = final_index_->Tn[tmp].right[i];
+                            break;
+                        }
+                    }
+                }
+            }else {
+                if (final_index_->getParam().get<std::string>("exc_type") == "build") {
+                    for (unsigned i = 0; i < final_index_->getFinalGraph()[tmp].size(); i++) {
+                        if (!flag[final_index_->getFinalGraph()[tmp][i].id]) {
+                            next = final_index_->getFinalGraph()[tmp][i].id;
+                            break;
+                        }
+                    }
+                }else {
+                    for (unsigned i = 0; i < final_index_->getLoadGraph()[tmp].size(); i++) {
+                        if (!flag[final_index_->getLoadGraph()[tmp][i]]) {
+                            next = final_index_->getLoadGraph()[tmp][i];
+                            break;
+                        }
+                    }
                 }
             }
+
             // std::cout << next <<":"<<cnt <<":"<<tmp <<":"<<s.size()<< '\n';
             if (next == (final_index_->getBaseLen() + 1)) {
                 s.pop();
@@ -598,6 +723,76 @@ namespace weavess {
             cnt++;
         }
     }
+
+    /**
+     * graph quality analyst
+     */
+    void IndexBuilder::graph_quality(TYPE type) {
+        std::string exact_knng_path(final_index_->getParam().get<std::string>("exact_knng_path"));
+        load_graph(weavess::TYPE::INDEX_EXACT_KNNG, &exact_knng_path[0]);   // load exact knng
+        float mean_quality = 0;
+        unsigned control_point_num = 10;
+
+        if (type == INDEX_HNSW || type == INDEX_NSW) {
+            for (unsigned i = 0; i < final_index_->nodes_.size(); i++) {
+                float quality = 0;
+                auto &g = final_index_->nodes_[i];
+                auto &v = final_index_->getExactGraph()[(unsigned)g->GetId()];
+                if (v[0] == (unsigned)g->GetId()) v.erase(v.begin());  // skip itself
+                for (unsigned j = 0; j < control_point_num && j < v.size(); j++) {
+                    for (unsigned k = 0; k < g->GetFriends(0).size(); k++) {
+                        if ((unsigned)g->GetFriends(0)[k]->GetId() == v[j]) {
+                            quality++;
+                            break;
+                        }
+                    }
+                }
+                mean_quality += quality / std::min(std::min(control_point_num, (unsigned)g->GetFriends(0).size()), (unsigned)v.size());
+            }
+            std::cout << "Graph Quality : " << mean_quality / final_index_->nodes_.size() <<std::endl;
+        }else if (type == INDEX_HCNNG) {
+            for (unsigned i = 0; i < final_index_->Tn.size(); i++){
+                unsigned quality = 0;
+                auto &g = final_index_->Tn[i];
+                auto &v = final_index_->getExactGraph()[i];
+                if (v[0] == i) v.erase(v.begin());
+                for (unsigned j = 0; j < control_point_num && j < v.size(); j++) {
+                    for (unsigned k = 0; k < g.left.size(); k++) {
+                        if (g.left[k] == v[j]) {
+                        quality++;
+                        break;
+                        }
+                    }
+                    for (unsigned k = 0; k < g.right.size(); k++) {
+                        if (g.right[k] == v[j]) {
+                        quality++;
+                        break;
+                        }
+                    }
+                }
+                mean_quality += (float)quality / (float)std::min(std::min(control_point_num, (unsigned)(g.left.size() + g.right.size())), (unsigned)v.size());
+            }
+            std::cout << "Graph Quality : " << mean_quality / final_index_->Tn.size() <<std::endl;
+        }else {
+            for (unsigned i = 0; i < final_index_->getLoadGraph().size(); i++){
+                unsigned quality = 0;
+                auto &g = final_index_->getLoadGraph()[i];
+                auto &v = final_index_->getExactGraph()[i];
+                if (v[0] == i) v.erase(v.begin());
+                for (unsigned j = 0; j < control_point_num && j < v.size(); j++) {
+                    for (unsigned k = 0; k < g.size(); k++) {
+                        if (g[k] == v[j]) {
+                        quality++;
+                        break;
+                        }
+                    }
+                }
+                mean_quality += (float)quality / (float)std::min(std::min(control_point_num, (unsigned)g.size()), (unsigned)v.size());
+            }
+            std::cout << "Graph Quality : " << mean_quality / final_index_->getLoadGraph().size() <<std::endl;
+        }
+    }
+
 
     /**
     * 最大内存需求（VmPeak）
@@ -886,6 +1081,7 @@ namespace weavess {
                 out.write((char *)final_index_->Tn[i].left.data(), left_len * sizeof(unsigned));
                 out.write((char *)final_index_->Tn[i].right.data(), right_len * sizeof(unsigned));
             }
+            return this;
         } else if (type == INDEX_PANNG || type == INDEX_ONNG) {
             unsigned int node_num = Inorder(out, final_index_->vp_tree.m_root);
         }
@@ -954,6 +1150,7 @@ namespace weavess {
                 }
             }
             final_index_->enterpoint_ = final_index_->nodes_[enterpoint_id];
+            return this;
         } else if (type == INDEX_EFANNA) {
             size_t K;
 
@@ -1113,10 +1310,21 @@ namespace weavess {
                 in.read((char *)tmp.right.data(), right_len * sizeof(unsigned));
                 final_index_->Tn.push_back(tmp);
             }
+            return this;
         } else if (type == INDEX_ONNG || type == INDEX_PANNG) {
             Index::VPNodePtr root = deser(in);
             if(root==nullptr){ exit(-11); }
             final_index_->vp_tree.m_root = root;
+        } else if (type == INDEX_EXACT_KNNG) {
+            while (!in.eof()) {
+                unsigned GK;
+                in.read((char *) &GK, sizeof(unsigned));
+                if (in.eof()) break;
+                std::vector<unsigned> tmp(GK);
+                in.read((char *) tmp.data(), GK * sizeof(unsigned));
+                final_index_->getExactGraph().push_back(tmp);
+            }
+            return this;
         }
 
         while (!in.eof()) {

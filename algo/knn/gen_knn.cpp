@@ -2,6 +2,7 @@
 #include "weavess/parameters.h"
 #include <iostream>
 #include <queue>
+#include <omp.h>
 #include <algorithm>
 #include <fstream>
 #include <vector>
@@ -126,6 +127,7 @@ void gen_ground_truth(std::string graph_file, float *base_data, float *query_dat
 
     std::chrono::high_resolution_clock::time_point s = std::chrono::high_resolution_clock::now();
     unsigned *groundtruth = new unsigned[query_num * ground_dim];
+    omp_set_num_threads(4);
 
 #pragma omp parallel for
     for (int i = 0; i < query_num; i++) {
@@ -139,8 +141,9 @@ void gen_ground_truth(std::string graph_file, float *base_data, float *query_dat
         for(int j = 0; j < ground_dim; j ++) {
             std::pair<float, unsigned> p = dist.top();
             dist.pop();
+            if (p.second == i) continue;
             groundtruth[i * ground_dim + j] = p.second;
-            // if (i == 100) {
+            // if (i == 10) {
             //     std::cout << p.first << std::endl;
             //     std::cout << p.second << std::endl;
             // }

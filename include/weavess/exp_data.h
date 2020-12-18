@@ -266,7 +266,7 @@ void DPG_PARA(std::string dataset, weavess::Parameters &parameters) {
 void VAMANA_PARA(std::string dataset, weavess::Parameters &parameters) {
     unsigned L, R;
     if (dataset == "siftsmall") {
-        L = 100, R = 25;    // siftsmall
+        L = 30, R = 20;    // siftsmall
     }else if (dataset == "sift1M") {
         L = 70, R = 50;    // sift1M
     }else if (dataset == "gist") {
@@ -315,7 +315,7 @@ void VAMANA_PARA(std::string dataset, weavess::Parameters &parameters) {
 void EFANNA_PARA(std::string dataset, weavess::Parameters &parameters) {
     unsigned nTrees, mLevel, K, L, Iter, S, R;
     if (dataset == "siftsmall") {
-        nTrees = 8, mLevel = 4, K = 60, L = 70, Iter = 10, S = 15, R = 150;    // siftsmall
+        nTrees = 8, mLevel = 2, K = 30, L = 50, Iter = 10, S = 15, R = 150;    // siftsmall
     }else if (dataset == "sift1M") {
         nTrees = 8, mLevel = 8, K = 60, L = 70, Iter = 10, S = 15, R = 150;    // sift1M
     }else if (dataset == "gist") {
@@ -535,7 +535,7 @@ void SPTAG_BKT_PARA(std::string dataset, weavess::Parameters &parameters) {
     }else if (dataset == "uqv") {
         BKT_Number = 4, BKT_kmeans_k = 64, TPT_Number = 16, TPT_leaf_size = 1000, scale = 2, CEF = 500;    // uqv
     }else if (dataset == "enron") {
-        // BKT_Number = 4, BKT_kmeans_k = 64, TPT_Number = 16, TPT_leaf_size = 1000, scale = 2, CEF = 500;;    // enron
+        BKT_Number = 1, BKT_kmeans_k = 16, TPT_Number = 16, TPT_leaf_size = 1500, scale = 2, CEF = 500;;    // enron
     }else if (dataset == "mnist") {
         BKT_Number = 1, BKT_kmeans_k = 16, TPT_Number = 16, TPT_leaf_size = 500, scale = 2, CEF = 500;    // mnist
     }else if (dataset == "c_1") {
@@ -573,7 +573,7 @@ void SPTAG_BKT_PARA(std::string dataset, weavess::Parameters &parameters) {
 void HNSW_PARA(std::string dataset, weavess::Parameters &parameters) {
     unsigned max_m, max_m0, ef_construction;
     if (dataset == "siftsmall") {
-        max_m = 5, max_m0 = 10, ef_construction = 100;    // siftsmall
+        max_m = 25, max_m0 = 50, ef_construction = 100;    // siftsmall
     }else if (dataset == "sift1M") {
         max_m = 40, max_m0 = 50, ef_construction = 800;    // sift1M
     }else if (dataset == "gist") {
@@ -684,6 +684,58 @@ void PANNG_PARA(std::string dataset, weavess::Parameters &parameters) {
     }
     parameters.set<unsigned>("NN", K);          // K
     parameters.set<unsigned>("ef_construction", L);        //L
+}
+
+void ONNG_PARA(std::string dataset, weavess::Parameters &parameters) {
+    unsigned K, L, numOfOutgoingEdges, numOfIngoingEdges;
+    if (dataset == "siftsmall") {
+        K = 10, L = 50, numOfOutgoingEdges = 20, numOfIngoingEdges = 50;    // siftsmall
+    }else if (dataset == "sift1M") {
+        K = 100, L = 110, numOfOutgoingEdges = 10, numOfIngoingEdges = 100;    // sift1M
+    }else if (dataset == "gist") {
+        K = 100, L = 120, numOfOutgoingEdges = 20, numOfIngoingEdges = 100;    // gist
+    }else if (dataset == "glove-100") {
+        K = 400, L = 430, numOfOutgoingEdges = 80, numOfIngoingEdges = 100;    // glove
+    }else if (dataset == "audio") {
+        K = 100, L = 120, numOfOutgoingEdges = 10, numOfIngoingEdges = 100;    // audio
+    }else if (dataset == "crawl") {
+        K = 200, L = 220, numOfOutgoingEdges = 10, numOfIngoingEdges = 100;    // crawl
+    }else if (dataset == "msong") {
+        K = 100, L = 120, numOfOutgoingEdges = 20, numOfIngoingEdges = 100;    // msong
+    }else if (dataset == "uqv") {
+        K = 100, L = 120, numOfOutgoingEdges = 10, numOfIngoingEdges = 100;    // uqv
+    }else if (dataset == "enron") {
+        K = 100, L = 100, numOfOutgoingEdges = 10, numOfIngoingEdges = 100;    // enron
+    }else if (dataset == "mnist") {
+        K = 40, L = 40, numOfOutgoingEdges = 20, numOfIngoingEdges = 100;    // mnist
+    }else if (dataset == "c_1") {
+        K = 100, L = 100, numOfOutgoingEdges = 20, numOfIngoingEdges = 100;    // c_1
+    }else if (dataset == "c_10") {
+        K = 100, L = 120, numOfOutgoingEdges = 10, numOfIngoingEdges = 100;    // c_10
+    }else if (dataset == "c_100") {
+        K = 100, L = 100, numOfOutgoingEdges = 10, numOfIngoingEdges = 100;    // c_100
+    }else if (dataset == "d_8") {
+        K = 100, L = 110, numOfOutgoingEdges = 10, numOfIngoingEdges = 100;    // d_8
+    }else if (dataset == "d_128") {
+        K = 100, L = 100, numOfOutgoingEdges = 20, numOfIngoingEdges = 100;    // d_128
+    }else if (dataset == "n_10000") {
+        K = 100, L = 120, numOfOutgoingEdges = 10, numOfIngoingEdges = 100;    // n_10000
+    }else if (dataset == "n_1000000") {
+        K = 100, L = 120, numOfOutgoingEdges = 10, numOfIngoingEdges = 100;    // n_1000000
+    }else if (dataset == "s_1") {
+        K = 100, L = 120, numOfOutgoingEdges = 10, numOfIngoingEdges = 100;    // s_1
+    }else if (dataset == "s_10") {
+        K = 100, L = 110, numOfOutgoingEdges = 10, numOfIngoingEdges = 100;    // s_10
+    }else {
+        std::cout << "dataset error!\n";
+        exit(-1);
+    }
+    parameters.set<unsigned>("NN", K);          // K
+    parameters.set<unsigned>("ef_construction", L);        //L
+    parameters.set<unsigned>("numOfOutgoingEdges", numOfOutgoingEdges);
+    parameters.set<unsigned>("numOfIncomingEdges", numOfIngoingEdges);
+    parameters.set<unsigned>("numOfQueries", 200);
+    parameters.set<unsigned>("numOfResultantObjects", 20);
 }
 
 void set_data_path(std::string dataset, weavess::Parameters &parameters) {
@@ -799,7 +851,7 @@ void set_data_path(std::string dataset, weavess::Parameters &parameters) {
 void set_para(std::string alg, std::string dataset, weavess::Parameters &parameters) {
     
     set_data_path(dataset, parameters);
-    if (parameters.get<std::string>("exc_type") == "search" && alg != "ieh") {
+    if (parameters.get<std::string>("exc_type") != "build") {
         return;
     }
 
@@ -831,6 +883,8 @@ void set_para(std::string alg, std::string dataset, weavess::Parameters &paramet
         IEH_PARA(dataset, parameters);
     }else if (alg == "panng") {
         PANNG_PARA(dataset, parameters);
+    }else if (alg == "onng") {
+        ONNG_PARA(dataset, parameters);
     }
     else {
         std::cout << "algorithm input error!\n";

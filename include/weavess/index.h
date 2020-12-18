@@ -1672,6 +1672,10 @@ namespace weavess {
             return load_graph_;
         }
 
+        LoadGraph &getExactGraph() {
+            return exact_graph_;
+        }
+
         TYPE getCandidateType() const {
             return candidate_type;
         }
@@ -1751,6 +1755,7 @@ namespace weavess {
         // 迭代式
         FinalGraph final_graph_;
         LoadGraph load_graph_;
+        LoadGraph exact_graph_;
 
 
         TYPE entry_type;

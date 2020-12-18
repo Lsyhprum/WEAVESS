@@ -31,15 +31,19 @@ namespace weavess {
 
         IndexBuilder *search(TYPE entry_type, TYPE route_type, TYPE L_type);
 
+        IndexBuilder *print_index_info(TYPE type);
+
         void print_graph();
 
-        void degree_info(std::unordered_map<unsigned, unsigned> &in_degree, std::unordered_map<unsigned, unsigned> &out_degree);
+        void degree_info(std::unordered_map<unsigned, unsigned> &in_degree, std::unordered_map<unsigned, unsigned> &out_degree, TYPE type);
 
-        void conn_info();
+        void conn_info(TYPE type);
 
-        void DFS(boost::dynamic_bitset<> &flag, unsigned root, unsigned &cnt);
+        void graph_quality(TYPE type);
 
-        void findRoot(boost::dynamic_bitset<> &flag, unsigned &root);
+        void DFS(boost::dynamic_bitset<> &flag, unsigned root, unsigned &cnt, TYPE type);
+
+        void findRoot(boost::dynamic_bitset<> &flag, std::vector<unsigned> &root);
 
         IndexBuilder *draw();
 

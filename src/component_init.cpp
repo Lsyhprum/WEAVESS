@@ -2827,6 +2827,10 @@ namespace weavess {
 
         index->m_iBKTKmeansK = index->getParam().get<unsigned>("BKTKMeansK");
 
+        index->m_iTPTNumber = index->getParam().get<unsigned>("TPTNumber");
+
+        index->m_iTPTLeafSize = index->getParam().get<unsigned>("TPTLeafSize");
+
         index->m_iNeighborhoodSize = index->getParam().get<unsigned>("NeighborhoodSize");
 
         index->m_iNeighborhoodScale = index->getParam().get<unsigned>("GraphNeighborhoodScale");

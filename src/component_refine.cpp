@@ -761,7 +761,7 @@ namespace weavess {
                 Index::SimpleNeighbor nn(pool[j].id, pool[j].distance);
                 index->getFinalGraph()[i][j] = nn;
             }
-            std::sort(index->getFinalGraph()[i].begin(), index->getFinalGraph()[i].end());
+            // std::sort(index->getFinalGraph()[i].begin(), index->getFinalGraph()[i].end());
         }
 
 //        for(int i = 0; i < 100; i ++) {
@@ -944,6 +944,40 @@ namespace weavess {
 //        }
 
         std::vector<Index::nhood>().swap(index->graph_);
+        // 裁边
+        unsigned range = index->K;
+
+        auto *cut_graph_ = new Index::SimpleNeighbor[index->getBaseLen() * range];
+
+        // PRUNE
+        std::cout << "__PRUNE : NAIVE__" << std::endl;
+        auto *b = new ComponentPruneNaive(index);
+
+#ifdef PARALLEL
+#pragma omp parallel
+#endif
+        {
+            boost::dynamic_bitset<> flags{index->getBaseLen(), 0};
+#ifdef PARALLEL
+#pragma omp for schedule(dynamic, 100)
+#endif
+            for (unsigned n = 0; n < index->getBaseLen(); ++n) {
+                b->PruneInner(n, range, flags, index->getFinalGraph()[n], cut_graph_);
+            }
+        }
+
+        for (unsigned n = 0; n < index->getBaseLen(); ++n) {
+            Index::SimpleNeighbor *src_pool = cut_graph_ + n * range;
+            int len = 0;
+            for (unsigned i = 0; i < range; i++) {
+                if (src_pool[i].distance == -1) break;
+                len++;
+                index->getFinalGraph()[n][i] = src_pool[i];
+            }
+            index->getFinalGraph()[n].resize(len);
+        }
+
+        delete[] cut_graph_;
     }
 
     void ComponentRefineEFANNA::SetConfigs() {
@@ -1148,7 +1182,7 @@ namespace weavess {
     void ComponentRefinePANNG::RefineInner() {
         std::vector<std::vector<Index::SimpleNeighbor>> tmpGraph;
         for (size_t id = 0; id < index->getBaseLen(); id++) {
-            std::vector<Index::SimpleNeighbor> node = index->getFinalGraph()[id];
+            std::vector<Index::SimpleNeighbor> &node = index->getFinalGraph()[id];
             tmpGraph.push_back(node);
             node.clear();
         }
@@ -1250,7 +1284,7 @@ namespace weavess {
                         continue;
                     }
                 }
-                auto outSrcNode = index->getFinalGraph()[id];
+                auto &outSrcNode = index->getFinalGraph()[id];
                 insert(outSrcNode, srcNode[rank].id, srcNode[rank].distance);
                 it++;
             }
@@ -1281,7 +1315,7 @@ namespace weavess {
         return (ni != srcNode.end()) && ((*ni).id == dstNodeID);
     }
 
-    void ComponentRefinePANNG::insert(std::vector<Index::SimpleNeighbor> node, size_t edgeID, float edgeDistance) {
+    void ComponentRefinePANNG::insert(std::vector<Index::SimpleNeighbor> &node, size_t edgeID, float edgeDistance) {
         Index::SimpleNeighbor edge(edgeID, edgeDistance);
         auto ni = std::lower_bound(node.begin(), node.end(), edge, edgeComp);
         node.insert(ni, edge);

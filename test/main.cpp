@@ -25,6 +25,10 @@ void KGraph(weavess::Parameters &parameters) {
                 -> load_graph(weavess::TYPE::INDEX_KGRAPH, &graph_file[0])
                 -> search(weavess::TYPE::SEARCH_ENTRY_RAND, weavess::TYPE::ROUTER_GREEDY, weavess::TYPE::L_SEARCH_ASSIGN);
         builder -> peak_memory_footprint();
+    }else if (parameters.get<std::string>("exc_type") == "info") {
+        builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
+                -> load_graph(weavess::TYPE::INDEX_KGRAPH, &graph_file[0])
+                -> print_index_info(weavess::TYPE::INDEX_KGRAPH);
     }else {
         std::cout << "exc_type input error!" << std::endl;
     }
@@ -51,6 +55,10 @@ void FANNG(weavess::Parameters &parameters) {
                 -> load_graph(weavess::TYPE::INDEX_FANNG, &graph_file[0])
                 -> search(weavess::TYPE::SEARCH_ENTRY_RAND, weavess::TYPE::ROUTER_BACKTRACK, weavess::TYPE::L_SEARCH_SET_RECALL);
         builder -> peak_memory_footprint();
+    }else if (parameters.get<std::string>("exc_type") == "info") {
+        builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
+                -> load_graph(weavess::TYPE::INDEX_FANNG, &graph_file[0])
+                -> print_index_info(weavess::TYPE::INDEX_FANNG);
     }else {
         std::cout << "exc_type input error!" << std::endl;
     }
@@ -78,6 +86,10 @@ void NSG(weavess::Parameters &parameters) {
                 -> load_graph(weavess::TYPE::INDEX_NSG, &graph_file[0])
                 -> search(weavess::TYPE::SEARCH_ENTRY_CENTROID, weavess::TYPE::ROUTER_GREEDY, weavess::TYPE::L_SEARCH_SET_RECALL);
         builder -> peak_memory_footprint();
+    }else if (parameters.get<std::string>("exc_type") == "info") {
+        builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
+                -> load_graph(weavess::TYPE::INDEX_NSG, &graph_file[0])
+                -> print_index_info(weavess::TYPE::INDEX_NSG);
     }else {
         std::cout << "exc_type input error!" << std::endl;
     }
@@ -105,6 +117,10 @@ void SSG(weavess::Parameters &parameters) {
                 -> load_graph(weavess::TYPE::INDEX_SSG, &graph_file[0])
                 -> search(weavess::SEARCH_ENTRY_SUB_CENTROID, weavess::ROUTER_GREEDY, weavess::TYPE::L_SEARCH_SET_RECALL);
         builder -> peak_memory_footprint();
+    }else if (parameters.get<std::string>("exc_type") == "info") {
+        builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
+                -> load_graph(weavess::TYPE::INDEX_SSG, &graph_file[0])
+                -> print_index_info(weavess::TYPE::INDEX_SSG);
     }else {
         std::cout << "exc_type input error!" << std::endl;
     }
@@ -132,6 +148,10 @@ void DPG(weavess::Parameters &parameters) {
                 -> load_graph(weavess::TYPE::INDEX_DPG,  &graph_file[0])
                 -> search(weavess::TYPE::SEARCH_ENTRY_RAND, weavess::TYPE::ROUTER_GREEDY, weavess::TYPE::L_SEARCH_SET_RECALL);
         builder -> peak_memory_footprint();
+    }else if (parameters.get<std::string>("exc_type") == "info") {
+        builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
+                -> load_graph(weavess::TYPE::INDEX_DPG, &graph_file[0])
+                -> print_index_info(weavess::TYPE::INDEX_DPG);
     }else {
         std::cout << "exc_type input error!" << std::endl;
     }
@@ -159,6 +179,10 @@ void VAMANA(weavess::Parameters &parameters) {
                 -> load_graph(weavess::TYPE::INDEX_VAMANA, &graph_file[0])
                 -> search(weavess::TYPE::SEARCH_ENTRY_CENTROID, weavess::TYPE::ROUTER_GREEDY, weavess::TYPE::L_SEARCH_SET_RECALL);
         builder -> peak_memory_footprint();
+    }else if (parameters.get<std::string>("exc_type") == "info") {
+        builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
+                -> load_graph(weavess::TYPE::INDEX_VAMANA, &graph_file[0])
+                -> print_index_info(weavess::TYPE::INDEX_VAMANA);
     }else {
         std::cout << "exc_type input error!" << std::endl;
     }
@@ -185,6 +209,10 @@ void EFANNA(weavess::Parameters &parameters) {
                 -> load_graph(weavess::TYPE::INDEX_EFANNA, &graph_file[0])
                 -> search(weavess::TYPE::SEARCH_ENTRY_KDT, weavess::TYPE::ROUTER_GREEDY, weavess::TYPE::L_SEARCH_SET_RECALL);
         builder -> peak_memory_footprint();
+    }else if (parameters.get<std::string>("exc_type") == "info") {
+        builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
+                -> load_graph(weavess::TYPE::INDEX_EFANNA, &graph_file[0])
+                -> print_index_info(weavess::TYPE::INDEX_EFANNA);
     }else {
         std::cout << "exc_type input error!" << std::endl;
     }
@@ -199,13 +227,16 @@ void IEH(weavess::Parameters &parameters) {
     std::string graph_file = parameters.get<std::string>("graph_file");
     auto *builder = new weavess::IndexBuilder(num_threads);
 
-    std::cout << "Time cost: " << builder->GetBuildTime().count() << std::endl;
     if (parameters.get<std::string>("exc_type") == "build") {   // build
         std::cout << "index should be built in WEAVESS/algo/" << std::endl;
     }else if (parameters.get<std::string>("exc_type") == "search") {    // search
         builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
                 -> init(weavess::INIT_IEH)
                 -> search(weavess::SEARCH_ENTRY_HASH, weavess::ROUTER_IEH, weavess::TYPE::L_SEARCH_SET_RECALL);
+    }else if (parameters.get<std::string>("exc_type") == "info") {  // 不需要测试
+        builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
+                -> load_graph(weavess::TYPE::INDEX_IEH, &graph_file[0])
+                -> print_index_info(weavess::TYPE::INDEX_IEH);
     }else {
         std::cout << "exc_type input error!" << std::endl;
     }
@@ -230,6 +261,10 @@ void NSW(weavess::Parameters &parameters) {
                 -> load_graph(weavess::TYPE::INDEX_NSW, &graph_file[0])
                 -> search(weavess::TYPE::SEARCH_ENTRY_NONE, weavess::TYPE::ROUTER_NSW, weavess::TYPE::L_SEARCH_SET_RECALL);
         builder -> peak_memory_footprint();
+    }else if (parameters.get<std::string>("exc_type") == "info") {
+        builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
+                -> load_graph(weavess::TYPE::INDEX_NSW, &graph_file[0])
+                -> print_index_info(weavess::TYPE::INDEX_NSW);
     }else {
         std::cout << "exc_type input error!" << std::endl;
     }
@@ -254,6 +289,10 @@ void HNSW(weavess::Parameters &parameters) {
                 -> load_graph(weavess::TYPE::INDEX_HNSW, &graph_file[0])
                 -> search(weavess::TYPE::SEARCH_ENTRY_NONE, weavess::TYPE::ROUTER_HNSW, weavess::TYPE::L_SEARCH_SET_RECALL);
         builder -> peak_memory_footprint();
+    }else if (parameters.get<std::string>("exc_type") == "info") {
+        builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
+                -> load_graph(weavess::TYPE::INDEX_HNSW, &graph_file[0])
+                -> print_index_info(weavess::TYPE::INDEX_HNSW);
     }else {
         std::cout << "exc_type input error!" << std::endl;
     }
@@ -278,32 +317,45 @@ void PANNG(weavess::Parameters &parameters) {
                 -> load_graph(weavess::TYPE::INDEX_PANNG, &graph_file[0])
                 -> search(weavess::TYPE::SEARCH_ENTRY_VPT, weavess::TYPE::ROUTER_NGT, weavess::TYPE::L_SEARCH_SET_RECALL);
         builder -> peak_memory_footprint();
+    }else if (parameters.get<std::string>("exc_type") == "info") {
+        builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
+                -> load_graph(weavess::TYPE::INDEX_PANNG, &graph_file[0])
+                -> print_index_info(weavess::TYPE::INDEX_PANNG);
     }else {
         std::cout << "exc_type input error!" << std::endl;
     }
 }
 
-void ONNG(std::string base_path, std::string query_path, std::string ground_path) {
-    std::string graph_file = R"(onng.graph)";
+void ONNG(weavess::Parameters &parameters) {
 
-    weavess::Parameters parameters;
-    parameters.set<unsigned>("NN", 50);          // K
-    parameters.set<unsigned>("ef_construction", 100);        //L
-    parameters.set<unsigned>("n_threads_", 1);
+    const unsigned num_threads = parameters.get<unsigned>("n_threads");
+    std::string base_path = parameters.get<std::string>("base_path");
+    std::string query_path = parameters.get<std::string>("query_path");
+    std::string ground_path = parameters.get<std::string>("ground_path");
+    std::string graph_file = parameters.get<std::string>("graph_file");
+    auto *builder = new weavess::IndexBuilder(num_threads);
 
-    parameters.set<unsigned>("numOfOutgoingEdges", 20);
-    parameters.set<unsigned>("numOfIncomingEdges", 50);
-    parameters.set<unsigned>("numOfQueries", 200);
-    parameters.set<unsigned>("numOfResultantObjects", 20);
-
-    auto *builder = new weavess::IndexBuilder(8);
-    builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
-            -> init(weavess::INIT_ANNG, true)
-            -> refine(weavess::REFINE_ONNG, true)
-            -> refine(weavess::REFINE_PANNG, true)
-            -> search(weavess::SEARCH_ENTRY_VPT, weavess::ROUTER_NGT, weavess::TYPE::L_SEARCH_SET_RECALL);
-
-    std::cout << "Time cost: " << builder->GetBuildTime().count() << std::endl;
+    if (parameters.get<std::string>("exc_type") == "build") {   // build
+        builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
+                -> init(weavess::INIT_ANNG);
+        std::cout << "Init cost: " << builder->GetBuildTime().count() << std::endl;
+        builder -> refine(weavess::REFINE_ONNG, false);
+        std::cout << "Refine_onng cost: " << builder->GetBuildTime().count() << std::endl;
+        builder -> refine(weavess::REFINE_PANNG, false)
+                -> save_graph(weavess::TYPE::INDEX_ONNG, &graph_file[0]);
+        std::cout << "Build cost: " << builder->GetBuildTime().count() << std::endl;
+    }else if (parameters.get<std::string>("exc_type") == "search") {    // search
+        builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
+                -> load_graph(weavess::TYPE::INDEX_ONNG, &graph_file[0])
+                -> search(weavess::TYPE::SEARCH_ENTRY_VPT, weavess::TYPE::ROUTER_NGT, weavess::TYPE::L_SEARCH_SET_RECALL);
+        builder -> peak_memory_footprint();
+    }else if (parameters.get<std::string>("exc_type") == "info") {
+        builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
+                -> load_graph(weavess::TYPE::INDEX_ONNG, &graph_file[0])
+                -> print_index_info(weavess::TYPE::INDEX_ONNG);
+    }else {
+        std::cout << "exc_type input error!" << std::endl;
+    }
 }
 
 void HCNNG(weavess::Parameters &parameters) {
@@ -325,6 +377,11 @@ void HCNNG(weavess::Parameters &parameters) {
                 -> load_graph(weavess::TYPE::INDEX_HCNNG, &graph_file[0])
                 -> search(weavess::TYPE::SEARCH_ENTRY_KDT, weavess::TYPE::ROUTER_GUIDE, weavess::TYPE::L_SEARCH_SET_RECALL);
         builder -> peak_memory_footprint();
+    }else if (parameters.get<std::string>("exc_type") == "info") {
+        builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
+                -> load_graph(weavess::TYPE::INDEX_HCNNG, &graph_file[0])
+                // -> save_graph(weavess::TYPE::INDEX_HCNNG, &graph_file[0])
+                -> print_index_info(weavess::TYPE::INDEX_HCNNG);
     }else {
         std::cout << "exc_type input error!" << std::endl;
     }
@@ -351,6 +408,10 @@ void SPTAG_KDT(weavess::Parameters &parameters) {
                 -> load_graph(weavess::TYPE::INDEX_SPTAG_KDT, &graph_file[0])
                 -> search(weavess::TYPE::SEARCH_ENTRY_NONE, weavess::TYPE::ROUTER_SPTAG_KDT, weavess::TYPE::L_SEARCH_SET_RECALL);
         builder -> peak_memory_footprint();
+    }else if (parameters.get<std::string>("exc_type") == "info") {
+        builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
+                -> load_graph(weavess::TYPE::INDEX_SPTAG_KDT, &graph_file[0])
+                -> print_index_info(weavess::TYPE::INDEX_SPTAG_KDT);
     }else {
         std::cout << "exc_type input error!" << std::endl;
     }
@@ -377,6 +438,10 @@ void SPTAG_BKT(weavess::Parameters &parameters) {
                 -> load_graph(weavess::TYPE::INDEX_SPTAG_BKT, &graph_file[0])
                 -> search(weavess::TYPE::SEARCH_ENTRY_NONE, weavess::TYPE::ROUTER_SPTAG_BKT, weavess::TYPE::L_SEARCH_SET_RECALL);
         builder -> peak_memory_footprint();
+    }else if (parameters.get<std::string>("exc_type") == "info") {
+        builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
+                -> load_graph(weavess::TYPE::INDEX_SPTAG_BKT, &graph_file[0])
+                -> print_index_info(weavess::TYPE::INDEX_SPTAG_BKT);
     }else {
         std::cout << "exc_type input error!" << std::endl;
     }
@@ -394,7 +459,7 @@ int main(int argc, char** argv) {
     std::string index_path = R"(/)";
     parameters.set<std::string>("dataset_root", dataset_root);
     parameters.set<std::string>("index_path", index_path);
-    parameters.set<unsigned>("n_threads", 4);
+    parameters.set<unsigned>("n_threads", 8);
     std::string alg(argv[1]);
     std::string dataset(argv[2]);
     std::string exc_type(argv[3]);
@@ -405,7 +470,9 @@ int main(int argc, char** argv) {
     std::cout << "algorithm: " << alg << std::endl;
     std::cout << "dataset: " << dataset << std::endl;
     std::string graph_file(alg + "_" + dataset + ".graph");
+    std::string exact_knng_path("/Users/wmz/Documents/Postgraduate/Code/WEAVESS/build/algo/knn/siftsmall_50nn.graph");
     parameters.set<std::string>("graph_file", graph_file);
+    parameters.set<std::string>("exact_knng_path", exact_knng_path);
     parameters.set<std::string>("exc_type", exc_type);
     set_para(alg, dataset, parameters);
 
@@ -435,7 +502,7 @@ int main(int argc, char** argv) {
     }else if (alg == "panng") {
         PANNG(parameters);
     }else if (alg == "onng") {
-
+        ONNG(parameters);
     }else if (alg == "sptag_kdt") {
         SPTAG_KDT(parameters);
     }else if (alg == "sptag_bkt") {

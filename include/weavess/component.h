@@ -475,7 +475,7 @@ namespace weavess {
     private:
         bool hasEdge(size_t srcNodeID, size_t dstNodeID);
 
-        void insert(std::vector<Index::SimpleNeighbor> node, size_t edgeID, float edgeDistance);
+        void insert(std::vector<Index::SimpleNeighbor> &node, size_t edgeID, float edgeDistance);
     };
 
     class ComponentRefineSPTAG_BKT : public ComponentRefine {
