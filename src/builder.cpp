@@ -284,6 +284,7 @@ namespace weavess {
 #pragma omp parallel for
                 for (unsigned i = 0; i < final_index_->getQueryLen(); i++) {
                     // pool.clear();
+                    // if (i == 5070) continue; // only for hnsw search on glove-100
                     std::vector<Index::Neighbor> pool;
 
                     a->SearchEntryInner(i, pool);
@@ -372,6 +373,7 @@ namespace weavess {
 
                 for (unsigned i = 0; i < final_index_->getQueryLen(); i++) {
                     // pool.clear();
+                    // if (i == 5070) continue; // only for hnsw search on glove-100
                     std::vector<Index::Neighbor> pool;
 
                     a->SearchEntryInner(i, pool);
@@ -443,6 +445,7 @@ namespace weavess {
 
             for (unsigned i = 0; i < final_index_->getQueryLen(); i++) {
                 // pool.clear();
+                // if (i == 5070) continue; // only for hnsw search on glove-100
                 std::vector<Index::Neighbor> pool;
 
                 a->SearchEntryInner(i, pool);

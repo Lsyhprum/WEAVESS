@@ -846,8 +846,11 @@ namespace weavess {
         void RouteInner(unsigned query, std::vector<Index::Neighbor> &pool, std::vector<unsigned> &res) override;
 
     private:
-        void SearchById_(unsigned query, Index::HnswNode* cur_node, float cur_dist, size_t k,
-                         size_t ef_search, std::vector<std::pair<Index::HnswNode*, float>> &result);
+        // void SearchById_(unsigned query, Index::HnswNode* cur_node, float cur_dist, size_t k,
+        //                  size_t ef_search, std::vector<std::pair<Index::HnswNode*, float>> &result);
+        void SearchAtLayer(unsigned qnode, Index::HnswNode *enterpoint, int level,
+                           Index::VisitedList *visited_list,
+                           std::priority_queue<Index::FurtherFirst> &result);
     };
 
     class ComponentSearchRouteIEH : public ComponentSearchRoute {

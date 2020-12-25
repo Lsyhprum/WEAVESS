@@ -154,7 +154,7 @@ namespace weavess {
     void ComponentSearchRouteHNSW::RouteInner(unsigned int query, std::vector<Index::Neighbor> &pool,
                                               std::vector<unsigned int> &res) {
         const auto K = index->getParam().get<unsigned>("K_search");
-        const auto L = index->getParam().get<unsigned>("L_search");
+        // const auto L = index->getParam().get<unsigned>("L_search");
 
         auto *visited_list = new Index::VisitedList(index->getBaseLen());
 
@@ -205,117 +205,173 @@ namespace weavess {
 
         //std::cout << "ensure_k : " << ensure_k_path_.size() << " " << ensure_k_path_[0].first->GetId() << std::endl;
 
-        std::vector<std::pair<Index::HnswNode*, float>> tmp;
+        // std::vector<std::pair<Index::HnswNode*, float>> tmp;
+        std::priority_queue<Index::FurtherFirst> result;
+        std::priority_queue<Index::CloserFirst> tmp;
 
-        while(tmp.size() < K && !ensure_k_path_.empty()) {
+        while(result.size() < K && !ensure_k_path_.empty()) {
             cur_dist = ensure_k_path_.back().second;
-            //std::cout << ensure_k_path_.back().first->GetId() << " ";
             ensure_k_path_.pop_back();
-            SearchById_(query, ensure_k_path_.back().first, cur_dist, K, L, tmp);
+            SearchAtLayer(query, ensure_k_path_.back().first, 0, visited_list, result);
         }
-        //std::cout << std::endl;
+        while(!result.empty()) {
+            tmp.push(Index::CloserFirst(result.top().GetNode(), result.top().GetDistance()));
+            result.pop();
+        }
 
-        for(auto ret : tmp) {
-//            std::cout << ret.first << "";
-            res.push_back(ret.first->GetId());
+        res.resize(K);
+        int pos = 0;
+        while (!tmp.empty() && pos < K) {
+            auto *top_node = tmp.top().GetNode();
+            tmp.pop();
+            res[pos] = top_node->GetId();
+            pos ++;
         }
-//        std::cout << std::endl;
 
         delete visited_list;
     }
 
-    void ComponentSearchRouteHNSW::SearchById_(unsigned query, Index::HnswNode* cur_node, float cur_dist, size_t k,
-                                                   size_t ef_search, std::vector<std::pair<Index::HnswNode*, float>> &result) {
-        Index::IdDistancePairMinHeap candidates;
-        Index::IdDistancePairMinHeap visited_nodes;
+    void ComponentSearchRouteHNSW::SearchAtLayer(unsigned qnode, Index::HnswNode *enterpoint, int level,
+                                         Index::VisitedList *visited_list,
+                                         std::priority_queue<Index::FurtherFirst> &result) {
+        const auto L = index->getParam().get<unsigned>("L_search");
 
-        candidates.emplace(cur_node, cur_dist);
+        // TODO: check Node 12bytes => 8bytes
+        std::priority_queue<Index::CloserFirst> candidates;
+        float d = index->getDist()->compare(index->getQueryData() + qnode * index->getQueryDim(),
+                                            index->getBaseData() + enterpoint->GetId() * index->getBaseDim(),
+                                            index->getBaseDim());
+        index->addDistCount();
+        result.emplace(enterpoint, d);
+        candidates.emplace(enterpoint, d);
 
-        auto *visited_list_ = new Index::VisitedList(index->getBaseLen());
+        visited_list->Reset();
+        visited_list->MarkAsVisited(enterpoint->GetId());
 
-        visited_list_->Reset();
-        unsigned int visited_mark = visited_list_->GetVisitMark();
-        unsigned int* visited = visited_list_->GetVisited();
-
-        size_t already_visited_for_ensure_k = 0;
-        if (!result.empty()) {
-            already_visited_for_ensure_k = result.size();
-            for (size_t i = 0; i < result.size(); ++i) {
-                if (result[i].first->GetId() == cur_node->GetId()) {
-                    return ;
-                }
-                visited[result[i].first->GetId()] = visited_mark;
-                visited_nodes.emplace(std::move(result[i]));
-            }
-            result.clear();
-        }
-        visited[cur_node->GetId()] = visited_mark;
-        //std::cout << "wtf" << std::endl;
-
-        float farthest_distance = cur_dist;
-        size_t total_size = 1;
-        while (!candidates.empty() && visited_nodes.size() < ef_search+already_visited_for_ensure_k) {
-            //std::cout << "wtf1" << std::endl;
-            const Index::IdDistancePair& c = candidates.top();
-            cur_node = c.first;
-            visited_nodes.emplace(std::move(const_cast<Index::IdDistancePair&>(c)));
-            candidates.pop();
-
-            float minimum_distance = farthest_distance;
-            int size = cur_node->GetFriends(0).size();
-
-            index->addHopCount();
-            //std::cout << "wtf2" << std::endl;
-            for (auto j = 1; j < size; ++j) {
-                int node_id = cur_node->GetFriends(0)[j]->GetId();
-                //std::cout << "wtf4" << std::endl;
-                if (visited[node_id] != visited_mark) {
-                    visited[node_id] = visited_mark;
-                    //std::cout << "wtf5" << std::endl;
-                    float d = index->getDist()->compare(index->getQueryData() + index->getQueryDim() * query,
-                                                        index->getBaseData() + index->getBaseDim() * node_id,
-                                                        index->getBaseDim());
-                    index->addDistCount();
-                    //std::cout << "wtf6" << std::endl;
-                    if (d < minimum_distance || total_size < ef_search) {
-                        candidates.emplace(cur_node->GetFriends(0)[j], d);
-                        if (d > farthest_distance) {
-                            farthest_distance = d;
-                        }
-                        ++total_size;
-                    }
-                    //std::cout << "wtf7" << std::endl;
-                }
-            }
-            //std::cout << "wtf3" << std::endl;
-        }
-
-        //std::cout << "wtf" <<std::endl;
-
-        while (result.size() < k) {
-            if (!candidates.empty() && !visited_nodes.empty()) {
-                const Index::IdDistancePair& c = candidates.top();
-                const Index::IdDistancePair& v = visited_nodes.top();
-                if (c.second < v.second) {
-                    result.emplace_back(std::move(const_cast<Index::IdDistancePair&>(c)));
-                    candidates.pop();
-                } else {
-                    result.emplace_back(std::move(const_cast<Index::IdDistancePair&>(v)));
-                    visited_nodes.pop();
-                }
-            } else if (!candidates.empty()) {
-                const Index::IdDistancePair& c = candidates.top();
-                result.emplace_back(std::move(const_cast<Index::IdDistancePair&>(c)));
-                candidates.pop();
-            } else if (!visited_nodes.empty()) {
-                const Index::IdDistancePair& v = visited_nodes.top();
-                result.emplace_back(std::move(const_cast<Index::IdDistancePair&>(v)));
-                visited_nodes.pop();
-            } else {
+        while (!candidates.empty()) {
+            const Index::CloserFirst &candidate = candidates.top();
+            float lower_bound = result.top().GetDistance();
+            if (candidate.GetDistance() > lower_bound)
                 break;
+
+            Index::HnswNode *candidate_node = candidate.GetNode();
+            std::unique_lock<std::mutex> lock(candidate_node->GetAccessGuard());
+            const std::vector<Index::HnswNode *> &neighbors = candidate_node->GetFriends(level);
+            candidates.pop();
+            index->addHopCount();
+            for (const auto &neighbor : neighbors) {
+                int id = neighbor->GetId();
+                if (visited_list->NotVisited(id)) {
+                    visited_list->MarkAsVisited(id);
+                    d = index->getDist()->compare(index->getQueryData() + qnode * index->getQueryDim(),
+                                                  index->getBaseData() + neighbor->GetId() * index->getBaseDim(),
+                                                  index->getBaseDim());
+                    index->addDistCount();
+                    if (result.size() < L || result.top().GetDistance() > d) {
+                        result.emplace(neighbor, d);
+                        candidates.emplace(neighbor, d);
+                        if (result.size() > L)
+                            result.pop();
+                    }
+                }
             }
         }
+
+
     }
+
+    // void ComponentSearchRouteHNSW::SearchById_(unsigned query, Index::HnswNode* cur_node, float cur_dist, size_t k,
+    //                                                size_t ef_search, std::vector<std::pair<Index::HnswNode*, float>> &result) {
+    //     Index::IdDistancePairMinHeap candidates;
+    //     Index::IdDistancePairMinHeap visited_nodes;
+
+    //     candidates.emplace(cur_node, cur_dist);
+
+    //     auto *visited_list_ = new Index::VisitedList(index->getBaseLen());
+
+    //     visited_list_->Reset();
+    //     unsigned int visited_mark = visited_list_->GetVisitMark();
+    //     unsigned int* visited = visited_list_->GetVisited();
+
+    //     size_t already_visited_for_ensure_k = 0;
+    //     if (!result.empty()) {
+    //         already_visited_for_ensure_k = result.size();
+    //         for (size_t i = 0; i < result.size(); ++i) {
+    //             if (result[i].first->GetId() == cur_node->GetId()) {
+    //                 return ;
+    //             }
+    //             visited[result[i].first->GetId()] = visited_mark;
+    //             visited_nodes.emplace(std::move(result[i]));
+    //         }
+    //         result.clear();
+    //     }
+    //     visited[cur_node->GetId()] = visited_mark;
+    //     //std::cout << "wtf" << std::endl;
+
+    //     float farthest_distance = cur_dist;
+    //     size_t total_size = 1;
+    //     while (!candidates.empty() && visited_nodes.size() < ef_search+already_visited_for_ensure_k) {
+    //         //std::cout << "wtf1" << std::endl;
+    //         const Index::IdDistancePair& c = candidates.top();
+    //         cur_node = c.first;
+    //         visited_nodes.emplace(std::move(const_cast<Index::IdDistancePair&>(c)));
+    //         candidates.pop();
+
+    //         float minimum_distance = farthest_distance;
+    //         int size = cur_node->GetFriends(0).size();
+
+    //         index->addHopCount();
+    //         //std::cout << "wtf2" << std::endl;
+    //         for (auto j = 1; j < size; ++j) {
+    //             int node_id = cur_node->GetFriends(0)[j]->GetId();
+    //             //std::cout << "wtf4" << std::endl;
+    //             if (visited[node_id] != visited_mark) {
+    //                 visited[node_id] = visited_mark;
+    //                 //std::cout << "wtf5" << std::endl;
+    //                 float d = index->getDist()->compare(index->getQueryData() + index->getQueryDim() * query,
+    //                                                     index->getBaseData() + index->getBaseDim() * node_id,
+    //                                                     index->getBaseDim());
+    //                 index->addDistCount();
+    //                 //std::cout << "wtf6" << std::endl;
+    //                 if (d < minimum_distance || total_size < ef_search) {
+    //                     candidates.emplace(cur_node->GetFriends(0)[j], d);
+    //                     if (d > farthest_distance) {
+    //                         farthest_distance = d;
+    //                     }
+    //                     ++total_size;
+    //                 }
+    //                 //std::cout << "wtf7" << std::endl;
+    //             }
+    //         }
+    //         //std::cout << "wtf3" << std::endl;
+    //     }
+
+    //     //std::cout << "wtf" <<std::endl;
+
+    //     while (result.size() < k) {
+    //         if (!candidates.empty() && !visited_nodes.empty()) {
+    //             const Index::IdDistancePair& c = candidates.top();
+    //             const Index::IdDistancePair& v = visited_nodes.top();
+    //             if (c.second < v.second) {
+    //                 result.emplace_back(std::move(const_cast<Index::IdDistancePair&>(c)));
+    //                 candidates.pop();
+    //             } else {
+    //                 result.emplace_back(std::move(const_cast<Index::IdDistancePair&>(v)));
+    //                 visited_nodes.pop();
+    //             }
+    //         } else if (!candidates.empty()) {
+    //             const Index::IdDistancePair& c = candidates.top();
+    //             result.emplace_back(std::move(const_cast<Index::IdDistancePair&>(c)));
+    //             candidates.pop();
+    //         } else if (!visited_nodes.empty()) {
+    //             const Index::IdDistancePair& v = visited_nodes.top();
+    //             result.emplace_back(std::move(const_cast<Index::IdDistancePair&>(v)));
+    //             visited_nodes.pop();
+    //         } else {
+    //             break;
+    //         }
+    //     }
+    // }
 
 
     /**
