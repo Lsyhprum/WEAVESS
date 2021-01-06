@@ -1,180 +1,83 @@
-# WEAVESS
+# A Comprehensive Survey and Experimental Comparison of Graph-based Approximate Nearest Neighbor Search
 
-## Architecture
+## Introduction
+
+Approcimate Nearest Neighbor Search (ANNS) is a fundamental building block in various application domains. Recently, graph-based algorithms have emerged as a very effective choice to implement ANNS. Our paper provides a comprehensive comparative analysis and experimental evaluation of representative graph-based ANNS algorithms on carefully selected datasets of varying sizes and characteristics.
+
+This project contains the code, dataset, optimal parameters, and other detailed information used for the experiments of our paper. It is worth noting that we reimplement all algorithms based on exactly the same design pattern, programming language (except for the hash table in IEH) and tricks, and experimental setup, which makes the comparison more fair. 
 
 ## Algorithms
 
-|   ALGO   |     TYPE     |   INIT   |    REFINE    |  SEEDS   |  ROUTE      |
-|:--------:|:------------:|:--------:|:------------:|:--------:|:-----------:|
-|  KGraph  |  Refinement  |  Random  |  NN-Descent  |  Random  |   Greedy    |
-|  FANNG   |  Refinement  |   KNNG   |     RNG      |  Random  |  Backtrack  |
+we evaluate thirteen representative graph-based ANNS algorithms, and their papers and the original codes are given in the following table.
 
-|  NSG        |    Refinement    |       NN-Descent      |      Centroid     |     Greedy    |     RNG      | Reverse+DFS  |     Centroid       |       Greedy       |
-|  SSG        |    Refinement    |       NN-Descent      |       Query       | PROPAGATION 2 |     SSG      | Reverse+DFS  |    Sub Centroid    |       Greedy       |
-|  DPG        |    Refinement    |       NN-Descent      |       Query       | PROPAGATION 1 |     DPG      |    Reverse   |      Random        |       Greedy       |
-|  VAMANA     |    Refinement    |         Random        |      Centroid     |     Greedy    |    VAMANA    |    Reverse   |     Centroid       |       Greedy       |
-|  EFANNA     |    Refinement    |                       |      KD-tree      |   NN-Descent  |              |              |      KD-tree       |       Greedy       |
-|  IEH        |    Refinement    |         KNNG          |                   |               |              |              |        LSH         |       Greedy       |
-|  NSW        |    Increment     |                       |     First Node    |               |              |              |                    |                    |
-|  HNSW       |    Increment     |                       |   Top Layer Node  |               |     RNG      |              |                    |                    |
-|  NGT_PANNG  |    Increment     |         ANNG          |                   |               |     ONNG     |              |      DVPTree       |       Greedy       |
-|  NGT_ONNG   |    Increment     |         ANNG          |                   |               |     ONNG     |              |      DVPTree       |       Greedy       |
-|  SPTAG_KDT  |  Divide&Conquer  |                       | KD-tree  |               |     RNG      |              |                    |                    |
-|  SPTAG_BKT  |  Divide&Conquer  |                       | BK-tree |               |     RNG      |              |                    |                    |
-|  HCNNG      |  Divide&Conquer  |Hierarchical Clustering|                   |               |              |              |      KD-tree       |       Guided       |
+|   ALGO   |     PAPER     |   CODE   |
+|:--------:|:------------:|:--------:|
+|  KGraph  |  [WWW'2011](https://dl.acm.org/doi/abs/10.1145/1963405.1963487)  |  [C++/Python](https://github.com/aaalgo/kgraph)  |
+|  FANNG   |  [CVPR'2016](https://www.cv-foundation.org/openaccess/content_cvpr_2016/html/Harwood_FANNG_Fast_Approximate_CVPR_2016_paper.html)  |   -   |
+|  NSG        |    [VLDB'2019](http://www.vldb.org/pvldb/vol12/p461-fu.pdf)    | [C++](https://github.com/ZJULearning/nsg)      |
+|  NSSG        |    [arXiv'2019](https://arxiv.org/abs/1907.06146)    |      [C++/Python](https://github.com/ZJULearning/ssg)      |
+|  DPG        |    [TKDE'2019](https://ieeexplore.ieee.org/abstract/document/8681160)    | [C++](https://github.com/DBWangGroupUNSW/nns_benchmark/tree/master/algorithms/DPG) |
+|  Vamana     |    [NeurIPS'2019](http://harsha-simhadri.org/pubs/DiskANN19.pdf)    |         -        |
+|  EFANNA     |    [arXiv'2016](https://arxiv.org/abs/1609.07228)    | [C++/MATLAB](https://github.com/ZJULearning/ssg) |
+|  IEH        |    [IEEE T CYBERNETICS'2014](https://ieeexplore.ieee.org/abstract/document/6734715/)    |        -      |
+|  NSW        | [IS'2014](https://www.sciencedirect.com/science/article/abs/pii/S0306437913001300) | [C++/Python](https://github.com/kakao/n2) |
+|  HNSW       | [TPAMI'2018](https://ieeexplore.ieee.org/abstract/document/8594636) | [C++/Python](https://github.com/kakao/n2) |
+|  NGT-panng  | [SISAP'2016](https://link.springer.com/chapter/10.1007/978-3-319-46759-7_2) |         [C++/Python](https://github.com/yahoojapan/NGT)         |
+|  NGT-onng  |    [arXiv'2018](https://arxiv.org/abs/1810.07355)    |         [C++/Python](https://github.com/yahoojapan/NGT)         |
+|  SPTAG-KDT  |  [ACM MM'2012](https://dl.acm.org/doi/abs/10.1145/2393347.2393378); [CVPR'2012](https://ieeexplore.ieee.org/abstract/document/6247790); [TPAMI'2014](https://ieeexplore.ieee.org/abstract/document/6549106)  | [C++](https://github.com/microsoft/SPTAG) |
+|  SPTAG-BKT  | [ACM MM'2012](https://dl.acm.org/doi/abs/10.1145/2393347.2393378); [CVPR'2012](https://ieeexplore.ieee.org/abstract/document/6247790); [TPAMI'2014](https://ieeexplore.ieee.org/abstract/document/6549106) | [C++](https://github.com/microsoft/SPTAG) |
+|  HCNNG      |  [PR'2019](https://www.sciencedirect.com/science/article/abs/pii/S0031320319302730)  |-|
 
+## Datasets
+
+Our experiment involves eight [real-world datasets](https://github.com/Lsyhprum/WEAVESS/tree/master/dataset) popularly deployed by existing works. All datasets are pre-split into base data and query data and come with groundtruth data in the form of the top 20 or 100 neighbors. Additional twelve [synthetic datasets](https://github.com/Lsyhprum/WEAVESS/tree/master/dataset) are used to test the scalability of each algorithm to the performance of different datasets.
+
+Note that, all base data and query data are converted to `fvecs` format, and groundtruth data is converted to `ivecs` format. Please refer [here](http://yael.gforge.inria.fr/file_format.html) for the description of `fvecs` and `ivecs` format. All datasets in this format can be downloaded from [here](https://github.com/Lsyhprum/WEAVESS/tree/master/dataset).
 
 ## Parameters
 
-### KGraph
+For the optimal parameters of each algorithm on all experimental datasets, see the [parameters](https://github.com/Lsyhprum/WEAVESS/tree/master/parameters) page.
 
-|  Name        |  Interval |  Description                         |  sift1M |  gist |  glove-100 |  crawl |  audio |  msong |  uqv |  enron |   c_1   |  c_10 |  c_100  |  d_8   |  d_32  |  d_128 | n_10000 |n_100000|n_1000000 |  s_1  |    s_5     |  s_10  |
-|:------------:|:---------:|:------------------------------------:|:-------:|:-----:|:----------:|:------:|:------:|:------:|:----:|:------:|:-------:|:-----:|:-------:|:------:|:------:|:------:|:-------:|:------:|:--------:|:-----:|:----------:|:------:|
-|  K           |[40\:100\:10]| degree bound                         |    90   |  100  |    100     |    80  |   40   |   100  |  40  |   50   |   100   |  100  |   80    |   50   |   \    |   90   |   100   |    \   |    100   |   60  |     \      |   80   |
-|  L           |[K:K+50:10]| number of top nearest candidate      |   130   |  120  |    150     |   100  |   60   |   140  |  80  |   80   |   110   |  120  |   130   |   70   |   \    |   90   |   140   |    \   |    130   |   60  |     \      |   110  |
-|  iter        |    1     | number of iteration in NN-Descent    |    12     |   12    |      12      |    12    |    5    |    12    |    6  |    7    | 8 | 8 | 8 | 8 | 8 | 8 | 7 | 8 | 12 | 5 | 8 | 9 |
-|  S           | [10:35:5] | number of seeds for NN-Descent       |    20   |   25  |     35     |    10  |   20   |    15  |  25  |   15   |    25   |   25  |   35    |   10   |   \    |   30   |    30   |    \   |     20   |   20  |     \      |   20   |
-|  R           |[50:150:50]| number of reverse edge in NN-Descent |    50   |  100  |    150     |   150  |  100   |   150  | 100  |  100   |   150   |   50  |  150    |  150   |   \    |   50   |   100   |    \   |     50   |  150  |     \      |   150  |
+## Usage
 
-### FANNG
+### Prerequisites
 
-|  Name        |  Default  |  Description                       |  sift1M |  gist  |  glove-100 |  crawl |  audio |  msong |  uqv |  enron |   c_1   |  c_10 |  c_100  |  d_8   |  d_32  |  d_128 | n_10000 |n_100000|n_1000000 |  s_1  |    s_5     |  s_10  |
-|:------------:|:---------:|:----------------------------------:|:-------:|:------:|:----------:|:------:|:------:|:------:|:----:|:------:|:-------:|:-----:|:-------:|:------:|:------:|:------:|:-------:|:------:|:--------:|:-----:|:----------:|:------:|
-|  R           |           | degree bound                       |    70   |    50  |      70    |   30   |   50   |   10   |  90  |  110   |    30   |   10  |   30    |  110   |   90   |   70   |    90   |    \   |    \     |   30  |     30     |   70   |
-|  L           |           | number of top nearest candidates   |   110   |   210  |     210    |  110   |  130   |  150   | 250  |  130   |    30   |   90  |  150    |  210   |  270   |  210   |   110   |    \   |    \     |  110  |     90     |  250   |
+* GCC 4.9+ with OpenMP
+* CMake 2.8+
+* Boost 1.55+
 
-### NSG
+### Compile on Linux
 
-|  Name        |   Interval  |  Description                       |  sift1M |  gist |  glove-100 |  crawl |  audio |  msong |  uqv |  enron |   c_1   |  c_10 |  c_100  |  d_8   |  d_32  |  d_128 | n_10000 |n_100000|n_1000000 |  s_1  |    s_5     |  s_10  |
-|:------------:|:-----------:|:----------------------------------:|:-------:|:-----:|:----------:|:------:|:------:|:------:|:----:|:------:|:-------:|:-----:|:-------:|:------:|:------:|:------:|:-------:|:------:|:--------:|:-----:|:----------:|:------:|
-|  K           |[100:400:100]| init graph degree bound            |   100   |  400  |    400    |  400  |  200  |  300  | 300 |  200  |   300   |  200  |   400   |  100  |   \    |  200  |   300   |    \   |   200   |  200  |     \      |  300  |
-|  L           | [K:K+30:10] | number of top nearest candidate    |   120   |  430  |    420    |  430  |  230  |  310  | 320 |  200  |   310   |  200  |   410   |  100  |   \    |  210  |   300   |    \   |   200   |  220  |     \      |  300  |
-|  iter        |     1      | number of iteration                | 12 | 12 | 12 | 12 | 5 | 12 | 6 | 7 | 8 | 8 | 8 | 8 | 8 | 8 | 7 |  | 12 | 5 | 8 | 9 |
-|  S           |  [10:25:5]  | number of top nearest candidate    |    25   |  10  |     20     |   15  |   10   |    25  |  15  |   25   |   20   |  20  |   20  |   10   |   \    |   10   |   15   |    \   |   20   |  25  |     \      |   25   |
-|  R           |[100:300:100]| distance threshold                 |   300   |  200  |    300    |  300  |  100  |   300  | 200 |  200  |   200   |  100  |   100   |  100  |   \    |  300  |   300   |    \   |   100   |  300  |     \      |  300  |
-|  L_nsg       | [50:550:50] |                                    |    150   |  500  |    150     |   250  |   200   |  350  | 350 |  150  |   200   |  100  |   400   |   150   |   \    |  150  |   50   |    \   |   100   |  300  |     \      |  200  |
-|  R_nsg       | [20:90:10]  |                                    |    30   |  20  |     90     |   40  |   30   |   20  |  30  |   60   |   80   |  80  |   20  |   20   |   \    |   20   |   20   |    \   |   80   |  20  |     \      |   80   |
-|  C           |     [400:600:100]      |                                    | 400 | 400 | 600 | 600 | 600 | 500 | 400 | 600 | 400 | 400 | 400 | 600 |        | 400 | 500 |        | 400 | 500 |            | 400 |
+```shell
+$ git clone https://github.com/Lsyhprum/WEAVESS.git
+$ cd WEAVESS/
+$ mkdir build && cd build/
+$ cmake ..
+$ make -j
+```
 
-### SSG
+### Build graph index
 
-| Name  |   Interval    |           Description           | sift1M | gist | glove-100 | crawl | audio | msong | uqv  | enron | c_1  | c_10 | c_100 | d_8  | d_32 | d_128 | n_10000 | n_100000 | n_1000000 | s_1  | s_5  | s_10 |
-| :---: | :-----------: | :-----------------------------: | :----: | :--: | :-------: | :---: | :---: | :---: | :--: | :---: | :--: | :--: | :---: | :--: | :--: | :---: | :-----: | :------: | :-------: | :--: | :--: | :--: |
-|   K   | [100:400:100] |     init graph degree bound     |  400   | 300  |    300    |  100  |  400  |  400  | 400  |  100  | 100  | 400  |  200  | 200  |  \   |  400  |   200   |    \     |    400    | 100  |  \   | 300  |
-|   L   |  [K:K+30:10]  | number of top nearest candidate |  420   | 330  |    320    |  100  |  400  |  420  | 420  |  110  | 120  | 430  |  210  | 230  |  \   |  420  |   230   |    \     |    430    | 130  |  \   | 320  |
-| iter  |       1       |       number of iteration       |   12   |  12  |    12     |  12   |   5   |  12   |  6   |   7   |  8   |  8   |   8   |  8   |  8   |   8   |    7    |    8     |    12     |  5   |  8   |  9   |
-|   S   |   [10:25:5]   | number of top nearest candidate |   20   |  20  |    10     |  10   |  25   |  25   |  20  |  20   |  15  |  25  |  25   |  25  |  \   |  25   |   25    |    \     |    25     |  10  |  \   |  20  |
-|   R   | [100:300:100] |       distance threshold        |  100   | 200  |    200    |  100  |  200  |  300  | 300  |  300  | 200  | 200  |  300  | 100  |  \   |  300  |   100   |    \     |    200    | 100  |  \   | 300  |
-| L_ssg |  [50:550:50]  |                                 |   50   | 200  |    150    |  50   |  50   |  100  | 250  |  300  | 150  | 100  |  150  |  50  |  \   |  200  |   100   |    \     |    100    | 200  |  \   | 500  |
-| R_ssg |  [20:90:10]   |                                 |   20   |  40  |    30     |  60   |  20   |  70   |  20  |  30   |  40  |  40  |  40   |  70  |  \   |  30   |   40    |    \     |    40     |  40  |  \   |  60  |
-|   A   |      60       |                                 |        |      |           |       |       |       |      |       |      |      |       |      |      |       |         |          |           |      |      |      |
+Before building index, you should set the root directory for the dataset in `WEAVESS/test/main.cpp` first. Then, you can run the following instructions for build graph index.
 
-### DPG
+```shell
+cd WEAVESS/build/test/
+./main algorithm_name dataset_name build
+```
 
-| Name |   Interval    |             Description              | sift1M | gist | glove-100 | crawl | audio | msong | uqv  | enron | c_1  | c_10 | c_100 | d_8  | d_32 | d_128 | n_10000 | n_100000 | n_1000000 | s_1  | s_5  | s_10 |
-| :--: | :-----------: | :----------------------------------: | :----: | :--: | :-------: | :---: | :---: | :---: | :--: | :---: | :--: | :--: | :---: | :--: | :--: | :---: | :-----: | :------: | :-------: | :--: | :--: | :--: |
-|  K   | [100:400:100] |             degree bound             |  100   | 100  |    100    |  100  |  100  |  100  | 100  |  100  | 100  | 200  |  200  | 100  |  \   |  100  |   100   |    \     |    100    | 100  |  \   | 100  |
-|  L   |  [K:K+30:10]  |   number of top nearest candidate    |  100   | 100  |    130    |  130  |  130  |  110  | 100  |  120  | 100  | 210  |  220  | 110  |  \   |  100  |   130   |    \     |    100    | 100  |  \   | 100  |
-| iter |       1       |  number of iteration in NN-Descent   |   12   |  12  |    12     |  12   |   5   |  12   |  6   |   7   |  8   |  8   |   8   |  8   |  8   |   8   |    7    |    8     |    12     |  5   |  8   |  9   |
-|  S   |   [10:25:5]   |    number of seeds for NN-Descent    |   25   |  20  |    20     |  20   |  25   |  20   |  20  |  15   |  20  |  25  |  25   |  20  |  \   |  25   |   20    |    \     |    20     |  20  |  \   |  20  |
-|  R   | [100:300:100] | number of reverse edge in NN-Descent |  300   | 100  |    100    |  100  |  100  |  100  | 300  |  200  | 300  | 300  |  200  | 200  |  \   |  200  |   300   |    \     |    300    | 100  |  \   | 200  |
+With the index built, you can run the following commands to perform the search.
 
-### VAMANA
+### Search via index
 
-| Name  | Default |           Description            | sift1M | gist | glove-100 | crawl | audio | msong | uqv  | enron | c_1  | c_10 | c_100 | d_8  | d_32 | d_128 | n_10000 | n_100000 | n_1000000 | s_1  | s_5  | s_10 |
-| :---: | :-----: | :------------------------------: | :----: | :--: | :-------: | :---: | :---: | :---: | :--: | :---: | :--: | :--: | :---: | :--: | :--: | :---: | :-----: | :------: | :-------: | :--: | :--: | :--: |
-|   R   |   70    |           degree bound           |   50   |  50  |    110    |  50   |  50   |  30   |  30  |  110  | 110  |  70  |  50   | 110  |  70  |  70   |   50    |    70    |    70     |  70  |  70  |  90  |
-|   L   |   125   | number of top nearest candidates |   70   |  60  |    120    |  80   |  70   |  40   |  60  |  140  | 140  |  90  |  60   | 130  |  90  |  80   |   60    |    90    |    80     |  90  |  90  | 120  |
-| alpha |    2    |        distance threshold        |        |      |           |       |       |       |      |       |      |      |       |      |      |       |         |          |           |      |      |      |
+```shell
+cd WEAVESS/build/test/
+./main algorithm_name dataset_name search
+```
 
-### EFANNA
+## Experiment evaluation
 
-|  Name        |   Interval  |  Description                       |  sift1M |  gist |  glove-100 |  crawl |  audio |  msong |  uqv |  enron |   c_1   |  c_10 |  c_100  |  d_8   |  d_32  |  d_128 | n_10000 |n_100000|n_1000000 |  s_1  |    s_5     |  s_10  |
-|:------------:|:-----------:|:----------------------------------:|:-------:|:-----:|:----------:|:------:|:------:|:------:|:----:|:------:|:-------:|:-----:|:-------:|:------:|:------:|:------:|:-------:|:------:|:--------:|:-----:|:----------:|:------:|
-|  nTrees      | [4,8,16,32] | init graph degree bound            |    8    |  16   |     8      |   16   |   16   |    8   |  4   |   4    |    4    |   4   |    4    |   8    |   \    |   4    |    4    |    \   |    \     |  32   |     \      |   32   |
-|  mLevel      |            | number of top nearest candidate    | 8 | 8 | 8 | 8 | 8 | 8 | 8 | 8 | 8 | 8 | 8 | 8 |   \    | 8 | 8 |    \   |    \     | 8 |     \      | 8 |
-|  K           | [40\:100\:10] | number of iteration                |    60   |  100  |     100    |   100  |   40   |   50   |  40  |   40   |    90   |  100  |   70    |   50   |   \    |   40   |    80   |    \   |    \     |  100  |     \      |  100   |
-|  L           | [K:K+100:10]| number of top nearest candidate    |    70   |  190  |     170    |   120  |   10   |   130  |  50  |   140  |   190   |  160  |   160   |   120  |   \    |   40   |    140  |    \   |    \     |  160  |     \      |  110   |
-|  iter        |   [5:11:1]  | distance threshold                 |    10   |   7   |     7      |    8   |   10   |    7   |  7   |   5    |    7    |   7   |    7    |   7    |   \    |   7    |    7    |    \   |    \     |   7   |     \      |   7    |
-|  S           |  [1O:35:5]  |                                    |    15   |  30   |     10     |   25   |   30   |    10  |  10  |   35   |    15   |  15   |   35    |   15   |   \    |   25   |    25   |    \   |    \     |   35  |     \      |   30   |
-|  R           | [50:150:50] |                                    |    150  |  50   |     100    |   100  |  100   |   150  |  150 |  150   |    50   |  100  |   150   |   50   |   \    |   150  |    150  |    \   |    \     |  150  |     \      |  100   |
+Note that the default [`master` branch](https://github.com/Lsyhprum/WEAVESS/tree/master) is the evaluation of the overall performance of all algorithms, and the evaluation of a certain component needs to be carried out under the [`test` branch](https://github.com/Lsyhprum/WEAVESS/tree/test). For more details, please see our paper. 
 
+## Acknowledgements
 
-### IEH
-
-|  Name        |  Default  |  Description                       |
-|:------------:|:---------:|:----------------------------------:|
-|  P           | 10        | number of top nearest candidates   |
-|  K           | 50        | number of expansion                |
-|  S           | 3         | iteration number                   |
-
-### NSW
-
-|  Name             |  Default  |  Description                             |  sift1M |  gist |  glove-100 |  crawl |  audio |  msong |  uqv |  enron |   c_1   |  c_10 |  c_100  |  d_8   |  d_32  |  d_128 | n_10000 |n_100000|n_1000000 |  s_1  |    s_5     |  s_10  |
-|:-----------------:|:---------:|:----------------------------------------:|:-------:|:-----:|:----------:|:------:|:------:|:------:|:----:|:------:|:-------:|:-----:|:-------:|:------:|:------:|:------:|:-------:|:------:|:--------:|:-----:|:----------:|:------:|
-|  max_m0           |  24       | max number of edges for nodes at level0  |    40   |   60  |     80     |    60  |   40   |   60   |  30  |   80   |   100   |   30  |   70    |    50  |   80   |   80   |   20    |   80   |   100    |   60  |     70     |    50  |
-|  ef_construction  |  150      | number of top nearest candidates         |   300   |  200  |    100     |   400  |  800   |  300   | 400  |  600   |   500   |  100  |   400   |   500  |  100   |  1000  |  300    |  300   |   400    |  600  |    300     |  1000  |
-
-### HNSW
-
-|  Name             |  Default  |  Description                             |  sift1M |  gist |  glove-100 |  crawl |  audio |  msong |  uqv |  enron |   c_1   |  c_10 |  c_100  |  d_8   |  d_32  |  d_128 | n_10000 |n_100000|n_1000000 |  s_1  |    s_5     |  s_10  |
-|:-----------------:|:---------:|:----------------------------------------:|:-------:|:-----:|:----------:|:------:|:------:|:------:|:----:|:------:|:-------:|:-----:|:-------:|:------:|:------:|:------:|:-------:|:------:|:--------:|:-----:|:----------:|:------:|
-|  max_m            |  24       | max number of edges for nodes at level0  |    40   |   50  |     50     |    40  |   10   |   30   |  10  |   50   |    80   |   40  |   30    |    10  |   40   |   90   |   20    |   40   |    50    |   40  |     40     |    60  |
-|  max_m0           |  24       | max number of edges for nodes at level0  |    50   |   60  |     60     |    70  |   50   |   80   |  40  |   80   |    90   |   60  |   40    |    30  |   60   |  100   |   30    |   60   |   100    |   60  |     60     |    80  |
-|  ef_construction  |  150      | number of top nearest candidates         |   800   |  400  |    700     |   400  |  700   |  100   | 200  |  900   |  1000   |  300  |   300   |   900  |  300   |  900   |  900    |  200   |   200    |  200  |    300     |  1000  |
-
-
-### PANNG
-
-|  Name             |  Interval       |  Description  |  sift1M |  gist |  glove-100 |  crawl |  audio |  msong |  uqv |  enron |  c_1  |  c_10 |  c_100  |  d_8   |  d_32  |  d_128 | n_10000 |n_100000|n_1000000 |  s_1  |    s_5     |  s_10  |
-|:-----------------:|:---------------:|:-------------:|:-------:|:-----:|:----------:|:------:|:------:|:------:|:----:|:------:|:-----:|:-----:|:-------:|:------:|:------:|:------:|:-------:|:------:|:--------:|:-----:|:----------:|:------:|
-|  K                | [40 : 100 : 10] |               |  40     |  40   |  40        |  40    |  40    |  40    |  40  |  40    |  40   |  50   |  60     |  80    |        |  50    |  40     | 40     |          |  50   |            |  60    |
-|  L                | [K:K+50:10]     |               |  50     |  40   |  40        |  70    |  40    |  70    |  60  |  40    |  80   |  80   |  80     |  110   |        |  90    |  60     | 50     |          |  80   |            |  80    |
-
-### ONNG
-
-### SPTAG-KDT
-
-|  Name        |      Interval      |  Description  |  sift1M  |  gist |  glove-100 |  crawl |  audio |  msong |  uqv |  enron |  c_1  |  c_10  |  c_100  |  d_8   |  d_32  |  d_128 | n_10000 |n_100000|n_1000000 |  s_1  |  s_5   |  s_10  |
-|:------------:|:------------------:|:-------------:|:--------:|:-----:|:----------:|:------:|:------:|:------:|:----:|:------:|:-----:|:------:|:-------:|:------:|:------:|:------:|:-------:|:------:|:--------:|:-----:|:------:|:------:|
-| KDT_number   |    [1 , 2 , 4]     |               |  1       |  2    |  4         |  1     |  2     |  4     |  1   |  4     |  1    |  2     |  1      |  4     |        |   4    | 1       |        |          |  1    |        |  1     |
-| TPT_number   |   [16 , 32 , 64]   |               |  16      |  32   |  32        |  16    |  32    |  64    |  16  |  16    |  16   |  16    |  16     |  32    |        |   16   | 16      |        |          |  16   |        |  32    |
-| TPT_leaf_size| [500 : 2500 : 500] |               |  500     |  1000 |  1000      |  1000  |  500   |  1500  |  500 |  500   |  1000 |  1000  |  1500   |  500   |        |   1500 | 1500    |        |          |  1500 |        |  1500  |
-| scale        |    [2 , 8 , 32]    |               |  8       |  32   |  2         |  2     |  32    |  2     |  8   |  8     |  2    |  8     |  8      |  2     |        |   2    | 2       |        |          |  8    |        |  32    |
-| CEF          | [500 : 2000 : 500] |               |  500     |  1000 |  1500      |  1500  |  1000  |  500   |  1000|  1500  |  1000 |  1500  |  1500   |  1500  |        |   1500 | 1500    |        |          |  1000 |        |  1500  |
-
-
-### SPTAG_BKT
-
-|  Name          |      Interval      |  Description  |  sift1M |  gist |  glove-100 |  crawl |  audio |  msong |  uqv |  enron |   c_1   |  c_10 |  c_100  |  d_8   |  d_32  |  d_128 | n_10000 |n_100000|n_1000000 |  s_1  |    s_5     |  s_10  |
-|:--------------:|:------------------:|:-------------:|:-------:|:-----:|:----------:|:------:|:------:|:------:|:----:|:------:|:-------:|:-----:|:-------:|:------:|:------:|:------:|:-------:|:------:|:--------:|:-----:|:----------:|:------:|
-|  BKT_number    |    [1 , 2 , 4]     |               |  1      |  2    |  4         |  4     |  4     |  4     |  4   |        |   1     |  2    |  2      |   1    |        |   4    |         |        |          |  1    |            |  1     |
-|  BKT_kmeas_k   |   [16 , 32 , 64]   |               |  16     |  16   |  16        |  32    |  16    |  64    |  64  |        |   16    |  32   |  32     |   32   |        |   16   |         |        |          |  16   |            |  32    |
-|  TPT_number    |   [16 , 32 , 64]   |               |  16     |  32   |  16        |  32    |  16    |  16    |  16  |        |   16    |  16   |  16     |   16   |        |   32   |         |        |          |  16   |            |  64    |
-|  TPT_leaf_size | [500 : 2500 : 500] |               |  1000   |  1000 |  500       |  1000  |  1500  |  500   |  1000|        |   1000  |  1500 |  1500   |   1000 |        |   500  |         |        |          |  1000 |            |  2000  |
-|  scale         |    [2 , 8 , 32]    |               |  2      |  8    |  8         |  32    |  32    |  2     |  2   |        |   2     |  2    |  2      |   2    |        |   2    |         |        |          |  2    |            |  8     |
-|  CEF           | [500 : 2000 : 500] |               |  1000   |  1000 |  1500      |  500   |  1000  |  500   |  500 |        |   1000  |  500  |  500    |   1000 |        |   500  |         |        |          |  500  |            |  1500  |
-
-### HCNNG
-
-|  Name        |  Default  |  Description                       |  sift1M |  gist |  glove-100 |  crawl |  audio |  msong |  uqv |  enron |   c_1   |  c_10 |  c_100  |  d_8   |  d_32  |  d_128 | n_10000 |n_100000|n_1000000 |  s_1  |    s_5     |  s_10  |
-|:------------:|:---------:|:----------------------------------:|:-------:|:-----:|:----------:|:------:|:------:|:------:|:----:|:------:|:-------:|:-----:|:-------:|:------:|:------:|:------:|:-------:|:------:|:--------:|:-----:|:----------:|:------:|
-|  num_cl      |           | num clusters                       |  45/90  | 30/30 |   60/100   |  35/70 |  40/60 | 55/100 | 20/80| 30/100 |  50/100 | 65/70 |  65/90  | 65/80  |  50/70 | 65/100 | 50/90   | 60/90  |  55/100  | 65/60 |  65/60     | 50/90  |
-|  minsize_cl  |  sqrt(N)  | min size cluster                   |         |       |            |        |        |        |      |        |         |       |         |        |        |        |         |        |          |       |            |        |
-
-
-## TODO
-
-* OpenMP 增加 default
-
-* n2 引入third_party 方法
-* VAMANA REFINE 速度慢
-* 检查个算法candidate init 后排序情况
-* FANNG RNG -> HNSW prune
-* search entry -> pool -> seeds
-* panng 路径调整 根据id 排序
-* HNSWNode 结点距离
-
-
-
-
+Thanks to everyone who provided references for this project. Special thanks to Dr. [Weijie Zhao](https://scholar.google.com/citations?user=c-gzOhwAAAAJ&hl=zh-CN&oi=sra), Dr. [Mingjie Li](https://scholar.google.com/citations?user=MoLSu5cAAAAJ&hl=zh-CN&oi=sra), and Dr. [Cong Fu](https://scholar.google.com/citations?user=Gvp9ErEAAAAJ&hl=zh-CN&oi=sra) for their assistance in the necessary implementation of this project.
