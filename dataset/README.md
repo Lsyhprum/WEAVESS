@@ -4,8 +4,8 @@
 
 |           | base_num | base_dim | query_num | query_dim | groundtruth_num/query |                           download                           |
 | :-------: | :------: | :------: | :-------: | :-------: | :-------------------: | :----------------------------------------------------------: |
-|  Sift1M   | 1000000  |   128    |   10000   |    128    |          100          | [sift.tar.gz](ftp://ftp.irisa.fr/local/texmex/corpus/sift.tar.gz)(161MB) |
-|   Gist    | 1000000  |   960    |   1000    |    960    |          100          | [gist.tar.gz](ftp://ftp.irisa.fr/local/texmex/corpus/gist.tar.gz)(2.6GB) |
+|  Sift1M   | 1000000  |   128    |   10000   |    128    |          100          | [sift.tar.gz](http://corpus-texmex.irisa.fr)(161MB) |
+|   Gist    | 1000000  |   960    |   1000    |    960    |          100          | [gist.tar.gz](http://corpus-texmex.irisa.fr)(2.6GB) |
 | Glove-100 | 1183514  |   100    |   10000   |    100    |          100          | [glove-100.tar.gz](http://downloads.zjulearning.org.cn/data/glove-100.tar.gz)(424MB) |
 |   Crawl   | 1989995  |   300    |   10000   |    300    |          100          | [crawl.tar.gz](http://downloads.zjulearning.org.cn/data/crawl.tar.gz)(1.7GB) |
 |   Audio   |  53387   |   192    |    200    |    192    |          20           | [audio.tar.gz](https://drive.google.com/file/d/1fJvLMXZ8_rTrnzivvOXiy_iP91vDyQhs/view)(26MB) |
@@ -28,20 +28,20 @@
 
 ### SYNTHETIC DATASETS
 
-For a more detailed description about synthetic datasets, please refer to our paper.
+In following table, `base_cluster` indicates the number of clusters on base or query data, `deviation` indicates the standard deviation of the distribution in each cluster. For a more detailed description about synthetic datasets, please refer to our paper.
 
-|           | base_num | base_dim | query_num | query_dim | groundtruth_num/query | download |
+|           | base_num | base/query_dim | base_cluster | deviation | groundtruth_num/query | download |
 | :-------: | :------: | :------: | :-------: | :-------: | :-------------: | :-------------: |
-| d_8    | 100000    | 8      | 1000    | 128       | 100            | [d_8.tar.gz](https://drive.google.com/file/d/1bG-dCDeYDgpF7EriNpmM3Wh3NccHTBTU/view?usp=sharing)(3.3MB) |
-| d_32      | 100000    | 32      | 1000      | 960       | 100            | [d_32.tar.gz](https://drive.google.com/file/d/1tDMgCIXoSmPdu4SO6L9D3xYOiZvZ-tB_/view?usp=sharing)(12MB) |
-| d_128 | 100000    | 128      | 1000      | 100       | 100            | [d_128.tar.gz](https://drive.google.com/file/d/1B2TTgaWJdNg0-fO27zgzekrynrQIpryn/view?usp=sharing)(117MB) |
-| n_10000     | 10000    | 32      | 100       | 300       | 100             | [n_10000.tar.gz](https://drive.google.com/file/d/1cnoP5RAHxUrJ4oykRhzyGAiSXY4N-hUu/view?usp=sharing)(1.2MB) |
-| n_100000     | 100000    | 32      | 1000      | 192       | 100           | [n_100000.tar.gz](https://drive.google.com/file/d/1U2t_uw0nPTm1W8ZDlTiIfEZp4MeYHDyv/view?usp=sharing)(12MB) |
-| n_1000000     | 1000000    | 32      | 10000     | 420       | 100            | [n_1000000.tar.gz](https://drive.google.com/file/d/1JHXo-8AXskcpyXJLAyrDmusCGigboVgq/view?usp=sharing)(120MB) |
-| c_1     | 100000    | 32     | 1000    | 1369      | 100            | [c_1.tar.gz](https://drive.google.com/file/d/1RMD5zeQo-ZcvP6f-XY6UdlU1NhlZzLhO/view?usp=sharing)(12MB) |
-| c_10      | 100000    | 32      | 1000   | 256       | 100            | [c_10.tar.gz](https://drive.google.com/file/d/1aoDSfSJ--51gLfPBS5I3m6RU_PzlokVF/view?usp=sharing)(12MB) |
-| c_100      | 100000    | 32      | 1000   | 256       | 100            | [c_100.tar.gz](https://drive.google.com/file/d/11aEPf8Fq6Q3P1V8UT9MJ1FlThpNE3J7v/view?usp=sharing)(12MB) |
-| s_1      | 100000    | 32      | 1000   | 256       | 100            | [s_1.tar.gz](https://drive.google.com/file/d/1lSZtRkqlxpem_uORxGo48_JvN9SF-S5h/view?usp=sharing)(12MB) |
-| s_5      | 100000    | 32      | 1000   | 256       | 100            | [s_5.tar.gz](https://drive.google.com/file/d/1L1OySfOaY27U3__If2FfMvRYfaaov3JB/view?usp=sharing)(12MB) |
-| s_10      | 100000    | 32      | 1000 | 256       | 100            | [s_10.tar.gz](https://drive.google.com/file/d/1KeTeSlVfzlltLwfSfFp7KSSSl-ksY2S7/view?usp=sharing)(12MB) |
+| d_8    | 100000    | 8      | 10  | 5       | 100            | [d_8.tar.gz](https://drive.google.com/file/d/1bG-dCDeYDgpF7EriNpmM3Wh3NccHTBTU/view?usp=sharing)(3.3MB) |
+| d_32      | 100000    | 32      | 10      | 5       | 100            | [d_32.tar.gz](https://drive.google.com/file/d/1tDMgCIXoSmPdu4SO6L9D3xYOiZvZ-tB_/view?usp=sharing)(12MB) |
+| d_128 | 100000    | 128      | 10      | 5       | 100            | [d_128.tar.gz](https://drive.google.com/file/d/1B2TTgaWJdNg0-fO27zgzekrynrQIpryn/view?usp=sharing)(117MB) |
+| n_10000     | 10000    | 32      | 10       | 5       | 100             | [n_10000.tar.gz](https://drive.google.com/file/d/1cnoP5RAHxUrJ4oykRhzyGAiSXY4N-hUu/view?usp=sharing)(1.2MB) |
+| n_100000     | 100000    | 32      | 10      | 5       | 100           | [n_100000.tar.gz](https://drive.google.com/file/d/1U2t_uw0nPTm1W8ZDlTiIfEZp4MeYHDyv/view?usp=sharing)(12MB) |
+| n_1000000     | 1000000    | 32      | 10     | 5       | 100            | [n_1000000.tar.gz](https://drive.google.com/file/d/1JHXo-8AXskcpyXJLAyrDmusCGigboVgq/view?usp=sharing)(120MB) |
+| c_1     | 100000    | 32     | 1    | 5      | 100            | [c_1.tar.gz](https://drive.google.com/file/d/1RMD5zeQo-ZcvP6f-XY6UdlU1NhlZzLhO/view?usp=sharing)(12MB) |
+| c_10      | 100000    | 32      | 10   | 5       | 100            | [c_10.tar.gz](https://drive.google.com/file/d/1aoDSfSJ--51gLfPBS5I3m6RU_PzlokVF/view?usp=sharing)(12MB) |
+| c_100      | 100000    | 32      | 100  | 5       | 100            | [c_100.tar.gz](https://drive.google.com/file/d/11aEPf8Fq6Q3P1V8UT9MJ1FlThpNE3J7v/view?usp=sharing)(12MB) |
+| s_1      | 100000    | 32      | 10   | 1      | 100            | [s_1.tar.gz](https://drive.google.com/file/d/1lSZtRkqlxpem_uORxGo48_JvN9SF-S5h/view?usp=sharing)(12MB) |
+| s_5      | 100000    | 32      | 10   | 5       | 100            | [s_5.tar.gz](https://drive.google.com/file/d/1L1OySfOaY27U3__If2FfMvRYfaaov3JB/view?usp=sharing)(12MB) |
+| s_10      | 100000    | 32      | 10 | 10     | 100            | [s_10.tar.gz](https://drive.google.com/file/d/1KeTeSlVfzlltLwfSfFp7KSSSl-ksY2S7/view?usp=sharing)(12MB) |
 
