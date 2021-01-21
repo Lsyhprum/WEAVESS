@@ -56,7 +56,7 @@ $ cmake ..
 $ make -j
 ```
 
-### Build graph index
+### Index construction evaluation
 
 Before building index, you should set the root directory for the dataset in `WEAVESS/test/main.cpp` first. Then, you can run the following instructions for build graph index.
 
@@ -65,16 +65,21 @@ cd WEAVESS/build/test/
 ./main algorithm_name dataset_name build
 ```
 
-With the index built, you can run the following commands to perform the search.
+After the build is completed, the graph index will be written in the current folder in binary format (for index size). The index construction time can be viewed from the output log information. You can run the following command in current directory for getting other index information, such as average out-degree, graph quality, and the number of connected components.
 
-### Search via index
+```shell
+./main algorithm_name dataset_name info
+```
+
+### Search performance
+With the index built, you can run the following commands to perform the search. Related information about the search such as search time, distance evaluation times, candidate set size, average query path length, memory load can be obtained or calculated according to the output log information.
 
 ```shell
 cd WEAVESS/build/test/
 ./main algorithm_name dataset_name search
 ```
 
-## Experiment evaluation
+### Components evaluation
 
 Note that the default [`master` branch](https://github.com/Lsyhprum/WEAVESS/tree/master) is the evaluation of the overall performance of all algorithms, and the evaluation of a certain component needs to be carried out under the [`test` branch](https://github.com/Lsyhprum/WEAVESS/tree/test). For more details, please see our paper. 
 
