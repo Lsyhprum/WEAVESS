@@ -16,7 +16,6 @@ void KGraph(weavess::Parameters &parameters) {
         builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
                 -> init(weavess::TYPE::INIT_RANDOM, false);
         std::cout << "Init cost: " << builder->GetBuildTime().count() << std::endl;
-        // 注意正式实验要关闭NN-Descent迭代图质量信息输出 index.h文件中
         builder -> refine(weavess::TYPE::REFINE_NN_DESCENT, false)
                 -> save_graph(weavess::TYPE::INDEX_KGRAPH, &graph_file[0]);
         std::cout << "Build cost: " << builder->GetBuildTime().count() << std::endl;
@@ -233,7 +232,7 @@ void IEH(weavess::Parameters &parameters) {
         builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
                 -> init(weavess::INIT_IEH)
                 -> search(weavess::SEARCH_ENTRY_HASH, weavess::ROUTER_IEH, weavess::TYPE::L_SEARCH_SET_RECALL);
-    }else if (parameters.get<std::string>("exc_type") == "info") {  // 不需要测试
+    }else if (parameters.get<std::string>("exc_type") == "info") {
         builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
                 -> load_graph(weavess::TYPE::INDEX_IEH, &graph_file[0])
                 -> print_index_info(weavess::TYPE::INDEX_IEH);

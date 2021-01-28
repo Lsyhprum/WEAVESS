@@ -8,11 +8,6 @@
 
 namespace weavess {
 
-    /**
-     * 随机 K 近邻图
-     *
-     * 近邻个数 **小于等于** init_edges_num
-     */
     void ComponentInitRandom::InitInner() {
         SetConfigs();
 
@@ -53,14 +48,7 @@ namespace weavess {
         index->setInitEdgesNum(index->getParam().get<unsigned>("S"));
     }
 
-    /**
-     * 获取随机近邻
-     *
-     * TODO : 近邻 id 可能等于查询点 id，近邻个数 **小于等于** 初始近邻阈值 init_edges_num
-     * @param rng
-     * @param addr
-     * @param size
-     */
+
     void ComponentInitRandom::GenRandom(std::mt19937 &rng, unsigned *addr, unsigned size) {
         unsigned N = index->getBaseLen();
 
@@ -81,14 +69,6 @@ namespace weavess {
     }
 
 
-
-
-    /**
-     * 精确 K 近邻图
-     *
-     * 近邻个数 **等于** init_edges_num
-     *
-     */
     void ComponentInitKNNG::InitInner() {
         SetConfigs();
 
@@ -105,7 +85,6 @@ namespace weavess {
             std::vector<Index::SimpleNeighbor> tmp;
             tmp.resize(index->getBaseLen() - 1);
 
-            // 暴力计算 k 近邻
             int pos = 0;
             for (unsigned j = 0; j < index->getBaseLen(); j ++) {
                 if (i == j) continue;
@@ -122,7 +101,6 @@ namespace weavess {
                 index->getFinalGraph()[i][k] = tmp[k];
             }
 
-            // 回收内存
             std::vector<Index::SimpleNeighbor>().swap(tmp);
         }
     }
@@ -132,13 +110,6 @@ namespace weavess {
     }
 
 
-
-
-    /**
-     * 构建随机截断 KD-tree, 并构建初始图
-     *
-     * 近邻个数 **等于** init_edges_num
-     */
     void ComponentInitKDTree::InitInner() {
         SetConfigs();
 
@@ -149,7 +120,6 @@ namespace weavess {
         index->graph_.resize(index->getBaseLen());
         index->knn_graph.resize(index->getBaseLen());
 
-        // 构建树根
         std::vector<int> indices(index->getBaseLen());
         index->LeafLists.resize(TreeNum);
         std::vector<Index::EFANNA::Node *> ActiveSet;
@@ -176,7 +146,6 @@ namespace weavess {
             std::random_shuffle(myids.begin(), myids.end());
         }
         omp_init_lock(&index->rootlock);
-        // 构建随机截断树
         while (!ActiveSet.empty() && ActiveSet.size() < 1100) {
 #pragma omp parallel for
             for (unsigned i = 0; i < ActiveSet.size(); i++) {
@@ -187,7 +156,6 @@ namespace weavess {
                 std::mt19937 rng(seed ^ omp_get_thread_num());
                 std::vector<unsigned> &myids = index->LeafLists[node->treeid];
 
-                // 根据特征值进行划分
                 meanSplit(rng, &myids[0] + node->StartIdx, node->EndIdx - node->StartIdx, mid, cutdim, cutval);
 
                 node->DivDim = cutdim;
@@ -220,9 +188,7 @@ namespace weavess {
             //std::cout<<i<<":"<<node->EndIdx-node->StartIdx<<std::endl;
             //omp_unset_lock(&rootlock);
             std::mt19937 rng(seed ^ omp_get_thread_num());
-            // 查找树根对应节点
             std::vector<unsigned> &myids = index->LeafLists[node->treeid];
-            // 添加规定深度下的所有子节点
             DFSbuild(node, rng, &myids[0] + node->StartIdx, node->EndIdx - node->StartIdx, node->StartIdx);
         }
         //DFStest(0,0,tree_roots_[0]);
@@ -531,11 +497,6 @@ namespace weavess {
 
 
 
-
-
-    /**
-     * 构建随机截断树，并生成子图
-     */
     void ComponentInitKDT::InitInner() {
         omp_init_lock(&index->rootlock);
         SetConfigs();
@@ -549,7 +510,6 @@ namespace weavess {
         const auto TreeNumBuild = index->getParam().get<unsigned>("nTrees");
         const auto K = index->getParam().get<unsigned>("K");
 
-        // 选择树根
         std::vector<int> indices(index->getBaseLen());
         index->LeafLists.resize(TreeNum);
         std::vector<Index::EFANNA::Node *> ActiveSet;
@@ -576,7 +536,6 @@ namespace weavess {
             std::random_shuffle(myids.begin(), myids.end());
         }
         // omp_init_lock(&index->rootlock);
-        // 构建随机截断树
         while (!ActiveSet.empty() && ActiveSet.size() < 1100) {
 #pragma omp parallel for
             for (unsigned i = 0; i < ActiveSet.size(); i++) {
@@ -587,7 +546,6 @@ namespace weavess {
                 std::mt19937 rng(seed ^ omp_get_thread_num());
                 std::vector<unsigned> &myids = index->LeafLists[node->treeid];
 
-                // 根据特征值进行划分
                 meanSplit(rng, &myids[0] + node->StartIdx, node->EndIdx - node->StartIdx, mid, cutdim, cutval);
 
                 node->DivDim = cutdim;
@@ -620,9 +578,7 @@ namespace weavess {
             //std::cout<<i<<":"<<node->EndIdx-node->StartIdx<<std::endl;
             //omp_unset_lock(&rootlock);
             std::mt19937 rng(seed ^ omp_get_thread_num());
-            // 查找树根对应节点
             std::vector<unsigned> &myids = index->LeafLists[node->treeid];
-            // 添加规定深度下的所有子节点
             DFSbuild(node, rng, &myids[0] + node->StartIdx, node->EndIdx - node->StartIdx, node->StartIdx);
         }
         //DFStest(0,0,tree_roots_[0]);
@@ -958,12 +914,6 @@ namespace weavess {
 
 
 
-
-    /**
-     * @deprecated
-     *
-     * 已废弃，由 ComponentInitKNNG 代替
-     */
     void ComponentInitFANNG::InitInner() {
         SetConfigs();
 
@@ -986,7 +936,6 @@ namespace weavess {
 
             index->getFinalGraph()[i] = tmp;
 
-            // 内存释放
             std::vector<Index::Neighbor>().swap(index->graph_[i].pool);
             std::vector<unsigned>().swap(index->graph_[i].nn_new);
             std::vector<unsigned>().swap(index->graph_[i].nn_old);
@@ -994,7 +943,6 @@ namespace weavess {
             std::vector<unsigned>().swap(index->graph_[i].rnn_new);
         }
 
-        // 内存释放
         std::vector<Index::nhood>().swap(index->graph_);
     }
 
@@ -1028,11 +976,6 @@ namespace weavess {
     }
 
 
-    /**
-     * @deprecated
-     *
-     * 已废弃，由 ComponentInitRandom 代替
-     */
     void ComponentInitRand::InitInner() {
         SetConfigs();
 
@@ -1071,7 +1014,6 @@ namespace weavess {
 
             index->getFinalGraph()[i] = tmp;
 
-            // 内存释放
             std::vector<Index::Neighbor>().swap(index->graph_[i].pool);
             std::vector<unsigned>().swap(index->graph_[i].nn_new);
             std::vector<unsigned>().swap(index->graph_[i].nn_old);
@@ -1426,9 +1368,7 @@ namespace weavess {
 
     void ComponentInitHNSW::Build(bool reverse) {
         index->nodes_.resize(index->getBaseLen());
-        // 随机决定当前结点层数
         int level = GetRandomNodeLevel();
-        // 必须提前插入结点
         auto *first = new Index::HnswNode(0, level, index->max_m_, index->max_m0_);
         index->nodes_[0] = first;
         index->max_level_ = level;
@@ -1475,7 +1415,6 @@ namespace weavess {
         int max_level_copy = index->max_level_;
         Index::HnswNode *enterpoint = index->enterpoint_;
 
-        // 当前结点所达层数小于最大层数，逐步向下寻找
         if (cur_level < max_level_copy) {
             Index::HnswNode *cur_node = enterpoint;
 
@@ -1511,7 +1450,6 @@ namespace weavess {
 
         for (auto i = std::min(max_level_copy, cur_level); i >= 0; --i) {
             std::priority_queue<Index::FurtherFirst> result;
-            // 贪婪算法在当前层获取近邻候选点
             SearchAtLayer(qnode, enterpoint, i, visited_list, result);
 
             a->Hnsw2Neighbor(qnode->GetId(), index->m_, result);
@@ -2467,9 +2405,7 @@ namespace weavess {
         localindices.resize(index->getBaseLen());
         for (int i = 0; i < localindices.size(); i++) localindices[i] = i;
 
-        // 保存所有 KDT 结构
         index->m_pKDTreeRoots.resize(index->m_iTreeNumber * localindices.size());
-        // 保存 KDT 树根
         index->m_pTreeStart.resize(index->m_iTreeNumber, 0);
 #pragma omp parallel for num_threads(index->numOfThreads)
         for (int i = 0; i < index->m_iTreeNumber; i++) {
@@ -2483,7 +2419,6 @@ namespace weavess {
             // std::cout << "Start to build KDTree " << i + 1 << std::endl;
             int iTreeSize = index->m_pTreeStart[i];
 
-            // 分治生成 KDT
             DivideTree(pindices, 0, pindices.size() - 1, index->m_pTreeStart[i], iTreeSize);
             // std::cout << i + 1 << " KDTree built, " << iTreeSize - index->m_pTreeStart[i] << " " << pindices.size();
         }
@@ -2730,7 +2665,6 @@ namespace weavess {
     }
 
     void ComponentInitSPTAG_KDT::BuildGraph() {
-        // 初始化索引尺寸
         index->m_iNeighborhoodSize = index->m_iNeighborhoodSize * index->m_iNeighborhoodScale;
 
         index->getFinalGraph().resize(index->getBaseLen());
@@ -2746,7 +2680,6 @@ namespace weavess {
             }
         }
 
-        // 构建 TPTree 和 初始图
         std::vector<std::vector<int>> TptreeDataIndices(index->m_iTPTNumber, std::vector<int>(index->getBaseLen()));
         std::vector<std::vector<std::pair<int, int>>> TptreeLeafNodes(index->m_iTPTNumber,
                                                                       std::vector<std::pair<int, int>>());
@@ -3259,7 +3192,6 @@ namespace weavess {
     }
 
     void ComponentInitSPTAG_BKT::BuildGraph() {
-        // 初始化索引尺寸
         index->m_iNeighborhoodSize = index->m_iNeighborhoodSize * index->m_iNeighborhoodScale;
 
         index->getFinalGraph().resize(index->getBaseLen());
@@ -3275,7 +3207,6 @@ namespace weavess {
             }
         }
 
-        // 构建 TPTree 和 初始图
         std::vector<std::vector<int>> TptreeDataIndices(index->m_iTPTNumber, std::vector<int>(index->getBaseLen()));
         std::vector<std::vector<std::pair<int, int>>> TptreeLeafNodes(index->m_iTPTNumber,
                                                                       std::vector<std::pair<int, int>>());
@@ -3341,7 +3272,6 @@ namespace weavess {
         std::vector<std::vector<Index::Edge> > G(index->getBaseLen());
         std::vector<omp_lock_t> locks(index->getBaseLen());
 
-        // 初始化数据结构
         for (int i = 0; i < index->getBaseLen(); i++) {
             omp_init_lock(&locks[i]);
             G[i].reserve(max_mst_degree * index->num_cl);
@@ -3371,7 +3301,7 @@ namespace weavess {
             int degree = G[i].size();
 
             for (int j = 0; j < degree; j++) {
-                tmp.emplace_back(G[i][j].v2, G[i][j].weight);  // 已排序
+                tmp.emplace_back(G[i][j].v2, G[i][j].weight);
             }
             index->getFinalGraph()[i] = tmp;
         }
@@ -3383,7 +3313,6 @@ namespace weavess {
         const auto TreeNumBuild = index->getParam().get<unsigned>("nTrees");
         const auto K = index->getParam().get<unsigned>("K");
 
-        // 选择树根
         std::vector<int> indices(index->getBaseLen());
         index->LeafLists.resize(TreeNum);
         std::vector<Index::EFANNA::Node *> ActiveSet;
@@ -3410,7 +3339,6 @@ namespace weavess {
             std::random_shuffle(myids.begin(), myids.end());
         }
         omp_init_lock(&index->rootlock);
-        // 构建随机截断树
         while (!ActiveSet.empty() && ActiveSet.size() < 1100) {
 #pragma omp parallel for
             for (unsigned i = 0; i < ActiveSet.size(); i++) {
@@ -3421,7 +3349,6 @@ namespace weavess {
                 std::mt19937 rng(seed ^ omp_get_thread_num());
                 std::vector<unsigned> &myids = index->LeafLists[node->treeid];
 
-                // 根据特征值进行划分
                 meanSplit(rng, &myids[0] + node->StartIdx, node->EndIdx - node->StartIdx, mid, cutdim, cutval);
 
                 node->DivDim = cutdim;
@@ -3450,13 +3377,8 @@ namespace weavess {
 #pragma omp parallel for
         for (unsigned i = 0; i < ActiveSet.size(); i++) {
             Index::EFANNA::Node *node = ActiveSet[i];
-            //omp_set_lock(&rootlock);
-            //std::cout<<i<<":"<<node->EndIdx-node->StartIdx<<std::endl;
-            //omp_unset_lock(&rootlock);
             std::mt19937 rng(seed ^ omp_get_thread_num());
-            // 查找树根对应节点
             std::vector<unsigned> &myids = index->LeafLists[node->treeid];
-            // 添加规定深度下的所有子节点
             DFSbuild(node, rng, &myids[0] + node->StartIdx, node->EndIdx - node->StartIdx, node->StartIdx);
         }
         //DFStest(0,0,tree_roots_[0]);
@@ -3542,11 +3464,7 @@ namespace weavess {
         std::vector<std::vector<Index::Edge >> MST(N);
         auto *disjset = new Index::DisjointSet(N);
         float cost = 0;
-        //std::cout << "www" << edges.size() << std::endl;
         for (Index::Edge &e : edges) {
-            //std::cout << "111 " << (disjset->find(e.v1) != disjset->find(e.v2)) << std::endl;
-            //std::cout << "111 " << (MST[e.v1].size() < max_mst_degree) << std::endl;
-            //std::cout << "111 " << (MST[e.v2].size() < max_mst_degree) << std::endl;
             if (disjset->find(e.v1) != disjset->find(e.v2) && MST[e.v1].size() < max_mst_degree &&
                 MST[e.v2].size() < max_mst_degree) {
                 MST[e.v1].push_back(e);
@@ -3603,8 +3521,6 @@ namespace weavess {
         if (num_points < minsize_cl) {
             std::vector<std::vector<Index::Edge> > mst = create_exact_mst(idx_points, left, right, max_mst_degree);
             for (int i = 0; i < num_points; i++) {
-                //std::cout << "w1" << " " << mst.size() << std::endl;
-                //std::cout << "w2" << " " << mst[2].size() <<std::endl;
                 for (int j = 0; j < mst[i].size(); j++) {
                     omp_set_lock(&locks[idx_points[left + i]]);
                     if (!check_in_neighbors(idx_points[left + mst[i][j].v2], graph[idx_points[left + i]])) {
@@ -3616,7 +3532,6 @@ namespace weavess {
                 }
             }
         } else {
-            // 随机抽取两点进行分簇
             int x = rand_int(left, right);
             int y = rand_int(left, right);
             while (y == x) y = rand_int(left, right);

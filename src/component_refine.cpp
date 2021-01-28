@@ -14,7 +14,6 @@ namespace weavess {
         // L ITER S R
         SetConfigs();
 
-        // 获取初始图
         init();
 
         NNDescent();
@@ -33,7 +32,6 @@ namespace weavess {
 
             index->getFinalGraph()[i].swap(tmp);
 
-            // 内存释放
             std::vector<Index::Neighbor>().swap(index->graph_[i].pool);
             std::vector<unsigned>().swap(index->graph_[i].nn_new);
             std::vector<unsigned>().swap(index->graph_[i].nn_old);
@@ -41,10 +39,8 @@ namespace weavess {
             std::vector<unsigned>().swap(index->graph_[i].rnn_new);
         }
 
-        // 内存释放
         std::vector<Index::nhood>().swap(index->graph_);
 
-        // 裁边
         unsigned range = index->getResultEdgesNum();
 
         auto *cut_graph_ = new Index::SimpleNeighbor[index->getBaseLen() * range];
@@ -818,20 +814,15 @@ namespace weavess {
 
     void ComponentRefineVAMANA::InterInsert(unsigned int n, unsigned int range, std::vector<std::mutex> &locks,
                                             Index::SimpleNeighbor *cut_graph_) {
-        // 结点 n 近邻
         Index::SimpleNeighbor *src_pool = cut_graph_ + (size_t) n * (size_t) range;
-        // 遍历近邻
         for (size_t i = 0; i < range; i++) {
             if (src_pool[i].distance == -1) break;
 
             Index::SimpleNeighbor sn(n, src_pool[i].distance);
             size_t des = src_pool[i].id;
-            // 结点 n 近 des 邻信息
             Index::SimpleNeighbor *des_pool = cut_graph_ + des * (size_t) range;
 
-            // 单向边近邻 （n -> des.nn)
             std::vector<Index::SimpleNeighbor> temp_pool;
-            // 查询 res 与 des近邻 是否存在双向边
             int dup = 0;
             {
                 Index::LockGuard guard(locks[des]);
@@ -846,10 +837,8 @@ namespace weavess {
             }
             if (dup) continue;
 
-            // 插入待查询点 n
             temp_pool.push_back(sn);
             if (temp_pool.size() > range) {
-                // 裁边
                 std::vector<Index::SimpleNeighbor> result;
                 Index::MinHeap<float, Index::SimpleNeighbor> skipped;
                 std::sort(temp_pool.begin(), temp_pool.end());
@@ -889,7 +878,6 @@ namespace weavess {
                     }
                 }
             } else {
-                // 添加反向边
                 Index::LockGuard guard(locks[des]);
                 for (unsigned t = 0; t < range; t++) {
                     if (des_pool[t].distance == -1) {
@@ -928,7 +916,6 @@ namespace weavess {
 
             index->getFinalGraph()[i] = tmp;
 
-            // 内存释放
             std::vector<Index::Neighbor>().swap(index->graph_[i].pool);
             std::vector<unsigned>().swap(index->graph_[i].nn_new);
             std::vector<unsigned>().swap(index->graph_[i].nn_old);
@@ -944,7 +931,6 @@ namespace weavess {
 //        }
 
         std::vector<Index::nhood>().swap(index->graph_);
-        // 裁边
         unsigned range = index->K;
 
         auto *cut_graph_ = new Index::SimpleNeighbor[index->getBaseLen() * range];
@@ -1049,7 +1035,6 @@ namespace weavess {
     }
 
     void ComponentRefineEFANNA::update() {
-        // 清空内存
 #pragma omp parallel for
         for (unsigned i = 0; i < index->getBaseLen(); i++) {
             std::vector<unsigned>().swap(index->graph_[i].nn_new);
@@ -1061,7 +1046,7 @@ namespace weavess {
             //graph_[i].rnn_new.clear();
             //graph_[i].rnn_old.clear();
         }
-        // 确定候选个数
+
 #pragma omp parallel for
         for (unsigned n = 0; n < index->getBaseLen(); ++n) {
             auto &nn = index->graph_[n];
@@ -1174,11 +1159,6 @@ namespace weavess {
     std::cout<<"Graph Quality : "<<mean_acc / ctrl_points.size() <<std::endl;
     }
 
-    /**
-     * PANNG refine :
-     *  PRUNE      : ONNG
-     *  根据 id 排序
-     */
     void ComponentRefinePANNG::RefineInner() {
         std::vector<std::vector<Index::SimpleNeighbor>> tmpGraph;
         for (size_t id = 0; id < index->getBaseLen(); id++) {

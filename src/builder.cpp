@@ -12,12 +12,12 @@
 namespace weavess {
 
     /**
-     * 加载数据集及参数
+     * load dataset and parameters
      * @param data_file *_base.fvecs
      * @param query_file *_query.fvecs
      * @param ground_file *_groundtruth.ivecs
-     * @param parameters 构建参数
-     * @return 当前建造者指针
+     * @param parameters
+     * @return pointer of builder
      */
     IndexBuilder *IndexBuilder::load(char *data_file, char *query_file, char *ground_file, Parameters &parameters) {
         auto *a = new ComponentLoad(final_index_);
@@ -39,13 +39,13 @@ namespace weavess {
     }
 
     /**
-    * 构建初始图
-    * @param type 初始化类型
-    * @param debug 是否输出图索引相关信息（开启将对性能产生一定影响）
-    * @return 当前建造者指针
+    * build init graph
+    * @param type init type
+    * @param debug Whether to output graph index information (will have a certain impact on performance)
+    * @return pointer of builder
     */
     IndexBuilder *IndexBuilder::init(TYPE type, bool debug) {
-        s = std::chrono::high_resolution_clock::now();  //构建开始时间点
+        s = std::chrono::high_resolution_clock::now();
         ComponentInit *a = nullptr;
 
         if (type == INIT_RAND) {
@@ -111,10 +111,10 @@ namespace weavess {
     }
 
     /**
-     * 构建改进图, 通常包含获取 入口点、获取候选点、裁边、增强连通性 四部分
-     * @param type 改进类型
-     * @param debug 是否输出图索引相关信息（开启将对性能产生一定影响）
-     * @return 当前建造者指针
+     * build refine graph
+     * @param type refine type
+     * @param debug
+     * @return
      */
     IndexBuilder *IndexBuilder::refine(TYPE type, bool debug) {
         ComponentRefine *a = nullptr;
@@ -158,7 +158,6 @@ namespace weavess {
 
         a->RefineInner();
 
-        // 下面3行置于输出索引信息操作前面，以避免输出索引信息对索引构建时间的影响
         std::cout << "===================" << std::endl;
         std::cout << "__REFINE : FINISH__" << std::endl;
         std::cout << "===================" << std::endl;
@@ -170,7 +169,6 @@ namespace weavess {
         //     std::unordered_map<unsigned, unsigned> out_degree;
         //     degree_info(in_degree, out_degree);
 
-        //     // 连通分量
         //     conn_info();
         // }
 
@@ -178,10 +176,10 @@ namespace weavess {
     }
 
     /**
-     * 离线搜索
-     * @param entry_type 入口点策略
-     * @param route_type 路由策略
-     * @return 当前建造者指针
+     * offline search
+     * @param entry_type
+     * @param route_type
+     * @return
      */
     IndexBuilder *IndexBuilder::search(TYPE entry_type, TYPE route_type, TYPE L_type) {
         std::cout << "__SEARCH__" << std::endl;
@@ -260,13 +258,13 @@ namespace weavess {
 
         if (L_type == L_SEARCH_SET_RECALL) {
             std::set<unsigned> visited;
-            unsigned sg = 1000; // 计算L步长的参数
-            float acc_set = 0.99;   // 指定的最小acc
+            unsigned sg = 1000;
+            float acc_set = 0.99;
             bool flag = false;
-            int L_sl = 1;   // L步长，可能取负值
+            int L_sl = 1;
             unsigned L = K;
             visited.insert(L);
-            unsigned L_min = 0x7fffffff; // acc超过acc_set的最小L值
+            unsigned L_min = 0x7fffffff;
             while (true) {
                 // unsigned L_pre = L;
                 std::cout << "SEARCH_L : " << L << std::endl;
@@ -302,8 +300,7 @@ namespace weavess {
                 std::cout << "HopCount: " << final_index_->getHopCount() << std::endl;
                 final_index_->resetDistCount();
                 final_index_->resetHopCount();
-                
-                //结果评估
+
                 int cnt = 0;
                 for (unsigned i = 0; i < final_index_->getGroundLen(); i++) {
                     if (res[i].size() == 0) continue;
@@ -402,7 +399,6 @@ namespace weavess {
                 std::cout << "HopCount: " << final_index_->getHopCount() << std::endl;
                 final_index_->resetDistCount();
                 final_index_->resetHopCount();
-                //结果评估
                 int cnt = 0;
                 for (unsigned i = 0; i < final_index_->getGroundLen(); i++) {
                     if (res[i].size() == 0) continue;
@@ -463,7 +459,6 @@ namespace weavess {
             std::cout << "HopCount: " << final_index_->getHopCount() << std::endl;
             final_index_->resetDistCount();
             final_index_->resetHopCount();
-            //结果评估
             int cnt = 0;
             for (unsigned i = 0; i < final_index_->getGroundLen(); i++) {
                 if (res[i].size() == 0) continue;
@@ -488,9 +483,6 @@ namespace weavess {
         return this;
     }
 
-    /**
-     * 打印索引
-     */
     void IndexBuilder::print_graph() {
         std::cout << "=====================" << std::endl;
         for (int i = 0; i < 10; i++) {
@@ -503,13 +495,7 @@ namespace weavess {
         }
     }
 
-    /**
-     * 输出索引信息
-     * @param type 索引类型
-     * @return 当前建造者指针
-     */
     IndexBuilder *IndexBuilder::print_index_info(TYPE type) {
-        // 输出出度信息
         std::unordered_map<unsigned, unsigned> in_degree;
         std::unordered_map<unsigned, unsigned> out_degree;
         degree_info(in_degree, out_degree, type);
@@ -519,11 +505,6 @@ namespace weavess {
 
     }
 
-    /**
-     * 索引出度、入度分析
-     * @param in_degree 入度统计
-     * @param out_degree 出度统计
-     */
     void IndexBuilder::degree_info(std::unordered_map<unsigned, unsigned> &in_degree,
                                    std::unordered_map<unsigned, unsigned> &out_degree, TYPE type) {
         unsigned max_out_degree = 0, min_out_degree = 1e6;
@@ -583,9 +564,6 @@ namespace weavess {
         //        min_in_degree, avg_in_degree);
     }
 
-    /**
-     * 连通性分析
-     */
     void IndexBuilder::conn_info(TYPE type) {
         std::vector<unsigned> root{0};
         if (type == INDEX_NSG || type == INDEX_VAMANA) {
@@ -798,7 +776,7 @@ namespace weavess {
 
 
     /**
-    * 最大内存需求（VmPeak）
+    * peak_memory（VmPeak）
     */
     void IndexBuilder::peak_memory_footprint() {
 
@@ -934,12 +912,6 @@ namespace weavess {
         }
     }
 
-    /**
-    * 保存图索引
-    * @param index_type 图索引类型
-    * @param graph_file 图索引保存地址
-    * @return 当前建造者指针
-    */
     IndexBuilder *IndexBuilder::save_graph(TYPE type, char *graph_file) {
         std::fstream out(graph_file, std::ios::binary | std::ios::out);
         if (type == INDEX_NSG || type == INDEX_VAMANA) {
@@ -956,7 +928,7 @@ namespace weavess {
             for (unsigned i = 0; i < final_index_->getBaseLen(); i++) {
                 unsigned node_id = final_index_->nodes_[i]->GetId();
                 out.write((char *) &node_id, sizeof(unsigned));
-                unsigned node_level = final_index_->nodes_[i]->GetLevel() + 1;  // 含该结点的层数量
+                unsigned node_level = final_index_->nodes_[i]->GetLevel() + 1;
                 out.write((char *) &node_level, sizeof(unsigned));
                 unsigned current_level_GK;
                 for (unsigned j = 0; j < node_level; j++) {
@@ -1101,17 +1073,10 @@ namespace weavess {
         }
         out.close();
 
-        // 回收 final_graph 内存
         //std::vector<std::vector<Index::SimpleNeighbor>>().swap(final_index_->getFinalGraph());
         return this;
     }
 
-    /**
-     * 载入图索引
-     * @param index_type 图索引类型
-     * @param graph_file 图索引地址
-     * @return 当前建造者指针
-     */
     IndexBuilder *IndexBuilder::load_graph(TYPE type, char *graph_file) {
         std::ifstream in(graph_file, std::ios::binary);
         if (!in.is_open()) {

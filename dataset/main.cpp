@@ -19,9 +19,7 @@ public:
                                                                           ground_path(ROOT + dir + "/" + prefix +
                                                                                       "_groundtruth.ivecs") {}
 
-    /**
-     * 加载所有数据，除 genGroundTruth 外，均需提前调用该函数
-     */
+
     void loadAllData() {
         load_data(&base_path[0], base_data, base_num, base_dim);
 
@@ -30,9 +28,6 @@ public:
         load_data(&ground_path[0], ground_data, ground_num, ground_dim);
     }
 
-    /**
-     * 生成验证集，维度为 GROUND_TRUTH_DIM
-     */
     void genGroundTruth() {
         load_data(&base_path[0], base_data, base_num, base_dim);
 
@@ -41,15 +36,11 @@ public:
         gen_ground_truth(ground_path, GROUND_TRUTH_DIM, base_data, query_data, base_num, query_num);
     }
 
-    /**
-     * 生成数据库内部测试集和验证集
-     */
     void genInner() {
         inner_query_path = ROOT + dir_ + "/" + prefix_ + "_inner_query.fvecs";
         std::cout << inner_query_path << std::endl;
         inner_ground_path = ROOT + dir_ + "/" + prefix_ + "_inner_groundtruth.ivecs";
         std::cout << inner_ground_path << std::endl;
-        // ============ 生成数据库内测试集 =============
         std::cout << "SAVE TO NEW QUERY DATASET" << std::endl;
         auto *inner_query_data = new float[query_num * query_dim];
         for (int i = 0; i < query_num; i++) {
@@ -59,16 +50,9 @@ public:
         }
         save_data(&inner_query_path[0], inner_query_data, query_num, base_dim);
 
-        // ============ 生成数据库内验证集 =============
         gen_ground_truth(inner_ground_path, ground_dim, base_data, inner_query_data, base_num, query_num);
     }
 
-    /**
-     * 生成采样数据集 ： *_sample_base.fvecs、*_sample_query.fvecs、*_sample_groundtruth.ivecs
-     *
-     * @param sample_base_num 采样训练集数据个数
-     * @param sample_query_num 采样测试集数据个数
-     */
     void genSample(unsigned sample_base_num, unsigned sample_query_num) {
         sample_base_path = ROOT + dir_ + "/" + prefix_ + "_sample_base.fvecs";
         std::cout << sample_base_path << std::endl;
@@ -77,15 +61,12 @@ public:
         sample_ground_path = ROOT + dir_ + "/" + prefix_ + "_sample_groundtruth.ivecs";
         std::cout << sample_ground_path << std::endl;
 
-        // ============ 训练集采样 =============
-        // 生成随机序列
         std::mt19937 rng(rand());
         std::vector<unsigned> rand_index;
         gen_random(rand_index, rng, base_num, sample_base_num);
         //std::cout << rand_index.size() << std::endl;
         std::unordered_set<unsigned> set(rand_index.begin(), rand_index.end());
 
-        // 生成采样数据集
         std::ifstream in(base_path, std::ios::binary);
         if (!in.is_open()) {
             std::cerr << "open file error" << std::endl;
@@ -107,7 +88,6 @@ public:
         }
         in.close();
 
-        // 保存采样训练集
         save_data(&sample_base_path[0], sample_base_data, sample_base_num, base_dim);
 
         set.clear();
@@ -116,21 +96,17 @@ public:
         std::cout << "gen sample base success" << std::endl;
 
 
-        // ============ 测试集采样 =============
-        // 选取前 sample_query_num 个测试数据
         save_data(&sample_query_path[0], query_data, sample_query_num, query_dim);
 
         std::cout << "gen sample query success" << std::endl;
 
 
-        // ============ 生成验证集 =============
         gen_ground_truth(sample_ground_path, ground_dim, sample_base_data, query_data, sample_base_num,
                          sample_query_num);
 
         std::cout << "gen sample ground truth success" << std::endl;
 
 
-        // ============ 验证数据集 =============
         sample_test(sample_base_num, sample_query_num);
 
         delete[] sample_base_data;
@@ -209,14 +185,6 @@ private:
         fclose(ofp);
     }
 
-    /**
-     * 生成随机数序列
-     *
-     * @param index 返回随机序列
-     * @param rng 随机种子
-     * @param N 随机区间 [0, N)
-     * @param num 随机数个数 num < N
-     */
     void gen_random(std::vector<unsigned> &index, std::mt19937 &rng, unsigned N, unsigned num) {
         for (unsigned i = 0; i < num; ++i)
             index.push_back(rng() % (N - num));
@@ -266,15 +234,6 @@ private:
         return result;
     }
 
-    /**
-     * 生成验证集
-     *
-     * @param ground_path 验证集保存路径
-     * @param base_data 训练集数据
-     * @param query_data 测试集数据
-     * @param base_num 训练集个数
-     * @param query_num 测试集个数
-     */
     void gen_ground_truth(std::string ground_path, unsigned ground_dim, float *base_data, float *query_data,
                           unsigned base_num, unsigned query_num) {
 
@@ -322,17 +281,10 @@ private:
         return a.first < b.first;
     }
 
-    /**
-     * 测试采样数据集正确性
-     *
-     * @param sample_base_num 采样数据集数据个数
-     * @param sample_query_num 采样测试集数据个数
-     */
     void sample_test(unsigned sample_base_num, unsigned sample_query_num) {
         unsigned dim{};
         unsigned num{};
 
-        // 测试 sample base 数据规模
         std::ifstream in(sample_base_path, std::ios::binary);
         if (!in.is_open()) {
             std::cerr << "open file error" << std::endl;
@@ -356,7 +308,6 @@ private:
         assert(base_dim == dim);
         std::cout << "test sample base num success" << std::endl;
 
-        // 测试 sample query 数据规模
         std::ifstream in2(sample_query_path, std::ios::binary);
         if (!in2.is_open()) {
             std::cerr << "open file error" << std::endl;
@@ -380,7 +331,6 @@ private:
         assert(query_dim == dim);
         std::cout << "test  sample query num success" << std::endl;
 
-        // 测试 sample groundtruth 数据规模
         std::ifstream in3(sample_ground_path, std::ios::binary);
         if (!in3.is_open()) {
             std::cerr << "open file error" << std::endl;
@@ -404,7 +354,6 @@ private:
         assert(ground_dim == dim);
         std::cout << "test sample ground num success" << std::endl;
 
-        // 随机抽取测试数据进行验证
         std::vector<unsigned> index;
         std::mt19937 rng(rand());
         gen_random(index, rng, query_num, 10);

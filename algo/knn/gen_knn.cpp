@@ -114,13 +114,6 @@ float* data_align(float* data_ori, unsigned point_num, unsigned& dim){
     return data_new;
 }
 
-/**
-* 生成精确的knn图
-*
-* @param knn_path knn图保存路径
-* @param base_data 基数据
-* @param base_num 基数据个数
-*/
 void gen_ground_truth(std::string graph_file, float *base_data, float *query_data, unsigned base_num, unsigned query_num, unsigned dim) {
     unsigned ground_dim = 50;
     unsigned base_dim = dim;

@@ -17,13 +17,11 @@ namespace weavess {
         retset.resize(L + 1);
 
         L = 0;
-        // 选取质点近邻作为初始候选点
         for (unsigned i = 0; i < init_ids.size() && i < index->getFinalGraph()[enter].size(); i++) {
             init_ids[i] = index->getFinalGraph()[enter][i].id;
             flags[init_ids[i]] = true;
             L++;
         }
-        // 候选点不足填入随机点
         while (L < init_ids.size()) {
             unsigned id = rand() % index->getBaseLen();
             if (flags[id]) continue;
@@ -170,7 +168,6 @@ namespace weavess {
         Index::QueryResultSet p_query(index->L_refine);
 
 
-        // InitSearchTrees 根据 BKT 获取入口点
         for (char i = 0; i < index->m_iTreeNumber; i++) {
             const Index::BKTNode& node = index->m_pBKTreeRoots[index->m_pTreeStart[i]];
             if (node.childStart < 0) {
@@ -310,14 +307,12 @@ namespace weavess {
         Index::QueryResultSet p_query(index->L_refine + 1);
         //std::priority_queue<Index::SPTAGCloserFirst> res;
 
-        // InitSearchTrees 根据 KDT 获取入口点
         for(int i = 0; i < index->m_iTreeNumber; i ++) {
             int node = index->m_pTreeStart[i];
 
             KDTSearch(query, node, m_NGQueue, m_SPTQueue, nodeCheckStatus, m_iNumberOfCheckedLeaves, m_iNumberOfTreeCheckedLeaves);
         }
 
-        // SearchTrees 查询足够的 KDT 结点
         unsigned p_limits = m_iNumberOfInitialDynamicPivots;
         while (!m_SPTQueue.empty() && m_iNumberOfCheckedLeaves < p_limits)
         {

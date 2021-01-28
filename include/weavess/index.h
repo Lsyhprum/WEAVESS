@@ -117,7 +117,6 @@ namespace weavess {
                 pool.reserve(other.pool.capacity());
             }
 
-            // 插入大顶堆
             void insert(unsigned id, float dist) {
                 LockGuard guard(lock);
                 if (dist > pool.front().distance) return;
@@ -218,7 +217,6 @@ namespace weavess {
 
     class EFANNA {
     public:
-        // 节点不保存数据，只维护一个 LeafLists 中对应的数据编号
         struct Node {
             int DivDim;
             float DivVal;
@@ -275,9 +273,9 @@ namespace weavess {
             RAND_DIM = 5
         };
 
-        std::vector<Node *> tree_roots_;                    // 存储树根
-        std::vector<std::pair<Node *, size_t> > mlNodeList;  //  ml 层 节点 和对应树根编号
-        std::vector<std::vector<unsigned> > LeafLists;       // 存储每个随机截断树的对应节点
+        std::vector<Node *> tree_roots_;
+        std::vector<std::pair<Node *, size_t> > mlNodeList;
+        std::vector<std::vector<unsigned> > LeafLists;
         omp_lock_t rootlock;
         bool error_flag = false;
         int max_deepth = 0x0fffffff;
@@ -1407,12 +1405,9 @@ namespace weavess {
 
         unsigned numOfThreads;
 
-        // KDT/BKT 个数
         unsigned m_iTreeNumber;
         unsigned m_numTopDimensionKDTSplit = 5;
-        // TPT 个数
         unsigned m_iTPTNumber = 32;
-        // TPT 叶子个数
         unsigned m_iTPTLeafSize = 2000;
         unsigned m_numTopDimensionTPTSplit = 5;
         // K
@@ -1423,7 +1418,6 @@ namespace weavess {
         unsigned m_iCEF = 1000;
         unsigned m_iHashTableExp = 4;
 
-        // 抽样选取数量
         int m_iSamples = 1000;
 
         unsigned m_iCEFScale = 2;
@@ -1737,7 +1731,7 @@ namespace weavess {
         }
 
         int i = 0;
-        bool debug = false;  // 控制NN-Descent迭代图质量信息输出
+        bool debug = false;
 
     private:
         float *base_data_, *query_data_;
@@ -1752,7 +1746,6 @@ namespace weavess {
 
         Distance *dist_;
 
-        // 迭代式
         FinalGraph final_graph_;
         LoadGraph load_graph_;
         LoadGraph exact_graph_;
