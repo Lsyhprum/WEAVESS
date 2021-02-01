@@ -2,7 +2,7 @@
 
 ## Introduction
 
-Approcimate Nearest Neighbor Search (ANNS) is a fundamental building block in various application domains. Recently, graph-based algorithms have emerged as a very effective choice to implement ANNS. Our paper provides a comprehensive comparative analysis and experimental evaluation of representative graph-based ANNS algorithms on carefully selected datasets of varying sizes and characteristics.
+Approcimate Nearest Neighbor Search (ANNS) is a fundamental building block in various application domains. Recently, graph-based algorithms have emerged as a very effective choice to implement ANNS. Our paper ([arXiv link](https://arxiv.org/abs/2101.12631), [PDF](https://arxiv.org/pdf/2101.12631.pdf)) provides a comprehensive comparative analysis and experimental evaluation of representative graph-based ANNS algorithms on carefully selected datasets of varying sizes and characteristics.
 
 This project contains the code, dataset, optimal parameters, and other detailed information used for the experiments of our paper. It is worth noting that we reimplement all algorithms based on exactly the same design pattern, programming language (except for the hash table in IEH) and tricks, and experimental setup, which makes the comparison more fair. 
 
@@ -10,7 +10,7 @@ This project contains the code, dataset, optimal parameters, and other detailed 
 
 we evaluate thirteen representative graph-based ANNS algorithms, and their papers and the original codes are given in the following table.
 
-|   ALGO   |     PAPER     |   CODE   |
+|   ALGORITHM   |     PAPER     |   CODE   |
 |:--------:|:------------:|:--------:|
 |  KGraph  |  [WWW'2011](https://dl.acm.org/doi/abs/10.1145/1963405.1963487)  |  [C++/Python](https://github.com/aaalgo/kgraph)  |
 |  FANNG   |  [CVPR'2016](https://www.cv-foundation.org/openaccess/content_cvpr_2016/html/Harwood_FANNG_Fast_Approximate_CVPR_2016_paper.html)  |   -   |
@@ -36,7 +36,7 @@ Note that, all base data and query data are converted to `fvecs` format, and gro
 
 ## Parameters
 
-For the optimal parameters of each algorithm on all experimental datasets, see the [parameters](https://github.com/Lsyhprum/WEAVESS/tree/master/parameters) page.
+For the optimal parameters of each algorithm on all experimental datasets, see the [parameters](https://github.com/Lsyhprum/WEAVESS/tree/dev/parameters) page.
 
 ## Usage
 
@@ -81,7 +81,7 @@ cd WEAVESS/build/test/
 
 ### Components evaluation
 
-Note that the default [`master` branch](https://github.com/Lsyhprum/WEAVESS/tree/master) is the evaluation of the overall performance of all algorithms, and the evaluation of a certain component needs to be carried out under the [`test` branch](https://github.com/Lsyhprum/WEAVESS/tree/test). For more details, please see our paper. 
+Note that the default [`master` branch](https://github.com/Lsyhprum/WEAVESS/tree/master) is the evaluation of the overall performance of all algorithms, and the evaluation of a certain component needs to be carried out under the [`test` branch](https://github.com/Lsyhprum/WEAVESS/tree/test). For more details, please see [our paper](https://arxiv.org/pdf/2101.12631.pdf). 
 
 ## Acknowledgements
 
