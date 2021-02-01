@@ -6,11 +6,6 @@
 
 namespace weavess {
 
-    /**
-     * L 个随机入口点
-     * @param query 查询点
-     * @param pool 候选池
-     */
     void ComponentSearchEntryRand::SearchEntryInner(unsigned query, std::vector<Index::Neighbor> &pool) {
         const auto L = index->getParam().get<unsigned>("L_search");
 
@@ -35,11 +30,6 @@ namespace weavess {
     }
 
 
-    /**
-     * 质心入口点
-     * @param query 查询点
-     * @param pool 候选池
-     */
     void ComponentSearchEntryCentroid::SearchEntryInner(unsigned int query, std::vector<Index::Neighbor> &pool) {
         const auto L = index->getParam().get<unsigned>("L_search");
         pool.reserve(L + 1);
@@ -77,11 +67,6 @@ namespace weavess {
     }
 
 
-    /**
-     * 子图质心入口点
-     * @param query 查询点
-     * @param pool 候选池
-     */
     void ComponentSearchEntrySubCentroid::SearchEntryInner(unsigned int query, std::vector<Index::Neighbor> &pool) {
         auto L = index->getParam().get<unsigned>("L_search");
         pool.resize(L + 1);
@@ -114,11 +99,6 @@ namespace weavess {
     }
 
 
-    /**
-     * KDT获取入口点
-     * @param query 查询点
-     * @param pool 候选池
-     */
     void ComponentSearchEntryKDT::SearchEntryInner(unsigned int query, std::vector<Index::Neighbor> &pool) {
         unsigned TreeNum = index->nTrees;
         const auto L = index->getParam().get<unsigned>("L_search");
@@ -190,11 +170,6 @@ namespace weavess {
     }
 
 
-    /**
-    * KDT获取最近入口点
-    * @param query 查询点
-    * @param pool 候选池
-    */
     void ComponentSearchEntryKDTSingle::SearchEntryInner(unsigned int query, std::vector<Index::Neighbor> &pool) {
         unsigned TreeNum = index->nTrees;
         const auto L = index->getParam().get<unsigned>("L_search");
@@ -266,11 +241,6 @@ namespace weavess {
     }
 
 
-    /**
-     * Hash 获取入口点
-     * @param query 查询点
-     * @param pool 候选池
-     */
     void ComponentSearchEntryHash::SearchEntryInner(unsigned int query, std::vector<Index::Neighbor> &pool) {
         unsigned int idx1 = index->querycode[query] >> index->LowerBits;
         unsigned int idx2 = index->querycode[query] - (idx1 << index->LowerBits);
@@ -299,19 +269,9 @@ namespace weavess {
     }
 
 
-    /**
-     * 获取入口点空方法
-     * @param query 查询点
-     * @param pool 候选池
-     */
     void ComponentSearchEntryNone::SearchEntryInner(unsigned int query, std::vector<Index::Neighbor> &pool) { }
 
 
-    /**
-     * VP-tree 获取近邻
-     * @param query 查询点
-     * @param pool 候选池
-     */
     void ComponentSearchEntryVPT::SearchEntryInner(unsigned int query, std::vector<Index::Neighbor> &pool) {
         float cq = static_cast<float>(FLT_MAX);
         //float cq = 100;

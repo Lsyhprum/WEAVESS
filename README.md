@@ -30,9 +30,9 @@ we evaluate thirteen representative graph-based ANNS algorithms, and their paper
 
 ## Datasets
 
-Our experiment involves eight [real-world datasets](https://github.com/Lsyhprum/WEAVESS/tree/master/dataset) popularly deployed by existing works. All datasets are pre-split into base data and query data and come with groundtruth data in the form of the top 20 or 100 neighbors. Additional twelve [synthetic datasets](https://github.com/Lsyhprum/WEAVESS/tree/master/dataset) are used to test the scalability of each algorithm to the performance of different datasets.
+Our experiment involves eight [real-world datasets](https://github.com/Lsyhprum/WEAVESS/tree/dev/dataset) popularly deployed by existing works. All datasets are pre-split into base data and query data and come with groundtruth data in the form of the top 20 or 100 neighbors. Additional twelve [synthetic datasets](https://github.com/Lsyhprum/WEAVESS/tree/dev/dataset) are used to test the scalability of each algorithm to the performance of different datasets.
 
-Note that, all base data and query data are converted to `fvecs` format, and groundtruth data is converted to `ivecs` format. Please refer [here](http://yael.gforge.inria.fr/file_format.html) for the description of `fvecs` and `ivecs` format. All datasets in this format can be downloaded from [here](https://github.com/Lsyhprum/WEAVESS/tree/master/dataset).
+Note that, all base data and query data are converted to `fvecs` format, and groundtruth data is converted to `ivecs` format. Please refer [here](http://yael.gforge.inria.fr/file_format.html) for the description of `fvecs` and `ivecs` format. All datasets in this format can be downloaded from [here](https://github.com/Lsyhprum/WEAVESS/tree/dev/dataset).
 
 ## Parameters
 
@@ -81,7 +81,7 @@ cd WEAVESS/build/test/
 
 ### Components evaluation
 
-Note that the default [`master` branch](https://github.com/Lsyhprum/WEAVESS/tree/master) is the evaluation of the overall performance of all algorithms, and the evaluation of a certain component needs to be carried out under the [`test` branch](https://github.com/Lsyhprum/WEAVESS/tree/test). For more details, please see [our paper](https://arxiv.org/pdf/2101.12631.pdf). 
+Note that the default [`dev` branch](https://github.com/Lsyhprum/WEAVESS/tree/dev) is the evaluation of the overall performance of all algorithms, and the evaluation of a certain component needs to be carried out under the [`test` branch](https://github.com/Lsyhprum/WEAVESS/tree/test). For more details, please see our paper. 
 
 ## Acknowledgements
 

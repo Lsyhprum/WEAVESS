@@ -22,7 +22,7 @@ def load_txt_file(txt_filename):
 
 def load_hdf5_file(filename):
     f = h5py.File(filename, 'r')
-    print(list(f.keys()))	#展示所有的键
+    print(list(f.keys()))
     #print('dataset')
     #print('dim : {0}'.format(len(f['dataset'][0])))
     # print(f['dataset'][0:10])
@@ -45,10 +45,10 @@ def load_hdf5_file(filename):
 def to_fvecs(filename, data):
     with open(filename, 'wb') as fp:
         for y in data:
-            d = struct.pack('I', len(y))	#将y.size以C++的unsigned int的形式写入二进制文件
+            d = struct.pack('I', len(y))
             fp.write(d)
             for x in y:
-                a = struct.pack('f', x)	#将x以C++的float的形式写入二进制文件
+                a = struct.pack('f', x)
                 fp.write(a)
 
 def to_ivecs(filename, data):
@@ -77,13 +77,11 @@ if __name__ == "__main__":
 
     uqv_base_txt_path = "F:/ANNS/DATASET/uqv/UQV_train.txt"
     uqv_query_txt_path = "F:/ANNS/DATASET/uqv/UQV_query.txt"
-    
-    # 截取前 1000000 个数据
+
     #base_data = load_txt_file(uqv_base_txt_path)
     #print("base data len : {0}".format(len(base_data)))
     #to_fvecs('uqv_base.fvecs', base_data)
 
-    # 截取前 10000 个数据
     query_data = load_txt_file(uqv_query_txt_path)
     print("query data len : {0}".format(len(query_data)))
     to_fvecs('uqv_query.fvecs', query_data)

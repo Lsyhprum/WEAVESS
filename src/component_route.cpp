@@ -6,12 +6,6 @@
 
 namespace weavess {
 
-    /**
-     * 贪婪搜索
-     * @param query 查询点
-     * @param pool 侯选池
-     * @param res 结果集
-     */
     void ComponentSearchRouteGreedy::RouteInner(unsigned int query, std::vector<Index::Neighbor> &pool,
                                                 std::vector<unsigned int> &res) {
         const auto L = index->getParam().get<unsigned>("L_search");
@@ -28,7 +22,6 @@ namespace weavess {
                 unsigned n = pool[k].id;
 
                 index->addHopCount();
-                // 查找邻居的邻居
                 for (unsigned m = 0; m < index->getLoadGraph()[n].size(); ++m) {
                     unsigned id = index->getLoadGraph()[n][m];
 
@@ -60,12 +53,6 @@ namespace weavess {
     }
 
 
-    /**
-     * NSW 搜索
-     * @param query 查询点
-     * @param pool
-     * @param res 结果集
-     */
     void ComponentSearchRouteNSW::RouteInner(unsigned int query, std::vector<Index::Neighbor> &pool,
                                               std::vector<unsigned int> &res) {
         const auto K = index->getParam().get<unsigned>("K_search");
@@ -145,12 +132,6 @@ namespace weavess {
     }
 
 
-    /**
-     * HNSW 搜索
-     * @param query 查询点
-     * @param pool
-     * @param res 结果集
-     */
     void ComponentSearchRouteHNSW::RouteInner(unsigned int query, std::vector<Index::Neighbor> &pool,
                                               std::vector<unsigned int> &res) {
         const auto K = index->getParam().get<unsigned>("K_search");
@@ -374,12 +355,6 @@ namespace weavess {
     // }
 
 
-    /**
-     * IEH 搜索
-     * @param query 查询点
-     * @param pool
-     * @param res
-     */
     void ComponentSearchRouteIEH::RouteInner(unsigned int query, std::vector<Index::Neighbor> &pool,
                                              std::vector<unsigned int> &result) {
 
@@ -430,12 +405,6 @@ namespace weavess {
     }
 
 
-    /**
-     * Backtrack 搜索
-     * @param query 查询点
-     * @param pool 入口点
-     * @param res 结果集
-     */
     void ComponentSearchRouteBacktrack::RouteInner(unsigned int query, std::vector<Index::Neighbor> &pool,
                                                    std::vector<unsigned int> &res) {
         const auto L = index->getParam().get<unsigned>("L_search");
@@ -445,8 +414,8 @@ namespace weavess {
         std::priority_queue<Index::FANNGCloserFirst> full;
         std::vector<char> flags(index->getBaseLen());
         for(int i = 0; i < index->getBaseLen(); i ++) flags[i] = false;
-        std::unordered_map<unsigned, int> mp; // 记录结点近邻访问位置
-        std::unordered_map<unsigned, unsigned> relation; // 记录终止结点和起始结点关系
+        std::unordered_map<unsigned, int> mp;
+        std::unordered_map<unsigned, unsigned> relation;
 
         unsigned enter = pool[0].id;
         unsigned start = index->getLoadGraph()[enter][0];
@@ -466,7 +435,6 @@ namespace weavess {
             unsigned top_node = queue.top().GetNode();
             queue.pop();
 
-            // 未访问
             if(!flags[top_node]) {
                 flags[top_node] = true;
 
@@ -488,11 +456,9 @@ namespace weavess {
             //std::cout << 3 << " " << start_node << std::endl;
 
             unsigned pos = 0;
-            // 获取 top_node 近邻访问位置情况
             auto iter = mp.find(start_node);
             //std::cout << 3.11 << " " << (*iter).second << std::endl;
             //std::cout << index->getFinalGraph()[start_node].size() << std::endl;
-            // 已访问所有近邻
             if((*iter).second < index->getLoadGraph()[start_node].size() - 1) {
                 //std::cout << 3.1 << std::endl;
                 pos = (*iter).second + 1;
@@ -523,12 +489,6 @@ namespace weavess {
     }
 
 
-    /**
-     * Guided 搜索
-     * @param query 查询点
-     * @param pool 入口点
-     * @param res 结果集
-     */
     void ComponentSearchRouteGuided::RouteInner(unsigned int query, std::vector<Index::Neighbor> &pool,
                                                 std::vector<unsigned int> &res) {
         const auto L = index->getParam().get<unsigned>("L_search");
@@ -552,11 +512,11 @@ namespace weavess {
                 std::vector<unsigned> nn;
                 unsigned MaxM;
                 if ((index->getQueryData() + index->getQueryDim() * query)[div_dim_] < (index->getBaseData() + index->getBaseDim() * n)[div_dim_]) {
-                    MaxM = left_len; //左子树邻居的个数
+                    MaxM = left_len;
                     nn = index->Tn[n].left;
                 }
                 else {
-                    MaxM = right_len; //右子树邻居的个数
+                    MaxM = right_len;
                     nn = index->Tn[n].right;
                 }
 
@@ -596,12 +556,6 @@ namespace weavess {
     }
 
 
-    /**
-     * SPTAG-KDT 搜索
-     * @param query 查询点
-     * @param pool 入口点
-     * @param res 结果集
-     */
     void ComponentSearchRouteSPTAG_KDT::KDTSearch(unsigned int query, int node, Index::Heap &m_NGQueue,
                                                   Index::Heap &m_SPTQueue, Index::OptHashPosVector &nodeCheckStatus,
                                                   unsigned int &m_iNumberOfCheckedLeaves,
@@ -671,14 +625,12 @@ namespace weavess {
 
         Index::QueryResultSet p_query(L);
 
-        // InitSearchTrees 根据 KDT 获取入口点
         for(int i = 0; i < index->m_iTreeNumber; i ++) {
             int node = index->m_pTreeStart[i];
 
             KDTSearch(query, node, m_NGQueue, m_SPTQueue, nodeCheckStatus, m_iNumberOfCheckedLeaves, m_iNumberOfTreeCheckedLeaves);
         }
 
-        // SearchTrees 查询足够的 KDT 结点
         unsigned p_limits = m_iNumberOfInitialDynamicPivots;
         while (!m_SPTQueue.empty() && m_iNumberOfCheckedLeaves < p_limits)
         {
@@ -737,43 +689,7 @@ namespace weavess {
         result.resize(result.size() > K ? K : result.size());
     }
 
-    void ComponentSearchRouteSPTAG_BKT::BKTSearch(unsigned int query, Index::Heap &m_NGQueue,
-                                                  Index::Heap &m_SPTQueue, Index::OptHashPosVector &nodeCheckStatus,
-                                                  unsigned int &m_iNumberOfCheckedLeaves,
-                                                  unsigned int &m_iNumberOfTreeCheckedLeaves,
-                                                  int p_limits) {
-        while (!m_SPTQueue.empty())
-        {
-            Index::HeapCell bcell = m_SPTQueue.pop();
-            const Index::BKTNode& tnode = index->m_pBKTreeRoots[bcell.node];
-            if (tnode.childStart < 0) {
-                if (!nodeCheckStatus.CheckAndSet(tnode.centerid)) {
-                    m_iNumberOfCheckedLeaves++;
-                    m_NGQueue.insert(Index::HeapCell(tnode.centerid, bcell.distance));
-                }
-                if (m_iNumberOfCheckedLeaves >= p_limits) break;
-            }
-            else {
-                if (!nodeCheckStatus.CheckAndSet(tnode.centerid)) {
-                    m_NGQueue.insert(Index::HeapCell(tnode.centerid, bcell.distance));
-                }
-                for (int begin = tnode.childStart; begin < tnode.childEnd; begin++) {
-                    int tmp = index->m_pBKTreeRoots[begin].centerid;
-                    float dist = index->getDist()->compare(index->getQueryData() + index->getQueryDim() * query,
-                                                           index->getBaseData() + index->getBaseDim() * tmp,
-                                                           index->getBaseDim());
-                    index->addDistCount();
-                    m_SPTQueue.insert(Index::HeapCell(begin, dist));
-                }
-            }
-        }
-    }
-    /**
-     * SPTAG-BKT 搜索
-     * @param query 查询点
-     * @param pool 入口点
-     * @param res 结果集
-     */
+
     void ComponentSearchRouteSPTAG_BKT::RouteInner(unsigned int query, std::vector<Index::Neighbor> &pool,
                                                    std::vector<unsigned int> &result) {
         const auto L = index->getParam().get<unsigned>("L_search");
@@ -802,7 +718,6 @@ namespace weavess {
         Index::QueryResultSet p_query(L);
 
 
-        // InitSearchTrees 根据 BKT 获取入口点
         for (char i = 0; i < index->m_iTreeNumber; i++) {
             const Index::BKTNode& node = index->m_pBKTreeRoots[index->m_pTreeStart[i]];
             if (node.childStart < 0) {
@@ -877,12 +792,39 @@ namespace weavess {
         result.resize(result.size() > K ? K : result.size());
     }
 
-    /**
-     * NGT 搜索
-     * @param query 查询点
-     * @param pool 入口点
-     * @param res 结果集
-     */
+    void ComponentSearchRouteSPTAG_BKT::BKTSearch(unsigned int query, Index::Heap &m_NGQueue,
+                                                  Index::Heap &m_SPTQueue, Index::OptHashPosVector &nodeCheckStatus,
+                                                  unsigned int &m_iNumberOfCheckedLeaves,
+                                                  unsigned int &m_iNumberOfTreeCheckedLeaves,
+                                                  int p_limits) {
+        while (!m_SPTQueue.empty())
+        {
+            Index::HeapCell bcell = m_SPTQueue.pop();
+            const Index::BKTNode& tnode = index->m_pBKTreeRoots[bcell.node];
+            if (tnode.childStart < 0) {
+                if (!nodeCheckStatus.CheckAndSet(tnode.centerid)) {
+                    m_iNumberOfCheckedLeaves++;
+                    m_NGQueue.insert(Index::HeapCell(tnode.centerid, bcell.distance));
+                }
+                if (m_iNumberOfCheckedLeaves >= p_limits) break;
+            }
+            else {
+                if (!nodeCheckStatus.CheckAndSet(tnode.centerid)) {
+                    m_NGQueue.insert(Index::HeapCell(tnode.centerid, bcell.distance));
+                }
+                for (int begin = tnode.childStart; begin < tnode.childEnd; begin++) {
+                    int tmp = index->m_pBKTreeRoots[begin].centerid;
+                    float dist = index->getDist()->compare(index->getQueryData() + index->getQueryDim() * query,
+                                                           index->getBaseData() + index->getBaseDim() * tmp,
+                                                           index->getBaseDim());
+                    index->addDistCount();
+                    m_SPTQueue.insert(Index::HeapCell(begin, dist));
+                }
+            }
+        }
+    }
+
+
     void ComponentSearchRouteNGT::RouteInner(unsigned int query, std::vector<Index::Neighbor> &pool,
                                              std::vector<unsigned int> &res) {
         const auto L = index->getParam().get<unsigned>("L_search");

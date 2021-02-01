@@ -31,9 +31,7 @@ if(Boost_FOUND)
 endif()
 
 #Python
-# 添加python.h头文件路径
 #include_directories(F:/Python/include)
-# 添加python动态链接库文件
 #link_libraries(F:/Python/libs/python38.lib)
 
 #add_definitions (-std=c++11 -O3 -lboost -march=native -Wall -DINFO)
