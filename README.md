@@ -81,7 +81,24 @@ cd WEAVESS/build/test/
 
 ### Components evaluation
 
-Note that the default [`dev` branch](https://github.com/Lsyhprum/WEAVESS/tree/dev) is the evaluation of the overall performance of all algorithms, and the evaluation of a certain component needs to be carried out under the [`test` branch](https://github.com/Lsyhprum/WEAVESS/tree/test). For more details, please see our paper. 
+Note that the default [`dev` branch](https://github.com/Lsyhprum/WEAVESS/tree/dev) is the evaluation of the overall performance of all algorithms, and the evaluation of a certain component needs to be carried out under the [`test` branch](https://github.com/Lsyhprum/WEAVESS/tree/test). For more details, please see [our paper](https://arxiv.org/pdf/2101.12631.pdf). 
+
+## Reference
+
+Please cite our work in your publications if it helps your research:
+
+```
+@misc{wang2021comprehensive,
+    title={A Comprehensive Survey and Experimental Comparison of Graph-Based Approximate Nearest Neighbor Search},
+    author={Mengzhao Wang and Xiaoliang Xu and Qiang Yue and Yuxiang Wang},
+    year={2021},
+    eprint={2101.12631},
+    archivePrefix={arXiv},
+    primaryClass={cs.IR}
+}
+```
+
+
 
 ## Acknowledgements
 
