@@ -1,193 +1,92 @@
-# WEAVESS
+# A Comprehensive Survey and Experimental Comparison of Graph-based Approximate Nearest Neighbor Search
 
-## Architecture
+## Usage
 
-## Algorithms
+### Index Build
 
-|   ALGO   |     TYPE     |   INIT   |    REFINE    |  SEEDS   |  ROUTE      |
-|:--------:|:------------:|:--------:|:------------:|:--------:|:-----------:|
-|  KGraph  |  Refinement  |  Random  |  NN-Descent  |  Random  |   Greedy    |
-|  FANNG   |  Refinement  |   KNNG   |     RNG      |  Random  |  Backtrack  |
+#### Sample Code
 
-|  NSG        |    Refinement    |       NN-Descent      |      Centroid     |     Greedy    |     RNG      | Reverse+DFS  |     Centroid       |       Greedy       |
-|  SSG        |    Refinement    |       NN-Descent      |       Query       | PROPAGATION 2 |     SSG      | Reverse+DFS  |    Sub Centroid    |       Greedy       |
-|  DPG        |    Refinement    |       NN-Descent      |       Query       | PROPAGATION 1 |     DPG      |    Reverse   |      Random        |       Greedy       |
-|  VAMANA     |    Refinement    |         Random        |      Centroid     |     Greedy    |    VAMANA    |    Reverse   |     Centroid       |       Greedy       |
-|  EFANNA     |    Refinement    |                       |      KD-tree      |   NN-Descent  |              |              |      KD-tree       |       Greedy       |
-|  IEH        |    Refinement    |         KNNG          |                   |               |              |              |        LSH         |       Greedy       |
-|  NSW        |    Increment     |                       |     First Node    |               |              |              |                    |                    |
-|  HNSW       |    Increment     |                       |   Top Layer Node  |               |     RNG      |              |                    |                    |
-|  NGT_PANNG  |    Increment     |         ANNG          |                   |               |     ONNG     |              |      DVPTree       |       Greedy       |
-|  NGT_ONNG   |    Increment     |         ANNG          |                   |               |     ONNG     |              |      DVPTree       |       Greedy       |
-|  SPTAG_KDT  |  Divide&Conquer  |                       | KD-tree  |               |     RNG      |              |                    |                    |
-|  SPTAG_BKT  |  Divide&Conquer  |                       | BK-tree |               |     RNG      |              |                    |                    |
-|  HCNNG      |  Divide&Conquer  |Hierarchical Clustering|                   |               |              |              |      KD-tree       |       Guided       |
+```cpp
+const unsigned num_threads = parameters.get<unsigned>("n_threads");
+std::string base_path = parameters.get<std::string>("base_path");
+std::string query_path = parameters.get<std::string>("query_path");
+std::string ground_path = parameters.get<std::string>("ground_path");
+std::string graph_file = parameters.get<std::string>("graph_file");
+	
+auto *builder = new weavess::IndexBuilder(num_threads);
 
+builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
+        -> init(weavess::TYPE::INIT_RANDOM, false)
+		-> refine(weavess::TYPE::REFINE_NN_DESCENT, false)
+        -> save_graph(weavess::TYPE::INDEX_KGRAPH, &graph_file[0]);
+```
 
-## Parameters
+#### Base Classes
 
-### KGraph
+* `ComponentLoad`: load input raw data for index build and algorithm parameters.
+* `ComponentInit`:	initialization components for index construction.
+* `ComponentPreEntry`: seed acquisition of the index construction.
+* `ComponentRefine`: include candidate、prune、conn components.
+* `ComponentCandidate`: candidate neighbor acquisition.
+* `ComponentPrune`: neighbor selection.
+* `ComponentConn`: connectivity assurance.
 
-|  Name        |  Interval |  Description                         |  sift1M |  gist |  glove-100 |  crawl |  audio |  msong |  uqv |  enron |   c_1   |  c_10 |  c_100  |  d_8   |  d_32  |  d_128 | n_10000 |n_100000|n_1000000 |  s_1  |    s_5     |  s_10  |
-|:------------:|:---------:|:------------------------------------:|:-------:|:-----:|:----------:|:------:|:------:|:------:|:----:|:------:|:-------:|:-----:|:-------:|:------:|:------:|:------:|:-------:|:------:|:--------:|:-----:|:----------:|:------:|
-|  K           |[40\:100\:10]| degree bound                         |    90   |  100  |    100     |    80  |   40   |   100  |  40  |   50   |   100   |  100  |   80    |   50   |   \    |   90   |   100   |    \   |    100   |   60  |     \      |   80   |
-|  L           |[K:K+50:10]| number of top nearest candidate      |   130   |  120  |    150     |   100  |   60   |   140  |  80  |   80   |   110   |  120  |   130   |   70   |   \    |   90   |   140   |    \   |    130   |   60  |     \      |   110  |
-|  iter        |    1     | number of iteration in NN-Descent    |    12     |   12    |      12      |    12    |    5    |    12    |    6  |    7    | 8 | 8 | 8 | 8 | 8 | 8 | 7 | 8 | 12 | 5 | 8 | 9 |
-|  S           | [10:35:5] | number of seeds for NN-Descent       |    20   |   25  |     35     |    10  |   20   |    15  |  25  |   15   |    25   |   25  |   35    |   10   |   \    |   30   |    30   |    \   |     20   |   20  |     \      |   20   |
-|  R           |[50:150:50]| number of reverse edge in NN-Descent |    50   |  100  |    150     |   150  |  100   |   150  | 100  |  100   |   150   |   50  |  150    |  150   |   \    |   50   |   100   |    \   |     50   |  150  |     \      |   150  |
+#### Operator
 
-### FANNG
+```
+builder -> load()
+		-> init(INIT_COMPONENT_TYPE)
+		-> pre_entry(PRE_ENTRY__COMPONENT_TYPE)
+		-> refine(REFINE_COMPONENT_TYPE)
+		-> save_graph(SAVE_COMPONENT_TYPE);
+```
 
-|  Name        |  Default  |  Description                       |  sift1M |  gist  |  glove-100 |  crawl |  audio |  msong |  uqv |  enron |   c_1   |  c_10 |  c_100  |  d_8   |  d_32  |  d_128 | n_10000 |n_100000|n_1000000 |  s_1  |    s_5     |  s_10  |
-|:------------:|:---------:|:----------------------------------:|:-------:|:------:|:----------:|:------:|:------:|:------:|:----:|:------:|:-------:|:-----:|:-------:|:------:|:------:|:------:|:-------:|:------:|:--------:|:-----:|:----------:|:------:|
-|  R           |           | degree bound                       |    70   |    50  |      70    |   30   |   50   |   10   |  90  |  110   |    30   |   10  |   30    |  110   |   90   |   70   |    90   |    \   |    \     |   30  |     30     |   70   |
-|  L           |           | number of top nearest candidates   |   110   |   210  |     210    |  110   |  130   |  150   | 250  |  130   |    30   |   90  |  150    |  210   |  270   |  210   |   110   |    \   |    \     |  110  |     90     |  250   |
+### Index Search
 
-### NSG
+#### Sample Code
 
-|  Name        |   Interval  |  Description                       |  sift1M |  gist |  glove-100 |  crawl |  audio |  msong |  uqv |  enron |   c_1   |  c_10 |  c_100  |  d_8   |  d_32  |  d_128 | n_10000 |n_100000|n_1000000 |  s_1  |    s_5     |  s_10  |
-|:------------:|:-----------:|:----------------------------------:|:-------:|:-----:|:----------:|:------:|:------:|:------:|:----:|:------:|:-------:|:-----:|:-------:|:------:|:------:|:------:|:-------:|:------:|:--------:|:-----:|:----------:|:------:|
-|  K           |[100:400:100]| init graph degree bound            |   100   |  400  |    400    |  400  |  200  |  300  | 300 |  200  |   300   |  200  |   400   |  100  |   \    |  200  |   300   |    \   |   200   |  200  |     \      |  300  |
-|  L           | [K:K+30:10] | number of top nearest candidate    |   120   |  430  |    420    |  430  |  230  |  310  | 320 |  200  |   310   |  200  |   410   |  100  |   \    |  210  |   300   |    \   |   200   |  220  |     \      |  300  |
-|  iter        |     1      | number of iteration                | 12 | 12 | 12 | 12 | 5 | 12 | 6 | 7 | 8 | 8 | 8 | 8 | 8 | 8 | 7 |  | 12 | 5 | 8 | 9 |
-|  S           |  [10:25:5]  | number of top nearest candidate    |    25   |  10  |     20     |   15  |   10   |    25  |  15  |   25   |   20   |  20  |   20  |   10   |   \    |   10   |   15   |    \   |   20   |  25  |     \      |   25   |
-|  R           |[100:300:100]| distance threshold                 |   300   |  200  |    300    |  300  |  100  |   300  | 200 |  200  |   200   |  100  |   100   |  100  |   \    |  300  |   300   |    \   |   100   |  300  |     \      |  300  |
-|  L_nsg       | [50:550:50] |                                    |    150   |  500  |    150     |   250  |   200   |  350  | 350 |  150  |   200   |  100  |   400   |   150   |   \    |  150  |   50   |    \   |   100   |  300  |     \      |  200  |
-|  R_nsg       | [20:90:10]  |                                    |    30   |  20  |     90     |   40  |   30   |   20  |  30  |   60   |   80   |  80  |   20  |   20   |   \    |   20   |   20   |    \   |   80   |  20  |     \      |   80   |
-|  C           |[400:600:100]|                                    | 400 | 400 | 600 | 600 | 600 | 500 | 400 | 600 | 400 | 400 | 400 | 600 |        | 400 | 500 |        | 400 | 500 |            | 400 |
+```cpp
+const unsigned num_threads = parameters.get<unsigned>("n_threads");
+std::string base_path = parameters.get<std::string>("base_path");
+std::string query_path = parameters.get<std::string>("query_path");
+std::string ground_path = parameters.get<std::string>("ground_path");
+std::string graph_file = parameters.get<std::string>("graph_file");
+	
+auto *builder = new weavess::IndexBuilder(num_threads);
 
-### SSG
+builder -> load_graph(weavess::TYPE::INDEX_KGRAPH, &graph_file[0])
+        -> search(weavess::TYPE::SEARCH_ENTRY_RAND, weavess::TYPE::ROUTER_GREEDY, weavess::TYPE::L_SEARCH_ASSIGN);
+```
 
-| Name  |   Interval    |           Description           | sift1M | gist | glove-100 | crawl | audio | msong | uqv  | enron | c_1  | c_10 | c_100 | d_8  | d_32 | d_128 | n_10000 | n_100000 | n_1000000 | s_1  | s_5  | s_10 |
-| :---: | :-----------: | :-----------------------------: | :----: | :--: | :-------: | :---: | :---: | :---: | :--: | :---: | :--: | :--: | :---: | :--: | :--: | :---: | :-----: | :------: | :-------: | :--: | :--: | :--: |
-|   K   | [100:400:100] |     init graph degree bound     |  400   | 300  |    300    |  100  |  400  |  400  | 400  |  100  | 100  | 400  |  200  | 200  |  \   |  400  |   200   |    \     |    400    | 100  |  \   | 300  |
-|   L   |  [K:K+30:10]  | number of top nearest candidate |  420   | 330  |    320    |  100  |  400  |  420  | 420  |  110  | 120  | 430  |  210  | 230  |  \   |  420  |   230   |    \     |    430    | 130  |  \   | 320  |
-| iter  |       1       |       number of iteration       |   12   |  12  |    12     |  12   |   5   |  12   |  6   |   7   |  8   |  8   |   8   |  8   |  8   |   8   |    7    |    8     |    12     |  5   |  8   |  9   |
-|   S   |   [10:25:5]   | number of top nearest candidate |   20   |  20  |    10     |  10   |  25   |  25   |  20  |  20   |  15  |  25  |  25   |  25  |  \   |  25   |   25    |    \     |    25     |  10  |  \   |  20  |
-|   R   | [100:300:100] |       distance threshold        |  100   | 200  |    200    |  100  |  200  |  300  | 300  |  300  | 200  | 200  |  300  | 100  |  \   |  300  |   100   |    \     |    200    | 100  |  \   | 300  |
-| L_ssg |  [50:550:50]  |                                 |   50   | 200  |    150    |  50   |  50   |  100  | 250  |  300  | 150  | 100  |  150  |  50  |  \   |  200  |   100   |    \     |    100    | 200  |  \   | 500  |
-| R_ssg |  [20:90:10]   |                                 |   20   |  40  |    30     |  60   |  20   |  70   |  20  |  30   |  40  |  40  |  40   |  70  |  \   |  30   |   40    |    \     |    40     |  40  |  \   |  60  |
-|   A   |      60       |                                 |        |      |           |       |       |       |      |       |      |      |       |      |      |       |         |          |           |      |      |      |
+#### Base Classes
 
-### DPG
+* `ComponentSearchEntry`: seed acquisition of the index search.
+* `ComponentSearchRoute`: route strategies.
 
-| Name |   Interval    |             Description              | sift1M | gist | glove-100 | crawl | audio | msong | uqv  | enron | c_1  | c_10 | c_100 | d_8  | d_32 | d_128 | n_10000 | n_100000 | n_1000000 | s_1  | s_5  | s_10 |
-| :--: | :-----------: | :----------------------------------: | :----: | :--: | :-------: | :---: | :---: | :---: | :--: | :---: | :--: | :--: | :---: | :--: | :--: | :---: | :-----: | :------: | :-------: | :--: | :--: | :--: |
-|  K   | [100:400:100] |             degree bound             |  100   | 100  |    100    |  100  |  100  |  100  | 100  |  100  | 100  | 200  |  200  | 100  |  \   |  100  |   100   |    \     |    100    | 100  |  \   | 100  |
-|  L   |  [K:K+30:10]  |   number of top nearest candidate    |  100   | 100  |    130    |  130  |  130  |  110  | 100  |  120  | 100  | 210  |  220  | 110  |  \   |  100  |   130   |    \     |    100    | 100  |  \   | 100  |
-| iter |       1       |  number of iteration in NN-Descent   |   12   |  12  |    12     |  12   |   5   |  12   |  6   |   7   |  8   |  8   |   8   |  8   |  8   |   8   |    7    |    8     |    12     |  5   |  8   |  9   |
-|  S   |   [10:25:5]   |    number of seeds for NN-Descent    |   25   |  20  |    20     |  20   |  25   |  20   |  20  |  15   |  20  |  25  |  25   |  20  |  \   |  25   |   20    |    \     |    20     |  20  |  \   |  20  |
-|  R   | [100:300:100] | number of reverse edge in NN-Descent |  300   | 100  |    100    |  100  |  100  |  100  | 300  |  200  | 300  | 300  |  200  | 200  |  \   |  200  |   300   |    \     |    300    | 100  |  \   | 200  |
+#### Operator
 
-### VAMANA
-
-| Name  | Default |           Description            | sift1M | gist | glove-100 | crawl | audio | msong | uqv  | enron | c_1  | c_10 | c_100 | d_8  | d_32 | d_128 | n_10000 | n_100000 | n_1000000 | s_1  | s_5  | s_10 |
-| :---: | :-----: | :------------------------------: | :----: | :--: | :-------: | :---: | :---: | :---: | :--: | :---: | :--: | :--: | :---: | :--: | :--: | :---: | :-----: | :------: | :-------: | :--: | :--: | :--: |
-|   R   |   70    |           degree bound           |   50   |  50  |    110    |  50   |  50   |  30   |  30  |  110  | 110  |  70  |  50   | 110  |  70  |  70   |   50    |    70    |    70     |  70  |  70  |  90  |
-|   L   |   125   | number of top nearest candidates |   70   |  60  |    120    |  80   |  70   |  40   |  60  |  140  | 140  |  90  |  60   | 130  |  90  |  80   |   60    |    90    |    80     |  90  |  90  | 120  |
-| alpha |    2    |        distance threshold        |        |      |           |       |       |       |      |       |      |      |       |      |      |       |         |          |           |      |      |      |
-
-### EFANNA
-
-|  Name        |   Interval  |  Description                       |  sift1M |  gist |  glove-100 |  crawl |  audio |  msong |  uqv |  enron |   c_1   |  c_10 |  c_100  |  d_8   |  d_32  |  d_128 | n_10000 |n_100000|n_1000000 |  s_1  |    s_5     |  s_10  |
-|:------------:|:-----------:|:----------------------------------:|:-------:|:-----:|:----------:|:------:|:------:|:------:|:----:|:------:|:-------:|:-----:|:-------:|:------:|:------:|:------:|:-------:|:------:|:--------:|:-----:|:----------:|:------:|
-|  nTrees      | [4,8,16,32] | init graph degree bound            |    8    |  16   |     8      |   16   |   16   |    8   |  4   |   4    |    4    |   4   |    4    |   8    |   \    |   4    |    4    |    \   |    \     |  32   |     \      |   32   |
-|  mLevel      |            | number of top nearest candidate    | 8 | 8 | 8 | 8 | 8 | 8 | 8 | 8 | 8 | 8 | 8 | 8 |   \    | 8 | 8 |    \   |    \     | 8 |     \      | 8 |
-|  K           | [40\:100\:10] | number of iteration                |    60   |  100  |     100    |   100  |   40   |   50   |  40  |   40   |    90   |  100  |   70    |   50   |   \    |   40   |    80   |    \   |    \     |  100  |     \      |  100   |
-|  L           | [K:K+100:10]| number of top nearest candidate    |    70   |  190  |     170    |   120  |   10   |   130  |  50  |   140  |   190   |  160  |   160   |   120  |   \    |   40   |    140  |    \   |    \     |  160  |     \      |  110   |
-|  iter        |   [5:11:1]  | distance threshold                 |    10   |   7   |     7      |    8   |   10   |    7   |  7   |   5    |    7    |   7   |    7    |   7    |   \    |   7    |    7    |    \   |    \     |   7   |     \      |   7    |
-|  S           |  [1O:35:5]  |                                    |    15   |  30   |     10     |   25   |   30   |    10  |  10  |   35   |    15   |  15   |   35    |   15   |   \    |   25   |    25   |    \   |    \     |   35  |     \      |   30   |
-|  R           | [50:150:50] |                                    |    150  |  50   |     100    |   100  |  100   |   150  |  150 |  150   |    50   |  100  |   150   |   50   |   \    |   150  |    150  |    \   |    \     |  150  |     \      |  100   |
-
-
-### IEH
-
-|  Name        |  Default  |  Description                       |
-|:------------:|:---------:|:----------------------------------:|
-|  P           | 10        | number of top nearest candidates   |
-|  K           | 50        | number of expansion                |
-|  S           | 3         | iteration number                   |
-
-### NSW
-
-|  Name             |  Default  |  Description                             |  sift1M |  gist |  glove-100 |  crawl |  audio |  msong |  uqv |  enron |   c_1   |  c_10 |  c_100  |  d_8   |  d_32  |  d_128 | n_10000 |n_100000|n_1000000 |  s_1  |    s_5     |  s_10  |
-|:-----------------:|:---------:|:----------------------------------------:|:-------:|:-----:|:----------:|:------:|:------:|:------:|:----:|:------:|:-------:|:-----:|:-------:|:------:|:------:|:------:|:-------:|:------:|:--------:|:-----:|:----------:|:------:|
-|  max_m0           |  24       | max number of edges for nodes at level0  |    40   |   60  |     80     |    60  |   40   |   60   |  30  |   80   |   100   |   30  |   70    |    50  |   80   |   80   |   20    |   80   |   100    |   60  |     70     |    50  |
-|  ef_construction  |  150      | number of top nearest candidates         |   300   |  200  |    100     |   400  |  800   |  300   | 400  |  600   |   500   |  100  |   400   |   500  |  100   |  1000  |  300    |  300   |   400    |  600  |    300     |  1000  |
-
-### HNSW
-
-|  Name             |  Default  |  Description                             |  sift1M |  gist |  glove-100 |  crawl |  audio |  msong |  uqv |  enron |   c_1   |  c_10 |  c_100  |  d_8   |  d_32  |  d_128 | n_10000 |n_100000|n_1000000 |  s_1  |    s_5     |  s_10  |
-|:-----------------:|:---------:|:----------------------------------------:|:-------:|:-----:|:----------:|:------:|:------:|:------:|:----:|:------:|:-------:|:-----:|:-------:|:------:|:------:|:------:|:-------:|:------:|:--------:|:-----:|:----------:|:------:|
-|  max_m            |  24       | max number of edges for nodes at level0  |    40   |   50  |     50     |    40  |   10   |   30   |  10  |   50   |    80   |   40  |   30    |    10  |   40   |   90   |   20    |   40   |    50    |   40  |     40     |    60  |
-|  max_m0           |  24       | max number of edges for nodes at level0  |    50   |   60  |     60     |    70  |   50   |   80   |  40  |   80   |    90   |   60  |   40    |    30  |   60   |  100   |   30    |   60   |   100    |   60  |     60     |    80  |
-|  ef_construction  |  150      | number of top nearest candidates         |   800   |  400  |    700     |   400  |  700   |  100   | 200  |  900   |  1000   |  300  |   300   |   900  |  300   |  900   |  900    |  200   |   200    |  200  |    300     |  1000  |
-
-
-### PANNG
-
-|  Name             |  Interval       |  Description  |  sift1M |  gist |  glove-100 |  crawl |  audio |  msong |  uqv |  enron |  c_1  |  c_10 |  c_100  |  d_8   |  d_32  |  d_128 | n_10000 |n_100000|n_1000000 |  s_1  |    s_5     |  s_10  |
-|:-----------------:|:---------------:|:-------------:|:-------:|:-----:|:----------:|:------:|:------:|:------:|:----:|:------:|:-----:|:-----:|:-------:|:------:|:------:|:------:|:-------:|:------:|:--------:|:-----:|:----------:|:------:|
-|  K                | [40 : 100 : 10] |               |  40     |  40   |  40        |  40    |  40    |  40    |  40  |  40    |  40   |  50   |  60     |  80    |        |  50    |  40     | 40     |          |  50   |            |  60    |
-|  L                | [K:K+50:10]     |               |  50     |  40   |  40        |  70    |  40    |  70    |  60  |  40    |  80   |  80   |  80     |  110   |        |  90    |  60     | 50     |          |  80   |            |  80    |
-
-### ONNG
-
-|  Name             |      Interval      |  Description  |  sift1M  |  gist |  glove-100 |  crawl |  audio |  msong |  uqv |  enron |  c_1  |  c_10  |  c_100  |  d_8   |  d_32  |  d_128 | n_10000 |n_100000|n_1000000 |  s_1  |  s_5   |  s_10  |
-|:-----------------:|:------------------:|:-------------:|:--------:|:-----:|:----------:|:------:|:------:|:------:|:----:|:------:|:-----:|:------:|:-------:|:------:|:------:|:------:|:-------:|:------:|:--------:|:-----:|:------:|:------:|
-| K                 |    [1 , 2 , 4]     |               |          |       |            |        |        |        |      |        | 100   |  100   |  100    |        |        |        |         |        |          |       |        |        |
-| L                 |   [16 , 32 , 64]   |               |          |       |            |        |        |        |      |        | 100   |  120   |  100    |        |        |        |         |        |          |       |        |        |
-| numOfOutgoingEdges| [500 : 2500 : 500] |               |          |       |            |        |        |        |      |        | 20    |  10    |  10     |        |        |        |         |        |          |       |        |        |
-| numOfIngoingEdges |    [2 , 8 , 32]    |               |          |       |            |        |        |        |      |        | 100   |  100   |  100    |        |        |        |         |        |          |       |        |        |
-
-
-### SPTAG-KDT
-
-|  Name        |      Interval      |  Description  |  sift1M  |  gist |  glove-100 |  crawl |  audio |  msong |  uqv |  enron |  c_1  |  c_10  |  c_100  |  d_8   |  d_32  |  d_128 | n_10000 |n_100000|n_1000000 |  s_1  |  s_5   |  s_10  |
-|:------------:|:------------------:|:-------------:|:--------:|:-----:|:----------:|:------:|:------:|:------:|:----:|:------:|:-----:|:------:|:-------:|:------:|:------:|:------:|:-------:|:------:|:--------:|:-----:|:------:|:------:|
-| KDT_number   |    [1 , 2 , 4]     |               |  1       |  2    |  4         |  1     |  2     |  4     |  1   |  4     |  1    |  2     |  1      |  4     |        |   4    | 1       |        |          |  1    |        |  1     |
-| TPT_number   |   [16 , 32 , 64]   |               |  16      |  32   |  32        |  16    |  32    |  64    |  16  |  16    |  16   |  16    |  16     |  32    |        |   16   | 16      |        |          |  16   |        |  32    |
-| TPT_leaf_size| [500 : 2500 : 500] |               |  500     |  1000 |  1000      |  1000  |  500   |  1500  |  500 |  500   |  1000 |  1000  |  1500   |  500   |        |   1500 | 1500    |        |          |  1500 |        |  1500  |
-| scale        |    [2 , 8 , 32]    |               |  8       |  32   |  2         |  2     |  32    |  2     |  8   |  8     |  2    |  8     |  8      |  2     |        |   2    | 2       |        |          |  8    |        |  32    |
-| CEF          | [500 : 2000 : 500] |               |  500     |  1000 |  1500      |  1500  |  1000  |  500   |  1000|  1500  |  1000 |  1500  |  1500   |  1500  |        |   1500 | 1500    |        |          |  1000 |        |  1500  |
-
-
-### SPTAG_BKT
-
-|  Name          |      Interval      |  Description  |  sift1M |  gist |  glove-100 |  crawl |  audio |  msong |  uqv |  enron |   c_1   |  c_10 |  c_100  |  d_8   |  d_32  |  d_128 | n_10000 |n_100000|n_1000000 |  s_1  |    s_5     |  s_10  |
-|:--------------:|:------------------:|:-------------:|:-------:|:-----:|:----------:|:------:|:------:|:------:|:----:|:------:|:-------:|:-----:|:-------:|:------:|:------:|:------:|:-------:|:------:|:--------:|:-----:|:----------:|:------:|
-|  BKT_number    |    [1 , 2 , 4]     |               |  1      |  2    |  4         |  4     |  4     |  4     |  4   |  1     |   1     |  2    |  2      |   1    |        |   4    |         |        |          |  1    |            |  1     |
-|  BKT_kmeas_k   |   [16 , 32 , 64]   |               |  16     |  16   |  16        |  32    |  16    |  64    |  64  |  16    |   16    |  32   |  32     |   32   |        |   16   |         |        |          |  16   |            |  32    |
-|  TPT_number    |   [16 , 32 , 64]   |               |  16     |  32   |  16        |  32    |  16    |  16    |  16  |  16    |   16    |  16   |  16     |   16   |        |   32   |         |        |          |  16   |            |  64    |
-|  TPT_leaf_size | [500 : 2500 : 500] |               |  1000   |  1000 |  500       |  1000  |  1500  |  500   |  1000|  1500  |   1000  |  1500 |  1500   |   1000 |        |   500  |         |        |          |  1000 |            |  2000  |
-|  scale         |    [2 , 8 , 32]    |               |  2      |  8    |  8         |  32    |  32    |  2     |  2   |  2     |   2     |  2    |  2      |   2    |        |   2    |         |        |          |  2    |            |  8     |
-|  CEF           | [500 : 2000 : 500] |               |  1000   |  1000 |  1500      |  500   |  1000  |  500   |  500 |  500   |   1000  |  500  |  500    |   1000 |        |   500  |         |        |          |  500  |            |  1500  |
-
-### HCNNG
-
-|  Name        |  Default  |  Description                       |  sift1M |  gist |  glove-100 |  crawl |  audio |  msong |  uqv |  enron |   c_1   |  c_10 |  c_100  |  d_8   |  d_32  |  d_128 | n_10000 |n_100000|n_1000000 |  s_1  |    s_5     |  s_10  |
-|:------------:|:---------:|:----------------------------------:|:-------:|:-----:|:----------:|:------:|:------:|:------:|:----:|:------:|:-------:|:-----:|:-------:|:------:|:------:|:------:|:-------:|:------:|:--------:|:-----:|:----------:|:------:|
-|  num_cl      |           | num clusters                       |  45/90  | 30/30 |   60/100   |  35/70 |  40/60 | 55/100 | 20/80| 30/100 |  50/100 | 65/70 |  65/90  | 65/80  |  50/70 | 65/100 | 50/90   | 60/90  |  55/100  | 65/60 |  65/60     | 50/90  |
-|  minsize_cl  |  sqrt(N)  | min size cluster                   |         |       |            |        |        |        |      |        |         |       |         |        |        |        |         |        |          |       |            |        |
-
-
-## TODO
-
-* 删除 Refine 组件 range 参数 / 增加 Candidate 组件 range 参数
-* Test refine 反向边是否保留
-* candidate query/entry 匹配
+```
+builder -> load()
+		-> load_graph(LOAD_COMPONENT_TYPE)
+		-> search(SEARCH_ENTRY_COMPONENT_TYPE, SEARCH_ROUTE_COMPONENT_TYPE);
+```
 
 
 
-* OpenMP 增加 default
 
-* n2 引入third_party 方法
-* VAMANA REFINE 速度慢
-* 检查个算法candidate init 后排序情况
-* FANNG RNG -> HNSW prune
-* search entry -> pool -> seeds
-* panng 路径调整 根据id 排序
-* HNSWNode 结点距离
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
