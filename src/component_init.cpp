@@ -48,7 +48,6 @@ namespace weavess {
         index->setInitEdgesNum(index->getParam().get<unsigned>("S"));
     }
 
-
     void ComponentInitRandom::GenRandom(std::mt19937 &rng, unsigned *addr, unsigned size) {
         unsigned N = index->getBaseLen();
 
@@ -108,6 +107,7 @@ namespace weavess {
     void ComponentInitKNNG::SetConfigs() {
         index->setInitEdgesNum(index->getParam().get<unsigned>("S"));
     }
+
 
 
     void ComponentInitKDTree::InitInner() {

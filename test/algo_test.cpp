@@ -4,6 +4,26 @@
 #include <weavess/builder.h>
 #include <iostream>
 
+void KDRG(std::string base_path, std::string query_path, std::string ground_path) {
+    std::string graph = "basin.graph";
+    weavess::Parameters parameters;
+    parameters.set<unsigned>("S", 50);
+    parameters.set<unsigned>("R_refine", 10);
+
+    auto* builder= new weavess::IndexBuilder(8);
+    builder -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
+            -> init(weavess::INIT_KNNG, true)
+            -> refine(weavess::REFINE_KDRG, true)
+            -> save_graph(weavess::INDEX_KGRAPH, &graph[0]);
+
+    auto *builder2 = new weavess::IndexBuilder(8);
+    builder2 -> load(&base_path[0], &query_path[0], &ground_path[0], parameters)
+            -> load_graph(weavess::INDEX_KGRAPH, &graph[0])
+            -> search(weavess::SEARCH_ENTRY_RAND, weavess::ROUTER_GREEDY, weavess::TYPE::L_SEARCH_ASCEND);
+
+    std::cout << "Time cost: " << builder->GetBuildTime().count() << std::endl;
+}
+
 void EFANNA(std::string base_path, std::string query_path, std::string ground_path) {
     std::string graph = "efanna.graph";
     weavess::Parameters parameters;
@@ -183,8 +203,10 @@ int main(int argc, char** argv) {
 //    std::string query_path = R"(G:\ANNS\dataset\sift1M\sift_query.fvecs)";
 //    std::string ground_path = R"(G:\ANNS\dataset\sift1M\sift_groundtruth.ivecs)";
 
+    KDRG(base_path, query_path, ground_path);
+
     //ONNG(base_path, query_path, ground_path);
-    PANNG(base_path, query_path, ground_path);
+    //PANNG(base_path, query_path, ground_path);
 
     //HCNNG(base_path, query_path, ground_path);
 

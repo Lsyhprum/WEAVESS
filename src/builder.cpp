@@ -152,6 +152,9 @@ namespace weavess {
         } else if (type == REFINE_ONNG) {
             std::cout << "__REFINE : ONNG__" << std::endl;
             a = new ComponentRefineONNG(final_index_);
+        } else if (type == REFINE_KDRG) {
+            std::cout << "__REFINE : KDRG__" << std::endl;
+            a = new ComponentRefineKDRG(final_index_);
         } else {
             std::cerr << "__REFINE : WRONG TYPE__" << std::endl;
         }

@@ -274,6 +274,65 @@ namespace weavess {
     std::cout<<"Graph Quality : "<<mean_acc / ctrl_points.size() <<std::endl;
     }
 
+
+    /**
+     * KRDG
+     */
+    bool ComponentRefineKDRG::GreedyReachabilityChecking(const unsigned x, const unsigned y, std::vector<std::vector<Index::SimpleNeighbor>>& cut_graph_, double& dist) {
+        double xy = index->getDist()->compare(index->getBaseData() + index->getBaseDim() * x,
+                                              index->getBaseData() + index->getBaseDim() * y,
+                                              index->getBaseDim());
+        dist = xy;
+        if(cut_graph_[y].empty()) return false;
+
+        unsigned z = -1;
+        double xz = std::numeric_limits<double>::max();
+
+        for(const Index::SimpleNeighbor nn : cut_graph_[y]) {
+            double d = index->getDist()->compare(index->getBaseData() + index->getBaseDim() * x,
+                                                 index->getBaseData() + index->getBaseDim() * nn.id,
+                                                 index->getBaseDim());
+
+            if(d < xz) {
+                xz = d;
+                z = nn.id;
+            }
+        }
+
+        return xz <= xy;
+    }
+
+    void ComponentRefineKDRG::RefineInner() {
+
+        index->R_refine = index->getParam().get<unsigned>("R_refine");
+
+        std::vector<std::vector<Index::SimpleNeighbor>> cut_graph_(index->getBaseLen(), std::vector<Index::SimpleNeighbor>());
+
+        std::cout << "__PRUNE : KDRG__" << std::endl;
+
+        for(unsigned k = 0; k < index->R_refine; k ++) {
+            for(unsigned n = 0; n < index->getBaseLen(); n ++) {
+                double dist = -1;
+                if(!GreedyReachabilityChecking(n, index->getFinalGraph()[n][k].id, cut_graph_, dist)) {
+                    cut_graph_[n].emplace_back(index->getFinalGraph()[n][k].id, dist);
+                    cut_graph_[index->getFinalGraph()[n][k].id].emplace_back(n, dist);
+                }
+            }
+        }
+
+        // 赋值给 final_graph
+        for (unsigned n = 0; n < index->getBaseLen(); ++n) {
+            std::vector<Index::SimpleNeighbor> src_pool = cut_graph_[n];
+            for (unsigned i = 0; i < src_pool.size(); i++) {
+                index->getFinalGraph()[n][i] = src_pool[i];
+            }
+            index->getFinalGraph()[n].resize(src_pool.size());
+        }
+
+        std::vector<std::vector<Index::SimpleNeighbor>>().swap(cut_graph_);
+    }
+
+
     /**
      * FANNG Refine :
      *  PRUNE       : RNG

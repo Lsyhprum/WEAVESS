@@ -58,6 +58,7 @@ namespace weavess {
         void SetConfigs();
     };
 
+
     class ComponentInitKDTree : public ComponentInit {
     public:
         explicit ComponentInitKDTree(Index *index) : ComponentInit(index) {}
@@ -384,6 +385,16 @@ namespace weavess {
         void generate_control_set(std::vector<unsigned> &c, std::vector<std::vector<unsigned> > &v, unsigned N);
 
         void eval_recall(std::vector<unsigned> &ctrl_points, std::vector<std::vector<unsigned> > &acc_eval_set);
+    };
+
+    class ComponentRefineKDRG : public ComponentRefine {
+    public:
+        explicit ComponentRefineKDRG(Index *index) : ComponentRefine(index) {}
+
+        void RefineInner() override;
+
+    private:
+        bool GreedyReachabilityChecking(const unsigned x, const unsigned y, std::vector<std::vector<Index::SimpleNeighbor>>& cut_graph_, double& dist);
     };
 
     class ComponentRefineNSG : public ComponentRefine {
