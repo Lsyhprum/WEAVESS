@@ -738,6 +738,12 @@ void ONNG_PARA(std::string dataset, weavess::Parameters &parameters) {
     parameters.set<unsigned>("numOfResultantObjects", 20);
 }
 
+void KDRG_PARA(std::string dataset, weavess::Parameters &parameters) {
+    unsigned K = 50;
+    parameters.set<unsigned>("S", K);
+    parameters.set<unsigned>("R_refine", K);
+}
+
 void set_data_path(std::string dataset, weavess::Parameters &parameters) {
     // dataset root path
     std::string dataset_root = parameters.get<std::string>("dataset_root");
@@ -885,6 +891,8 @@ void set_para(std::string alg, std::string dataset, weavess::Parameters &paramet
         PANNG_PARA(dataset, parameters);
     }else if (alg == "onng") {
         ONNG_PARA(dataset, parameters);
+    }else if (alg == "kdrg") {
+        KDRG_PARA(dataset, parameters);
     }
     else {
         std::cout << "algorithm input error!\n";
