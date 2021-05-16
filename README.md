@@ -84,6 +84,10 @@ cd WEAVESS/build/test/
 
 Note that the default [`dev` branch](https://github.com/Lsyhprum/WEAVESS/tree/dev) is the evaluation of the overall performance of all algorithms, and the evaluation of a certain component needs to be carried out under the [`test` branch](https://github.com/Lsyhprum/WEAVESS/tree/test). For more details, please see [our paper](https://arxiv.org/pdf/2101.12631.pdf). 
 
+### Machine learning-based optimizations
+
+See [here](https://github.com/Lsyhprum/WEAVESS/tree/dev/ml) for details.
+
 ## Reference
 
 Please cite our work in your publications if it helps your research:
